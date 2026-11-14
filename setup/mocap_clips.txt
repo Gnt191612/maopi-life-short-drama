@@ -1,0 +1,18 @@
+# CMU 动作捕捉片段（http://mocap.cs.cmu.edu ，BVH 版本来自 github.com/una-dinosauria/cmu-mocap）
+# 编号  说明
+07_01	walk
+08_01	walk
+16_33	slow walk, stop
+16_17	walk, 90-degree left turn
+16_19	walk, 90-degree right turn
+13_01	sit on high stool, stand up
+13_05	sit on stepstool, hands against chin, stand up
+14_31	sit on stepstool, stand up
+13_33	climb ladder
+14_33	climb ladder
+13_35	climb 3 steps
+18_08	conversation - explain with hand gestures (A)
+19_08	conversation - explain with hand gestures (B)
+13_09	drink soda
+13_26	direct traffic, wave
+16_35	run/jog

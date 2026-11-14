@@ -1,0 +1,16 @@
+# 外部工具（由 setup 脚本下载）
+.tools/
+# 运行产物（可随时重新生成）
+build/
+# 固定资产大文件：作为 GitHub Release 附件发布（setup 脚本自动下载），不进 Git
+assets/cast/
+assets/sets/
+assets/audio/
+dist/
+*.blend1
+*.log
+# Python / Node
+__pycache__/
+*.pyc
+remotion/node_modules/
+remotion/out/

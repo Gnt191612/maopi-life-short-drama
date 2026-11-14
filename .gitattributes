@@ -1,0 +1,11 @@
+# 文本统一换行，避免 Windows/Linux 差异（大文件资产不进 Git，而是作为 Release 附件发布，见 setup/assets_release.txt）
+*.py text eol=lf
+*.sh text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.json text eol=lf
+*.ps1 text eol=crlf
+*.blend binary
+*.wav binary
+*.png binary
+*.jpg binary
