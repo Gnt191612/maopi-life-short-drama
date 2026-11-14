@@ -32,7 +32,9 @@ SCN = {
  # ---------------- 图书馆 ----------------
  's02': dict(side=-1,
    init={'chen': dict(pos=(-2.6, -4.3, 0), face=180, base='sit', arms='desk'),
-         'lin': dict(at='entrance', face=180, base='stand', arms='tray')},
+         'lin': dict(at='entrance', face=180, base='stand', arms='tray'),
+         'zhou': dict(pos=(-4.4, 4.3, 0), face=0, base='sit', arms='desk')},          # 角落里埋头刷题的学长
+   extras={'lib': ['周明远']},
    phones={'lin': (6.2, -0.2, 0.76)},
    beats={
     's02_01': {'lin': Wk(pos=(-4.2, -2.9, 0), face=150, arms='tray')},
@@ -43,6 +45,7 @@ SCN = {
     's02_06': {'lin': S(pos=(6.0, -0.75, 0), face=180, arms='desk')},
     's02_07': {'lin': S(pos=(5.9, -1.2, 0), face=160, base='crouch', arms='phone')},
     's02_08': {'chen': S(arms='desk')},
+    's02_08c': {'lin': S(pos=(-1.95, -4.25, 0), face=-90, base='crouch', arms='down')},
     's02_09': {'lin': S(at='window_seat', face=180, base='sit', arms='phone')},
    }),
  # ---------------- 午后宿舍 / 视频电话 ----------------
@@ -71,8 +74,9 @@ SCN = {
  's05': dict(side=-1,
    init={'lin': dict(at='queue', face=180, base='stand', arms='tray'),
          'classA': dict(pos=(-3.0, 3.0, 0), face=60, base='stand', arms='tray'),
-         'classB': dict(at='classB_seat', face=180, base='sit', arms='desk')},
-   extras={'canteen': ['同学甲', '同学乙']},
+         'classB': dict(at='classB_seat', face=180, base='sit', arms='desk'),
+         'zhou': dict(pos=(0.15, 3.9, 0), face=180, base='stand', arms='tray')},       # 排在后面，目睹这一幕
+   extras={'canteen': ['同学甲', '同学乙', '周明远']},
    phones={'lin': (0, -50, -5)},
    beats={
     's05_01': {'lin': S(arms='phone')},
@@ -92,6 +96,7 @@ SCN = {
     's06_04': {'chen': S(pos=(-0.15, -0.05, 0), face=-120, base='sit', arms='gesture', reach=None)},
     's06_05': {'lin': Bl(0.8, base='sit', arms='desk')},
     's06_07': {'lin': S(arms='cover_face'), 'chen': S(arms='pat', reach=(-0.85, -0.35, 1.25))},
+    's06_08': {'lin': Bl(1.0, arms='phone'), 'chen': S(arms='down', reach=None)},
    }),
  # ---------------- 第三幕 · 夜晚操场（含回忆） ----------------
  's07': dict(side=1,
@@ -149,6 +154,8 @@ SCN = {
    beats={
     's10_02': {'chen': S(pos=(-0.55, 0.1, 0), face=60, arms='pat', reach=(-0.1, -0.35, 1.35))},
     's10_03': {'zhou': S(pos=(0.6, 0.15, 0), face=-30, arms='gesture')},
+    's10_04b': {'zhou': S(arms='phone')},
+    's10_04c': {'zhou': S(arms='down')},
     's10_05': {'chen': S(pos=(-0.45, 0, 0), face=0, arms='down', reach=None), 'lin': S(arms='selfie'), 'zhou': S(pos=(0.45, 0, 0), face=0, arms='down')},
     's10_06': {'lin': S(arms='down')},
     's10_07': {'lin': Wk(pos=(0, 12, 0), face=180), 'chen': Wk(pos=(-0.5, 12, 0), face=180), 'zhou': Wk(pos=(0.5, 12, 0), face=180)},

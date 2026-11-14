@@ -10,7 +10,7 @@ sys.path.insert(0, config.COSYVOICE_DIR); sys.path.insert(0, os.path.join(config
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
 import re
 import torch, torchaudio
-from lines10 import LINES
+from lines import LINES   # 台词表唯一来源：story/lines.py
 from cosyvoice.cli.cosyvoice import CosyVoice2
 
 def cer(ref, hyp):
