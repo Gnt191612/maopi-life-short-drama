@@ -18,9 +18,11 @@ ms SparkAudio/Spark-TTS-0.5B "$T/Spark-TTS/pretrained_models/Spark-TTS-0.5B" con
 python3 -m venv "$T/sparkenv"
 "$T/sparkenv/bin/pip" install torch==2.6.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124
 "$T/sparkenv/bin/pip" install transformers==4.46.2 einx==0.3.0 einops omegaconf soundfile soxr safetensors
-echo "[TTS 2/2] CosyVoice2（Apache-2.0）"
-[ -d "$T/CosyVoice" ] || git clone --recursive https://github.com/FunAudioLLM/CosyVoice.git "$T/CosyVoice"
-python3 -m venv "$T/cosyenv"
-"$T/cosyenv/bin/pip" install -r "$T/CosyVoice/requirements.txt" openai-whisper pypinyin
-"$T/cosyenv/bin/python" -c "from modelscope import snapshot_download; snapshot_download('iic/CosyVoice2-0.5B', local_dir='$T/CosyVoice/pretrained_models/CosyVoice2-0.5B')"
-echo "配音模型安装完成。"
+echo "[TTS 2/2] IndexTTS2（台词配音，B 站开源）"
+[ -d "$T/index-tts" ] || git clone --depth 1 https://github.com/index-tts/index-tts.git "$T/index-tts"
+( cd "$T/index-tts" && python3 -m pip install -q uv && python3 -m uv sync --python 3.11 \
+  && python3 -m uv pip install --python .venv/bin/python pypinyin \
+  && .venv/bin/hf download IndexTeam/IndexTTS-2 --local-dir=checkpoints )
+echo "重新配音：V11_SPARK_DIR=$T/Spark-TTS $T/sparkenv/bin/python voice_tools/voice_design.py"
+echo "          $T/index-tts/.venv/bin/python voice_tools/voice_pick2.py"
+echo "          $T/index-tts/.venv/bin/python voice_tools/tts11.py"

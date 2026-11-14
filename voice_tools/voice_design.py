@@ -1,6 +1,7 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """Spark-TTS 音色设计：按性别/音高/语速直接生成全新的自然人声（不克隆任何真人、不用合成机器音作参考）。
-每个角色生成 4 个候选，输出 v10/voices/{角色}_{k}.wav，供试听挑选；选定后作为 CosyVoice2 零样本克隆的参考。
+每个角色生成若干候选（v11：VOICE_ROUNDS=3 VOICE_SEED=2026 VOICE_OUT=voice_tools/voices_v2），
+由 voice_pick2.py 自动打分挑选，作为 IndexTTS2（tts11.py）的音色参考。
 运行：<Spark-TTS 环境的 python> voice_tools/voice_design.py   （安装见 setup/setup_tts_*）
 """
 import os, sys, json
@@ -29,21 +30,21 @@ ROLES = {
            '哟，这不是咱们的学霸晓哥嘛，今天又去图书馆打卡啦？'),
  '同学乙': ('female', [('high', 'moderate'), ('high', 'moderate'), ('moderate', 'moderate'), ('very_high', 'moderate')],
            '其实我也经常这样，发之前要修好久的图，想想也挺累的。'),
- '网友':  ('female', [('high', 'high'), ('moderate', 'high')], '哈哈哈，这也太真实了吧，我也是这样的。'),
- '网友2': ('male',   [('moderate', 'high'), ('high', 'high')], '哈哈哈，这也太真实了吧，我也是这样的。'),
- '网友3': ('female', [('very_high', 'high'), ('moderate', 'moderate')], '哈哈哈，这也太真实了吧，我也是这样的。'),
- 'VO':   ('male',   [('low', 'low'), ('very_low', 'low')], '每个人都在努力地生活，也都值得被温柔地对待。'),
 }
 
 def main():
+    global OUT
+    # VOICE_ROUNDS=n：每种音高/语速组合换 n 个随机种子，得到更多候选（v11 第二轮音色用 3，输出到 VOICE_OUT 指定目录）
+    rounds = int(os.environ.get('VOICE_ROUNDS', 1))
+    OUT = os.environ.get('VOICE_OUT', OUT); os.makedirs(OUT, exist_ok=True)
     model = SparkTTS(os.path.join(config.SPARK_DIR, 'pretrained_models', 'Spark-TTS-0.5B'), torch.device(os.environ.get('SPARK_DEVICE', 'cuda:0')))
     meta_p = os.path.join(OUT, 'voices.json')
     meta = json.load(open(meta_p, encoding='utf-8')) if os.path.exists(meta_p) else {}
     for role, (g, opts, text) in ROLES.items():
-        for k, (pitch, speed) in enumerate(opts):
+        for k, (pitch, speed) in enumerate(opts * rounds):
             name = '%s_%d' % (role, k + 1); p = os.path.join(OUT, name + '.wav')
             if os.path.exists(p): continue
-            torch.manual_seed(7 + k * 101 + sum(map(ord, role)))
+            torch.manual_seed(int(os.environ.get('VOICE_SEED', 7)) + k * 101 + sum(map(ord, role)))
             with torch.no_grad():
                 wav = model.inference(text, gender=g, pitch=pitch, speed=speed, temperature=0.8, top_k=50, top_p=0.95)
             wav = np.asarray(wav, np.float32)

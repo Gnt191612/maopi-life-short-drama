@@ -31,7 +31,7 @@ git status
 | `config.py`、`run_all.py`、`segments.py` | 主控代码 |
 | `story/` | 剧本结构、台词、走位表 |
 | `blender/`（含 `lib/`、`tests/`） | Blender 端脚本 |
-| `voice_tools/`（含 `voices/` 候选音色） | 配音工具 |
+| `voice_tools/`（含 `voices_v2/` 选定音色） | 配音工具 |
 | `setup/` | 一键安装脚本、依赖清单、资产包地址 |
 | `remotion/`（**不含** `node_modules/`） | 合成工程 |
 | `docs/` | 文档与示意图 |
@@ -59,7 +59,7 @@ git push -u origin main
 ## 第 4 步：发布 Release 并上传资产包
 在仓库页面 → Releases → Draft a new release：
 - Tag：`v1.0`，标题：`v1.0 固定资产`
-- 说明：`角色（7 个）、场景（19 个）、配音（78 句）固定资产。安装脚本会自动下载本附件。资产许可：CC BY-NC-SA 4.0（仅限非商业用途）。`
+- 说明：`角色（7 个）、场景（19 个）、配音（73 句）固定资产。安装脚本会自动下载本附件。资产许可：CC BY-NC-SA 4.0（仅限非商业用途）。`
 - 附件：上传 `D:\v11\dist\assets_v1.0.zip` 和 `D:\v11\dist\assets_v1.0.sha256`
 - 点击 Publish release
 

@@ -6,13 +6,15 @@ cam:
   cut  —— 同一时刻换机位：以 ref 拍的最后一帧为依据重新构图（人物姿势、位置、服装、房间全部继承）
   est  —— 场景外景建立镜头（文生图起步）
 dur：这一拍动作本身需要的秒数（各不相同）；有台词时自动延长到台词说完。
-line：画面中说话的台词（必须看得见嘴、嘴没被占用，对口型并自动质检）；os：画外（仅限网友评论/回忆叙述/旁白）。
+line：画面中说话的台词（必须看得见嘴、嘴没被占用，对口型并自动质检）；os：画外（仅限画面外但在场的人发出的声音，如笑声）。
+screen：手机屏幕上的文字（lines.SCREEN 的 id；评论、来电、动态），不配音，按阅读速度自动留时长。
+导演原则：没有旁白、没有画外叙述——回忆用无声画面 + 环境声，网友评论用手机屏幕，情绪靠表演。
 """
 L, C, Z, W, M, A, B = '林晓', '陈瑶', '周明远', '王老师', '林母', '同学甲', '同学乙'
 
-def b(id, cam, chars=(), en=None, act='', dur=0, line=None, os=None, ref=None, sfx=(), sc=None):
+def b(id, cam, chars=(), en=None, act='', dur=0, line=None, os=None, ref=None, sfx=(), sc=None, screen=()):
     return dict(id=id, cam=cam, chars=list(chars), en=en, act=act, dur=dur, sc=sc,
-                line=[line] if isinstance(line, str) else (line or []), os=os or [], ref=ref, sfx=list(sfx))
+                line=[line] if isinstance(line, str) else (line or []), os=os or [], ref=ref, sfx=list(sfx), screen=list(screen))
 
 SCENES = [
  dict(id='s01', sc='dorm_am', cards=[('毛坯人生，精装朋友圈', 4.0, 'title'), ('第一幕\n精装的门面', 2.5, 'act')], beats=[
@@ -83,7 +85,7 @@ SCENES = [
   b('s03_00', 'est', en='wide establishing shot, exterior of a Chinese university dormitory building in the afternoon, slanting sunlight, tree shadows moving on the wall',
     act='午后的大学宿舍楼外景，阳光斜照，树影在墙上晃动，镜头横移', dur=2.2),
   b('s03_01', 'new', [L], en='medium shot, the chubby young man lies sideways on his bed scrolling his phone, smug grin, takeout boxes and clutter on the desk beside him',
-    act=['他躺在床上刷手机，一边看评论一边笑', '他手指不停往上划，笑得更得意了'], dur=1.0, os=['A09', 'A10'], sfx=[(0.3, 'ding'), (1.9, 'ding')]),
+    act=['他躺在床上刷手机，一边看评论一边笑', '他手指不停往上划，笑得更得意了'], dur=1.0, screen=['A09', 'A10'], sfx=[(0.35, 'ding'), (2.95, 'ding')]),
   b('s03_02', 'cont', [L], act='手机上方弹出一条通知，他的笑容凝固，慢慢坐起来，脸色发白', dur=2.6, sfx=[(0.3, 'ding')]),
   b('s03_03', 'cut', [L], en='medium shot, the same young man now sits at his messy desk with dirty socks and takeout boxes, a computer screen shows a grade sheet with one row in red, his face in three-quarter view toward the camera',
     act='他盯着电脑屏幕上标红的成绩单，张嘴长长地叹了一口气，肩膀垮下来', dur=1.5, line='A11'),
@@ -118,7 +120,7 @@ SCENES = [
   b('s05_01', 'new', [L], en='medium shot, the chubby young man stands in the canteen queue holding a food tray, phone buzzing in his pocket',
     act='他感觉到裤兜里手机不停震动，以为是点赞，兴奋地掏出手机解锁', dur=2.8, sfx=[(0.3, 'buzz'), (0.9, 'buzz'), (1.5, 'buzz')]),
   b('s05_02', 'cut', [L], en='close-up, the same young man staring at his phone, his smile fading, face turning pale, lips trembling',
-    act=['他看着评论，笑容一点点消失', '他越往下看脸色越难看，手微微发抖', '他咬紧嘴唇，呆住'], dur=1.0, os=['B04', 'B05', 'B06']),
+    act=['他看着评论，笑容一点点消失', '他越往下看脸色越难看，手微微发抖', '他咬紧嘴唇，呆住'], dur=1.0, screen=['B04', 'B05', 'B06'], sfx=[(0.35, 'ding'), (6.35, 'ding'), (9.35, 'ding')]),
   b('s05_03', 'cut', [A, L], en='medium shot, the young man in the navy track jacket walks up from the left with a food tray and pats the shoulder of the chubby young man in the dark grey hoodie on the right, grinning',
     act=['他拍着对方肩膀，拖长音调侃，脸朝向镜头', '他笑着继续阴阳怪气地说'], dur=1.0, line='B07'),
   b('s05_04', 'new', [B], en='close-up, the young woman with a ponytail sits at a canteen table nearby covering her mouth, giggling, then lowering her hand to speak',
@@ -167,7 +169,7 @@ SCENES = [
   b('s07_05', 'cut', [Z], en='close-up of the same thin young man, a street lamp lighting his face from the side',
     act=['他停顿了一下，苦涩地说', '他的声音低下去'], dur=1.0, line='C04'),
   b('s07_06', 'new', [Z], sc='dorm_nt', en='flashback with a cold blue color grade: a dark dorm room at night, the thin young man with a buzz cut sits hugging his knees on his bed, a phone beside him glowing with an incoming call',
-    act=['回忆，冷色调：手机一直在响，他盯着屏幕不敢接', '他最后把手机扣在床上，把脸埋进膝盖'], dur=1.0, os=['C05']),
+    act=['回忆，冷色调：手机一直在响，他盯着屏幕不敢接', '他最后把手机扣在床上，把脸埋进膝盖'], dur=4.5, screen=['P01'], sfx=[(0.2, 'vibrate'), (1.6, 'vibrate'), (3.0, 'vibrate')]),
   b('s07_07', 'cut', [Z], ref='s07_05', en='close-up of the same thin young man on the night track, smiling bitterly, street lamp light',
     act=['他苦笑着说，声音有些沙哑', '他摇摇头接着说'], dur=1.0, line='C06'),
   b('s07_08', 'cut', [L], ref='s07_02', en='close-up, the same chubby young man looks up at him, stunned, lips pressed together',
@@ -175,13 +177,13 @@ SCENES = [
   b('s07_09', 'cut', [Z], ref='s07_07', en='close-up, the same thin young man lowers his head and smiles faintly',
     act='他低沉缓慢地说话', dur=1.0, line='C07a'),
   b('s07_10', 'new', [Z], sc='dorm_nt', en='flashback with a cold blue color grade: late at night in a dark dorm, the thin young man types on his phone, the screen light on his tired face',
-    act=['回忆，冷色调：他在黑暗里打字', '他犹豫很久，按下发送，长出一口气'], dur=1.0, os=['C07b']),
+    act=['回忆，冷色调：他在黑暗里打字', '他犹豫很久，按下发送，长出一口气'], dur=3.0, screen=['P02'], sfx=[(0.1, 'typing'), (2.5, 'send')]),
   b('s07_11', 'cut', [L], ref='s07_08', en='close-up, the same chubby young man on the night track asking softly, face visible',
     act='他关切地轻声问', dur=1.0, line='C08'),
   b('s07_12', 'cut', [Z], ref='s07_09', en='close-up, the same thin young man with slightly red eyes, his expression warming',
     act=['他带着感动说话', '他眼眶微红，接着说'], dur=1.0, line='C09'),
   b('s07_13', 'new', [Z], sc='dorm_am', en='flashback with a warm golden color grade: at a dorm door in the morning, two smiling young men (strangers) hand steaming takeaway lunch boxes to the thin young man with a buzz cut who has just opened the door',
-    act=['回忆，暖色调：朋友们把冒热气的饭盒塞到他手里，拍拍他的胳膊', '他愣住，然后笑了'], dur=1.0, os=['C10']),
+    act=['回忆，暖色调：朋友们把冒热气的饭盒塞到他手里，拍拍他的胳膊', '他愣住，然后笑了'], dur=4.0, sfx=[(0.2, 'knock')]),
   b('s07_14', 'cut', [Z], ref='s07_12', en='medium close-up, the same thin young man faces the camera under a street lamp on the night track',
     act=['他认真温和地说话，语重心长', '他看着学弟接着说', '他说完点了点头'], dur=1.0, line='C11'),
   b('s07_15', 'cont', [Z], act=['他真诚缓慢地说话', '他停顿了一下，轻声接着说'], dur=1.0, line=['C12a', 'C12b']),
@@ -252,7 +254,7 @@ SCENES = [
   b('s09_07', 'cut', [C], ref='s09_05', en='close-up, the same slim young man with glasses leaning on his bed, shrugging and smiling',
     act=['他耸耸肩，轻松随意地笑着说话', '他接着说，笑意更深'], dur=1.0, line='E04'),
   b('s09_08', 'cut', [L], ref='s09_06', en='close-up, the same chubby young man looking at his phone screen as comments pop up, eyes red but smiling',
-    act=['他看着手机，评论一条条弹出', '他眼眶泛红，嘴角扬起来，笑出了声'], dur=1.0, os=['E05', 'E06', 'X03'], sfx=[(0.3, 'ding'), (2.4, 'ding')]),
+    act=['他看着手机，评论一条条弹出', '他眼眶泛红，嘴角扬起来，笑出了声'], dur=1.0, screen=['E05', 'E06'], sfx=[(0.35, 'ding'), (5.95, 'ding')]),
   b('s09_09', 'cont', [L], act='他犹豫片刻，在通讯录里找到妈妈，按下拨号，把手机贴到耳边，深吸一口气', dur=3.0),
   b('s09_10', 'cut', [L], en='close-up, the same young man holding the phone to his ear, nervous, face and mouth clearly visible, warm desk lamp',
     act=['他紧张地停顿', '他终于把话说出口'], dur=1.0, line='H01'),
@@ -281,8 +283,10 @@ SCENES = [
     act='他又惊又喜地大笑着说', dur=1.0, line='F07'),
   b('s10_05', 'cut', [C, L, Z], en='medium shot, three young men squeeze together for a selfie on the sunny lawn, sunlight on their faces: the chubby one in the dark grey hoodie in the middle holding the phone',
     act='三人挤在一起对着镜头灿烂地笑，按下快门', dur=2.6, sfx=[(1.8, 'shutter')]),
-  b('s10_06', 'cont', [C, L, Z], act='中间的男生收起手机，搂住两人的肩膀，兴奋地招呼大家', dur=1.0, line='F04'),
+  b('s10_05b', 'cut', [L], ref='s10_04c', en='close-up, the chubby young man on the sunny lawn looks down at his phone and types with his thumb, then smiles at the screen, face visible',
+    act=['他低头打字，没修图，直接把原图发了出去', '手机一响，他看了一眼，笑得眼睛眯成一条缝'], dur=1.0, screen=['P03', 'P04'], sfx=[(0.1, 'typing'), (0.35, 'send'), (4.35, 'ding')]),
+  b('s10_06', 'cut', [C, L, Z], ref='s10_05', act='中间的男生收起手机，搂住两人的肩膀，兴奋地招呼大家', dur=1.0, line='F04'),
   b('s10_07', 'cut', [C, L, Z], en='medium shot from behind, three young men walk away arm in arm across the sunny lawn toward a canteen building',
-    act='三人勾肩搭背地走远', dur=1.0, os=['F05']),
+    act='三人勾肩搭背地走远，笑声越来越远', dur=4.0),
  ]),
 ]

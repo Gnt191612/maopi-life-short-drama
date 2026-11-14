@@ -54,24 +54,28 @@ def ff_path(p):
 def previs(seg_ids, out_mp4):
     """把若干片段的白模帧接起来，配上台词与字幕（开源字体 Noto Sans SC）"""
     tmp = os.path.join(PRE, 'tmp'); os.makedirs(tmp, exist_ok=True)
-    lst, events, t = [], [], 0.0
+    lst, events, screens, t = [], [], [], 0.0
     for sid in seg_ids:
         tl = json.load(open(os.path.join(config.SHOTS, sid + '_timeline.json'), encoding='utf-8'))
         frames = sorted(glob.glob(os.path.join(config.RENDERS, sid, 'beauty_*.png')))
         lst += frames
         for b in tl:
             for fr, lid in b['audio']: events.append((t + (fr - 1) / 24.0, lid))
+            for fr, sid, d in b.get('screen', []): screens.append((t + (fr - 1) / 24.0, sid, d))
         t += len(frames) / 24.0
     lp = os.path.join(tmp, 'frames.txt')
     open(lp, 'w', encoding='utf-8').write(''.join("file '%s'\nduration %.6f\n" % (f.replace('\\', '/'), 1 / 24) for f in lst))
     sr = 48000; mix = np.zeros(int((t + 1) * sr), np.float32)
     ass = ['[Script Info]', 'ScriptType: v4.00+', 'PlayResX: 960', 'PlayResY: 540', '', '[V4+ Styles]',
            'Format: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, BackColour, Bold, BorderStyle, Outline, Shadow, Alignment, MarginV',
-           'Style: D,%s,30,&H00FFFFFF,&H00000000,&H80000000,0,1,2,1,2,28' % config.FONT_NAME, '', '[Events]', 'Format: Layer, Start, End, Style, Text']
+           'Style: D,%s,30,&H00FFFFFF,&H00000000,&H80000000,0,1,2,1,2,28' % config.FONT_NAME,
+           'Style: P,%s,26,&H0000E5FF,&H00000000,&HA0000000,0,3,2,0,8,24' % config.FONT_NAME, '', '[Events]', 'Format: Layer, Start, End, Style, Text']
     for st, lid in events:
         w = load_wav(os.path.join(S.AUD, lid + '.wav')); i = int(st * sr); mix[i:i + len(w)] += w[:max(0, len(mix) - i)]
         if not lid.startswith('X'):
             ass.append('Dialogue: 0,%s,%s,D,%s：%s' % (ts(st), ts(st + S.META[lid]['dur']), S.TEXT[lid][0], S.TEXT[lid][1]))
+    for st, sid, d in screens:   # 手机屏幕文字（正片由 Remotion 合成到手机上；预演以画面上方黄字示意）
+        ass.append('Dialogue: 0,%s,%s,P,【手机】%s：%s' % (ts(st), ts(st + d), S.SCREEN[sid][0], S.SCREEN[sid][1]))
     wp = os.path.join(tmp, 'mix.wav')
     with wave.open(wp, 'wb') as wf:
         wf.setnchannels(1); wf.setsampwidth(2); wf.setframerate(sr); wf.writeframes((np.clip(mix, -1, 1) * 32767).astype(np.int16).tobytes())

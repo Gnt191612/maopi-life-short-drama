@@ -1,0 +1,1010 @@
+{
+ "林晓_1": {
+  "role": "林晓",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "moderate",
+  "text": "哎，你们别笑我啊，我就是想让大家觉得，我过得还挺不错的嘛。",
+  "dur": 5.58
+ },
+ "林晓_2": {
+  "role": "林晓",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "moderate",
+  "text": "哎，你们别笑我啊，我就是想让大家觉得，我过得还挺不错的嘛。",
+  "dur": 6.2
+ },
+ "林晓_3": {
+  "role": "林晓",
+  "gender": "male",
+  "pitch": "high",
+  "speed": "moderate",
+  "text": "哎，你们别笑我啊，我就是想让大家觉得，我过得还挺不错的嘛。",
+  "dur": 5.36
+ },
+ "林晓_4": {
+  "role": "林晓",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "high",
+  "text": "哎，你们别笑我啊，我就是想让大家觉得，我过得还挺不错的嘛。",
+  "dur": 4.66
+ },
+ "林晓_5": {
+  "role": "林晓",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "moderate",
+  "text": "哎，你们别笑我啊，我就是想让大家觉得，我过得还挺不错的嘛。",
+  "dur": 5.86
+ },
+ "林晓_6": {
+  "role": "林晓",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "moderate",
+  "text": "哎，你们别笑我啊，我就是想让大家觉得，我过得还挺不错的嘛。",
+  "dur": 5.62
+ },
+ "林晓_7": {
+  "role": "林晓",
+  "gender": "male",
+  "pitch": "high",
+  "speed": "moderate",
+  "text": "哎，你们别笑我啊，我就是想让大家觉得，我过得还挺不错的嘛。",
+  "dur": 5.94
+ },
+ "林晓_8": {
+  "role": "林晓",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "high",
+  "text": "哎，你们别笑我啊，我就是想让大家觉得，我过得还挺不错的嘛。",
+  "dur": 4.68
+ },
+ "林晓_9": {
+  "role": "林晓",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "moderate",
+  "text": "哎，你们别笑我啊，我就是想让大家觉得，我过得还挺不错的嘛。",
+  "dur": 5.42
+ },
+ "林晓_10": {
+  "role": "林晓",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "moderate",
+  "text": "哎，你们别笑我啊，我就是想让大家觉得，我过得还挺不错的嘛。",
+  "dur": 5.1
+ },
+ "林晓_11": {
+  "role": "林晓",
+  "gender": "male",
+  "pitch": "high",
+  "speed": "moderate",
+  "text": "哎，你们别笑我啊，我就是想让大家觉得，我过得还挺不错的嘛。",
+  "dur": 5.26
+ },
+ "林晓_12": {
+  "role": "林晓",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "high",
+  "text": "哎，你们别笑我啊，我就是想让大家觉得，我过得还挺不错的嘛。",
+  "dur": 4.7
+ },
+ "陈瑶_1": {
+  "role": "陈瑶",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "moderate",
+  "text": "我觉得这件事没那么复杂，你先别急，坐下来，我们慢慢说。",
+  "dur": 5.28
+ },
+ "陈瑶_2": {
+  "role": "陈瑶",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "moderate",
+  "text": "我觉得这件事没那么复杂，你先别急，坐下来，我们慢慢说。",
+  "dur": 5.38
+ },
+ "陈瑶_3": {
+  "role": "陈瑶",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "moderate",
+  "text": "我觉得这件事没那么复杂，你先别急，坐下来，我们慢慢说。",
+  "dur": 5.1
+ },
+ "陈瑶_4": {
+  "role": "陈瑶",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "low",
+  "text": "我觉得这件事没那么复杂，你先别急，坐下来，我们慢慢说。",
+  "dur": 6.46
+ },
+ "陈瑶_5": {
+  "role": "陈瑶",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "moderate",
+  "text": "我觉得这件事没那么复杂，你先别急，坐下来，我们慢慢说。",
+  "dur": 5.46
+ },
+ "陈瑶_6": {
+  "role": "陈瑶",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "moderate",
+  "text": "我觉得这件事没那么复杂，你先别急，坐下来，我们慢慢说。",
+  "dur": 5.06
+ },
+ "陈瑶_7": {
+  "role": "陈瑶",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "moderate",
+  "text": "我觉得这件事没那么复杂，你先别急，坐下来，我们慢慢说。",
+  "dur": 4.8
+ },
+ "陈瑶_8": {
+  "role": "陈瑶",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "low",
+  "text": "我觉得这件事没那么复杂，你先别急，坐下来，我们慢慢说。",
+  "dur": 7.04
+ },
+ "陈瑶_9": {
+  "role": "陈瑶",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "moderate",
+  "text": "我觉得这件事没那么复杂，你先别急，坐下来，我们慢慢说。",
+  "dur": 5.06
+ },
+ "陈瑶_10": {
+  "role": "陈瑶",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "moderate",
+  "text": "我觉得这件事没那么复杂，你先别急，坐下来，我们慢慢说。",
+  "dur": 5.4
+ },
+ "陈瑶_11": {
+  "role": "陈瑶",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "moderate",
+  "text": "我觉得这件事没那么复杂，你先别急，坐下来，我们慢慢说。",
+  "dur": 4.58
+ },
+ "陈瑶_12": {
+  "role": "陈瑶",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "low",
+  "text": "我觉得这件事没那么复杂，你先别急，坐下来，我们慢慢说。",
+  "dur": 6.84
+ },
+ "周明远_1": {
+  "role": "周明远",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "low",
+  "text": "那段时间我谁也不想见，后来才慢慢明白，朋友其实一直都在。",
+  "dur": 7.52
+ },
+ "周明远_2": {
+  "role": "周明远",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "low",
+  "text": "那段时间我谁也不想见，后来才慢慢明白，朋友其实一直都在。",
+  "dur": 8.68
+ },
+ "周明远_3": {
+  "role": "周明远",
+  "gender": "male",
+  "pitch": "very_low",
+  "speed": "low",
+  "text": "那段时间我谁也不想见，后来才慢慢明白，朋友其实一直都在。",
+  "dur": 8.5
+ },
+ "周明远_4": {
+  "role": "周明远",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "moderate",
+  "text": "那段时间我谁也不想见，后来才慢慢明白，朋友其实一直都在。",
+  "dur": 5.36
+ },
+ "周明远_5": {
+  "role": "周明远",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "low",
+  "text": "那段时间我谁也不想见，后来才慢慢明白，朋友其实一直都在。",
+  "dur": 7.22
+ },
+ "周明远_6": {
+  "role": "周明远",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "low",
+  "text": "那段时间我谁也不想见，后来才慢慢明白，朋友其实一直都在。",
+  "dur": 7.4
+ },
+ "周明远_7": {
+  "role": "周明远",
+  "gender": "male",
+  "pitch": "very_low",
+  "speed": "low",
+  "text": "那段时间我谁也不想见，后来才慢慢明白，朋友其实一直都在。",
+  "dur": 7.52
+ },
+ "周明远_8": {
+  "role": "周明远",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "moderate",
+  "text": "那段时间我谁也不想见，后来才慢慢明白，朋友其实一直都在。",
+  "dur": 5.66
+ },
+ "周明远_9": {
+  "role": "周明远",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "low",
+  "text": "那段时间我谁也不想见，后来才慢慢明白，朋友其实一直都在。",
+  "dur": 7.1
+ },
+ "周明远_10": {
+  "role": "周明远",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "low",
+  "text": "那段时间我谁也不想见，后来才慢慢明白，朋友其实一直都在。",
+  "dur": 7.26
+ },
+ "周明远_11": {
+  "role": "周明远",
+  "gender": "male",
+  "pitch": "very_low",
+  "speed": "low",
+  "text": "那段时间我谁也不想见，后来才慢慢明白，朋友其实一直都在。",
+  "dur": 7.74
+ },
+ "周明远_12": {
+  "role": "周明远",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "moderate",
+  "text": "那段时间我谁也不想见，后来才慢慢明白，朋友其实一直都在。",
+  "dur": 5.62
+ },
+ "王老师_1": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "moderate",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 5.08
+ },
+ "王老师_2": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "moderate",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 6.22
+ },
+ "王老师_3": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "moderate",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 6.38
+ },
+ "王老师_4": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "very_low",
+  "speed": "moderate",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 5.72
+ },
+ "王老师_5": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "low",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 7.68
+ },
+ "王老师_6": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "low",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 7.86
+ },
+ "王老师_7": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "low",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 7.48
+ },
+ "王老师_8": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "moderate",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 4.88
+ },
+ "王老师_9": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "high",
+  "speed": "low",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 7.4
+ },
+ "王老师_10": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "moderate",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 5.2
+ },
+ "王老师_11": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "moderate",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 4.92
+ },
+ "王老师_12": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "moderate",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 5.14
+ },
+ "王老师_13": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "moderate",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 4.92
+ },
+ "王老师_14": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "very_low",
+  "speed": "moderate",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 6.12
+ },
+ "王老师_15": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "low",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 8.48
+ },
+ "王老师_16": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "low",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 6.66
+ },
+ "王老师_17": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "low",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 7.22
+ },
+ "王老师_18": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "moderate",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 5.3
+ },
+ "王老师_19": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "high",
+  "speed": "low",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 6.96
+ },
+ "王老师_20": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "moderate",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 5.12
+ },
+ "王老师_21": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "moderate",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 5.46
+ },
+ "王老师_22": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "moderate",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 5.9
+ },
+ "王老师_23": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "moderate",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 5.84
+ },
+ "王老师_24": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "very_low",
+  "speed": "moderate",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 5.66
+ },
+ "王老师_25": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "low",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 8.62
+ },
+ "王老师_26": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "low",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 6.88
+ },
+ "王老师_27": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "low",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 7.86
+ },
+ "王老师_28": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "moderate",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 5.52
+ },
+ "王老师_29": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "high",
+  "speed": "low",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 6.76
+ },
+ "王老师_30": {
+  "role": "王老师",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "moderate",
+  "text": "今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。",
+  "dur": 4.94
+ },
+ "林母_1": {
+  "role": "林母",
+  "gender": "female",
+  "pitch": "moderate",
+  "speed": "moderate",
+  "text": "晓晓啊，最近吃得好不好？天冷了，记得多穿件衣服，别熬夜。",
+  "dur": 6.42
+ },
+ "林母_2": {
+  "role": "林母",
+  "gender": "female",
+  "pitch": "moderate",
+  "speed": "moderate",
+  "text": "晓晓啊，最近吃得好不好？天冷了，记得多穿件衣服，别熬夜。",
+  "dur": 5.74
+ },
+ "林母_3": {
+  "role": "林母",
+  "gender": "female",
+  "pitch": "low",
+  "speed": "moderate",
+  "text": "晓晓啊，最近吃得好不好？天冷了，记得多穿件衣服，别熬夜。",
+  "dur": 6.28
+ },
+ "林母_4": {
+  "role": "林母",
+  "gender": "female",
+  "pitch": "moderate",
+  "speed": "low",
+  "text": "晓晓啊，最近吃得好不好？天冷了，记得多穿件衣服，别熬夜。",
+  "dur": 6.6
+ },
+ "林母_5": {
+  "role": "林母",
+  "gender": "female",
+  "pitch": "moderate",
+  "speed": "moderate",
+  "text": "晓晓啊，最近吃得好不好？天冷了，记得多穿件衣服，别熬夜。",
+  "dur": 5.42
+ },
+ "林母_6": {
+  "role": "林母",
+  "gender": "female",
+  "pitch": "moderate",
+  "speed": "moderate",
+  "text": "晓晓啊，最近吃得好不好？天冷了，记得多穿件衣服，别熬夜。",
+  "dur": 6.08
+ },
+ "林母_7": {
+  "role": "林母",
+  "gender": "female",
+  "pitch": "low",
+  "speed": "moderate",
+  "text": "晓晓啊，最近吃得好不好？天冷了，记得多穿件衣服，别熬夜。",
+  "dur": 5.28
+ },
+ "林母_8": {
+  "role": "林母",
+  "gender": "female",
+  "pitch": "moderate",
+  "speed": "low",
+  "text": "晓晓啊，最近吃得好不好？天冷了，记得多穿件衣服，别熬夜。",
+  "dur": 6.84
+ },
+ "林母_9": {
+  "role": "林母",
+  "gender": "female",
+  "pitch": "moderate",
+  "speed": "moderate",
+  "text": "晓晓啊，最近吃得好不好？天冷了，记得多穿件衣服，别熬夜。",
+  "dur": 5.18
+ },
+ "林母_10": {
+  "role": "林母",
+  "gender": "female",
+  "pitch": "moderate",
+  "speed": "moderate",
+  "text": "晓晓啊，最近吃得好不好？天冷了，记得多穿件衣服，别熬夜。",
+  "dur": 5.04
+ },
+ "林母_11": {
+  "role": "林母",
+  "gender": "female",
+  "pitch": "low",
+  "speed": "moderate",
+  "text": "晓晓啊，最近吃得好不好？天冷了，记得多穿件衣服，别熬夜。",
+  "dur": 5.88
+ },
+ "林母_12": {
+  "role": "林母",
+  "gender": "female",
+  "pitch": "moderate",
+  "speed": "low",
+  "text": "晓晓啊，最近吃得好不好？天冷了，记得多穿件衣服，别熬夜。",
+  "dur": 6.7
+ },
+ "同学甲_1": {
+  "role": "同学甲",
+  "gender": "male",
+  "pitch": "high",
+  "speed": "high",
+  "text": "哟，这不是咱们的学霸晓哥嘛，今天又去图书馆打卡啦？",
+  "dur": 4.08
+ },
+ "同学甲_2": {
+  "role": "同学甲",
+  "gender": "male",
+  "pitch": "high",
+  "speed": "moderate",
+  "text": "哟，这不是咱们的学霸晓哥嘛，今天又去图书馆打卡啦？",
+  "dur": 4.38
+ },
+ "同学甲_3": {
+  "role": "同学甲",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "high",
+  "text": "哟，这不是咱们的学霸晓哥嘛，今天又去图书馆打卡啦？",
+  "dur": 3.94
+ },
+ "同学甲_4": {
+  "role": "同学甲",
+  "gender": "male",
+  "pitch": "high",
+  "speed": "high",
+  "text": "哟，这不是咱们的学霸晓哥嘛，今天又去图书馆打卡啦？",
+  "dur": 4.06
+ },
+ "同学甲_5": {
+  "role": "同学甲",
+  "gender": "male",
+  "pitch": "high",
+  "speed": "high",
+  "text": "哟，这不是咱们的学霸晓哥嘛，今天又去图书馆打卡啦？",
+  "dur": 4.14
+ },
+ "同学甲_6": {
+  "role": "同学甲",
+  "gender": "male",
+  "pitch": "high",
+  "speed": "moderate",
+  "text": "哟，这不是咱们的学霸晓哥嘛，今天又去图书馆打卡啦？",
+  "dur": 4.5
+ },
+ "同学甲_7": {
+  "role": "同学甲",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "high",
+  "text": "哟，这不是咱们的学霸晓哥嘛，今天又去图书馆打卡啦？",
+  "dur": 4.14
+ },
+ "同学甲_8": {
+  "role": "同学甲",
+  "gender": "male",
+  "pitch": "high",
+  "speed": "high",
+  "text": "哟，这不是咱们的学霸晓哥嘛，今天又去图书馆打卡啦？",
+  "dur": 4.1
+ },
+ "同学甲_9": {
+  "role": "同学甲",
+  "gender": "male",
+  "pitch": "high",
+  "speed": "high",
+  "text": "哟，这不是咱们的学霸晓哥嘛，今天又去图书馆打卡啦？",
+  "dur": 4.02
+ },
+ "同学甲_10": {
+  "role": "同学甲",
+  "gender": "male",
+  "pitch": "high",
+  "speed": "moderate",
+  "text": "哟，这不是咱们的学霸晓哥嘛，今天又去图书馆打卡啦？",
+  "dur": 4.5
+ },
+ "同学甲_11": {
+  "role": "同学甲",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "high",
+  "text": "哟，这不是咱们的学霸晓哥嘛，今天又去图书馆打卡啦？",
+  "dur": 4.34
+ },
+ "同学甲_12": {
+  "role": "同学甲",
+  "gender": "male",
+  "pitch": "high",
+  "speed": "high",
+  "text": "哟，这不是咱们的学霸晓哥嘛，今天又去图书馆打卡啦？",
+  "dur": 4.1
+ },
+ "同学乙_1": {
+  "role": "同学乙",
+  "gender": "female",
+  "pitch": "high",
+  "speed": "moderate",
+  "text": "其实我也经常这样，发之前要修好久的图，想想也挺累的。",
+  "dur": 4.7
+ },
+ "同学乙_2": {
+  "role": "同学乙",
+  "gender": "female",
+  "pitch": "high",
+  "speed": "moderate",
+  "text": "其实我也经常这样，发之前要修好久的图，想想也挺累的。",
+  "dur": 4.82
+ },
+ "同学乙_3": {
+  "role": "同学乙",
+  "gender": "female",
+  "pitch": "moderate",
+  "speed": "moderate",
+  "text": "其实我也经常这样，发之前要修好久的图，想想也挺累的。",
+  "dur": 5.0
+ },
+ "同学乙_4": {
+  "role": "同学乙",
+  "gender": "female",
+  "pitch": "very_high",
+  "speed": "moderate",
+  "text": "其实我也经常这样，发之前要修好久的图，想想也挺累的。",
+  "dur": 4.84
+ },
+ "同学乙_5": {
+  "role": "同学乙",
+  "gender": "female",
+  "pitch": "high",
+  "speed": "moderate",
+  "text": "其实我也经常这样，发之前要修好久的图，想想也挺累的。",
+  "dur": 5.04
+ },
+ "同学乙_6": {
+  "role": "同学乙",
+  "gender": "female",
+  "pitch": "high",
+  "speed": "moderate",
+  "text": "其实我也经常这样，发之前要修好久的图，想想也挺累的。",
+  "dur": 5.26
+ },
+ "同学乙_7": {
+  "role": "同学乙",
+  "gender": "female",
+  "pitch": "moderate",
+  "speed": "moderate",
+  "text": "其实我也经常这样，发之前要修好久的图，想想也挺累的。",
+  "dur": 5.34
+ },
+ "同学乙_8": {
+  "role": "同学乙",
+  "gender": "female",
+  "pitch": "very_high",
+  "speed": "moderate",
+  "text": "其实我也经常这样，发之前要修好久的图，想想也挺累的。",
+  "dur": 5.12
+ },
+ "同学乙_9": {
+  "role": "同学乙",
+  "gender": "female",
+  "pitch": "high",
+  "speed": "moderate",
+  "text": "其实我也经常这样，发之前要修好久的图，想想也挺累的。",
+  "dur": 4.76
+ },
+ "同学乙_10": {
+  "role": "同学乙",
+  "gender": "female",
+  "pitch": "high",
+  "speed": "moderate",
+  "text": "其实我也经常这样，发之前要修好久的图，想想也挺累的。",
+  "dur": 5.1
+ },
+ "同学乙_11": {
+  "role": "同学乙",
+  "gender": "female",
+  "pitch": "moderate",
+  "speed": "moderate",
+  "text": "其实我也经常这样，发之前要修好久的图，想想也挺累的。",
+  "dur": 4.94
+ },
+ "同学乙_12": {
+  "role": "同学乙",
+  "gender": "female",
+  "pitch": "very_high",
+  "speed": "moderate",
+  "text": "其实我也经常这样，发之前要修好久的图，想想也挺累的。",
+  "dur": 4.92
+ },
+ "网友_1": {
+  "role": "网友",
+  "gender": "female",
+  "pitch": "high",
+  "speed": "high",
+  "text": "哈哈哈，这也太真实了吧，我也是这样的。",
+  "dur": 2.7
+ },
+ "网友_2": {
+  "role": "网友",
+  "gender": "female",
+  "pitch": "moderate",
+  "speed": "high",
+  "text": "哈哈哈，这也太真实了吧，我也是这样的。",
+  "dur": 2.58
+ },
+ "网友_3": {
+  "role": "网友",
+  "gender": "female",
+  "pitch": "high",
+  "speed": "high",
+  "text": "哈哈哈，这也太真实了吧，我也是这样的。",
+  "dur": 3.2
+ },
+ "网友_4": {
+  "role": "网友",
+  "gender": "female",
+  "pitch": "moderate",
+  "speed": "high",
+  "text": "哈哈哈，这也太真实了吧，我也是这样的。",
+  "dur": 3.24
+ },
+ "网友_5": {
+  "role": "网友",
+  "gender": "female",
+  "pitch": "high",
+  "speed": "high",
+  "text": "哈哈哈，这也太真实了吧，我也是这样的。",
+  "dur": 3.3
+ },
+ "网友_6": {
+  "role": "网友",
+  "gender": "female",
+  "pitch": "moderate",
+  "speed": "high",
+  "text": "哈哈哈，这也太真实了吧，我也是这样的。",
+  "dur": 2.98
+ },
+ "网友2_1": {
+  "role": "网友2",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "high",
+  "text": "哈哈哈，这也太真实了吧，我也是这样的。",
+  "dur": 3.3
+ },
+ "网友2_2": {
+  "role": "网友2",
+  "gender": "male",
+  "pitch": "high",
+  "speed": "high",
+  "text": "哈哈哈，这也太真实了吧，我也是这样的。",
+  "dur": 3.02
+ },
+ "网友2_3": {
+  "role": "网友2",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "high",
+  "text": "哈哈哈，这也太真实了吧，我也是这样的。",
+  "dur": 3.0
+ },
+ "网友2_4": {
+  "role": "网友2",
+  "gender": "male",
+  "pitch": "high",
+  "speed": "high",
+  "text": "哈哈哈，这也太真实了吧，我也是这样的。",
+  "dur": 3.3
+ },
+ "网友2_5": {
+  "role": "网友2",
+  "gender": "male",
+  "pitch": "moderate",
+  "speed": "high",
+  "text": "哈哈哈，这也太真实了吧，我也是这样的。",
+  "dur": 2.88
+ },
+ "网友2_6": {
+  "role": "网友2",
+  "gender": "male",
+  "pitch": "high",
+  "speed": "high",
+  "text": "哈哈哈，这也太真实了吧，我也是这样的。",
+  "dur": 3.12
+ },
+ "网友3_1": {
+  "role": "网友3",
+  "gender": "female",
+  "pitch": "very_high",
+  "speed": "high",
+  "text": "哈哈哈，这也太真实了吧，我也是这样的。",
+  "dur": 3.42
+ },
+ "网友3_2": {
+  "role": "网友3",
+  "gender": "female",
+  "pitch": "moderate",
+  "speed": "moderate",
+  "text": "哈哈哈，这也太真实了吧，我也是这样的。",
+  "dur": 3.4
+ },
+ "网友3_3": {
+  "role": "网友3",
+  "gender": "female",
+  "pitch": "very_high",
+  "speed": "high",
+  "text": "哈哈哈，这也太真实了吧，我也是这样的。",
+  "dur": 3.22
+ },
+ "网友3_4": {
+  "role": "网友3",
+  "gender": "female",
+  "pitch": "moderate",
+  "speed": "moderate",
+  "text": "哈哈哈，这也太真实了吧，我也是这样的。",
+  "dur": 3.4
+ },
+ "网友3_5": {
+  "role": "网友3",
+  "gender": "female",
+  "pitch": "very_high",
+  "speed": "high",
+  "text": "哈哈哈，这也太真实了吧，我也是这样的。",
+  "dur": 3.2
+ },
+ "网友3_6": {
+  "role": "网友3",
+  "gender": "female",
+  "pitch": "moderate",
+  "speed": "moderate",
+  "text": "哈哈哈，这也太真实了吧，我也是这样的。",
+  "dur": 4.32
+ },
+ "VO_1": {
+  "role": "VO",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "low",
+  "text": "每个人都在努力地生活，也都值得被温柔地对待。",
+  "dur": 6.08
+ },
+ "VO_2": {
+  "role": "VO",
+  "gender": "male",
+  "pitch": "very_low",
+  "speed": "low",
+  "text": "每个人都在努力地生活，也都值得被温柔地对待。",
+  "dur": 5.24
+ },
+ "VO_3": {
+  "role": "VO",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "low",
+  "text": "每个人都在努力地生活，也都值得被温柔地对待。",
+  "dur": 5.7
+ },
+ "VO_4": {
+  "role": "VO",
+  "gender": "male",
+  "pitch": "very_low",
+  "speed": "low",
+  "text": "每个人都在努力地生活，也都值得被温柔地对待。",
+  "dur": 6.04
+ },
+ "VO_5": {
+  "role": "VO",
+  "gender": "male",
+  "pitch": "low",
+  "speed": "low",
+  "text": "每个人都在努力地生活，也都值得被温柔地对待。",
+  "dur": 5.82
+ },
+ "VO_6": {
+  "role": "VO",
+  "gender": "male",
+  "pitch": "very_low",
+  "speed": "low",
+  "text": "每个人都在努力地生活，也都值得被温柔地对待。",
+  "dur": 5.58
+ }
+}

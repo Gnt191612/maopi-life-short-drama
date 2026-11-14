@@ -14,3 +14,13 @@ __pycache__/
 *.pyc
 remotion/node_modules/
 remotion/out/
+
+# 音色候选只提交各角色选中的参考音（其余可由 voice_design.py 重新生成）
+voice_tools/voices_v2/*.wav
+!voice_tools/voices_v2/林晓_12.wav
+!voice_tools/voices_v2/陈瑶_3.wav
+!voice_tools/voices_v2/周明远_6.wav
+!voice_tools/voices_v2/王老师_30.wav
+!voice_tools/voices_v2/林母_1.wav
+!voice_tools/voices_v2/同学甲_5.wav
+!voice_tools/voices_v2/同学乙_5.wav

@@ -157,6 +157,7 @@ SCN = {
     's10_04b': {'zhou': S(arms='phone')},
     's10_04c': {'zhou': S(arms='down')},
     's10_05': {'chen': S(pos=(-0.45, 0, 0), face=0, arms='down', reach=None), 'lin': S(arms='selfie'), 'zhou': S(pos=(0.45, 0, 0), face=0, arms='down')},
+    's10_05b': {'lin': S(arms='phone')},
     's10_06': {'lin': S(arms='down')},
     's10_07': {'lin': Wk(pos=(0, 12, 0), face=180), 'chen': Wk(pos=(-0.5, 12, 0), face=180), 'zhou': Wk(pos=(0.5, 12, 0), face=180)},
    }),

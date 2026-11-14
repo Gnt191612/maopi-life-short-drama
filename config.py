@@ -24,6 +24,10 @@ MOCAP = P('build', 'mocap')        # CMU 动作捕捉片段（安装脚本下载
 SHOTS = P('build', 'shots')        # 每个片段的完整动画 .blend（可重新生成）
 RENDERS = P('build', 'renders')    # 白模画面 / 深度图（可重新生成）
 PREVIS = P('build', 'previs')      # 预演视频（可重新生成）
+# 快速剧情预览：V11_PREVIEW=1 时用 EEVEE 低分辨率渲染，输出与正式渲染分开存放
+PREVIEW = os.environ.get('V11_PREVIEW') == '1'
+if PREVIEW:
+    RENDERS = P('build', 'renders_preview'); PREVIS = P('build', 'previs_preview')
 LOGS = P('build', 'logs')
 
 # ---- 外部工具（.tools/ 下，由 setup 脚本下载）----

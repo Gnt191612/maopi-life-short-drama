@@ -3,7 +3,7 @@
 import os, json
 import config
 from story_scenes import SCENES
-from lines import LINES
+from lines import LINES, SCREEN
 
 FPS, LEAD = 24, 0.35
 AUD = config.AUDIO
@@ -19,9 +19,24 @@ def audio_plan(bt):
     for l in bt['os']: out.append((t, l, False)); t += META[l]['dur'] + 0.25
     return out
 
+def read_time(sid):
+    """手机屏幕文字的阅读时长：1 秒反应 + 每字 0.2 秒"""
+    return 1.0 + 0.2 * len(SCREEN[sid][1])
+
+def screen_plan(bt):
+    """[(开始秒, 屏幕文字id, 显示秒数)]：说完的台词之后，评论/来电/动态一条条弹出"""
+    ap = audio_plan(bt)
+    t = max([o + META[l]['dur'] for o, l, _ in ap], default=LEAD - 0.1) + 0.1
+    out = []
+    for sid in bt.get('screen', []):
+        out.append((t, sid, read_time(sid))); t += read_time(sid)
+    return out
+
 def beat_dur(bt):
     ap = audio_plan(bt)
     end = max([o + META[l]['dur'] for o, l, _ in ap], default=0) + (0.45 if ap else 0)
+    sp = screen_plan(bt)
+    if sp: end = max(end, sp[-1][0] + sp[-1][2] + 0.3)
     return max(bt['dur'], end)
 
 def beat_frames(bt):

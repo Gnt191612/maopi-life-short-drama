@@ -1,5 +1,5 @@
-﻿# 可选：安装配音模型（只有要修改台词、重新配音时才需要；成片所用的 78 句配音已作为固定资产在 assets/audio/）
-# 由 setup_windows.ps1 -WithTTS 调用，也可单独运行。需要：git、Python 3.10、NVIDIA GPU（约 10 GB 磁盘）
+﻿# 可选：安装配音模型（只有要修改台词、重新配音时才需要；成片所用的全部配音已作为固定资产在 assets/audio/）
+# 由 setup_windows.ps1 -WithTTS 调用，也可单独运行。需要：git、Python 3.10、NVIDIA GPU（约 15 GB 磁盘）
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot; $T = Join-Path $Root '.tools'
 $Proxy = if ($env:HTTPS_PROXY) { @('-x', $env:HTTPS_PROXY) } else { @() }
@@ -22,15 +22,17 @@ python -m venv "$T\sparkenv"
 & "$T\sparkenv\Scripts\python.exe" -m pip install torch==2.6.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124
 & "$T\sparkenv\Scripts\python.exe" -m pip install transformers==4.46.2 einx==0.3.0 einops omegaconf soundfile soxr safetensors
 
-Write-Host '[TTS 2/2] CosyVoice2（台词配音，Apache-2.0）'
-if (-not (Test-Path "$T\CosyVoice")) { git clone --recursive https://github.com/FunAudioLLM/CosyVoice.git "$T\CosyVoice" }
-python -m venv "$T\cosyenv"
-& "$T\cosyenv\Scripts\python.exe" -m pip install -r "$T\CosyVoice\requirements.txt"
-& "$T\cosyenv\Scripts\python.exe" -m pip install openai-whisper pypinyin
-& "$T\cosyenv\Scripts\python.exe" -c "from modelscope import snapshot_download; snapshot_download('iic/CosyVoice2-0.5B', local_dir=r'$T\CosyVoice\pretrained_models\CosyVoice2-0.5B')"
+Write-Host '[TTS 2/2] IndexTTS2（台词配音，B 站开源；代码与模型许可见 THIRD_PARTY_LICENSES.md）'
+if (-not (Test-Path "$T\index-tts")) { git clone --depth 1 https://github.com/index-tts/index-tts.git "$T\index-tts" }
+Push-Location "$T\index-tts"
+python -m pip install -q uv
+python -m uv sync --python 3.11
+python -m uv pip install --python .venv\Scripts\python.exe pypinyin
+.venv\Scripts\hf.exe download IndexTeam/IndexTTS-2 --local-dir=checkpoints   # 约 5.9 GB；首次配音时还会自动下载约 3 GB 辅助模型
+Pop-Location
 
 Write-Host ''
 Write-Host '配音模型安装完成。重新配音：'
-Write-Host "  $T\sparkenv\Scripts\python.exe voice_tools\voice_design.py   （生成候选音色）"
-Write-Host "  $T\cosyenv\Scripts\python.exe voice_tools\voice_pick.py      （自动挑选音色）"
-Write-Host "  $T\cosyenv\Scripts\python.exe voice_tools\tts10.py           （生成全部台词到 assets\audio）"
+Write-Host "  `$env:V11_SPARK_DIR='$T\Spark-TTS'; $T\sparkenv\Scripts\python.exe voice_tools\voice_design.py   （生成候选音色；第二轮参数见 voice_tools\README）"
+Write-Host "  $T\index-tts\.venv\Scripts\python.exe voice_tools\voice_pick2.py   （自动挑选音色 -> voices_v2\pick.json）"
+Write-Host "  $T\index-tts\.venv\Scripts\python.exe voice_tools\tts11.py         （按语气说明生成全部台词到 assets\audio）"

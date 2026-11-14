@@ -151,6 +151,29 @@ def hood(rig, rgb):
     bpy.ops.object.transform_apply(scale=True)
     h.data.materials.append(fabric('lin_hood_m', rgb)); bone_child(h, rig, 'neck01'); return h
 
+# 成品发型素材（MakeHuman 社区高精度发型，CC-BY，作者署名见 THIRD_PARTY_LICENSES.md）；其余角色用代码生成的发丝
+HAIR_ASSET = {}   # 成品雕刻发型实测像塑料假发、款式复古，不直接使用（2026-11-14）
+# 发型轮廓素材：只用来定义发型外形，真实发丝沿着它生成（林母的微卷短发）
+HAIR_SHAPE = {'mom': r'mh_community\hair02\hair\elvs_wavy_bob\elvs_wavy_bob.mhclo'}
+HAIR_COLOR = {'mom': (0.030, 0.027, 0.026)}   # 林母：黑发里带一点灰；其余为自然黑发
+
+def recolor_asset_hair(obj, rgb=(0.014, 0.011, 0.009)):
+    """成品发型改成自然黑发：保留贴图的明暗与发丝细节（转灰度），只替换颜色"""
+    for slot in obj.material_slots:
+        m = slot.material
+        if not m or not m.use_nodes: continue
+        nt = m.node_tree; b = next((n for n in nt.nodes if n.type == 'BSDF_PRINCIPLED'), None)
+        if not b: continue
+        src = b.inputs['Base Color'].links[0].from_socket if b.inputs['Base Color'].links else None
+        bw = nt.nodes.new('ShaderNodeRGBToBW'); mul = nt.nodes.new('ShaderNodeMath'); mul.operation = 'MULTIPLY'; mul.inputs[1].default_value = 1.8
+        mix = nt.nodes.new('ShaderNodeMix'); mix.data_type = 'RGBA'; mix.blend_type = 'MULTIPLY'
+        mix.inputs[6].default_value = (*rgb, 1); mix.inputs[7].default_value = (1, 1, 1, 1)
+        if src: nt.links.new(src, bw.inputs['Color']); nt.links.new(bw.outputs[0], mul.inputs[0]); nt.links.new(mul.outputs[0], mix.inputs['Factor'])
+        else: mix.inputs['Factor'].default_value = 0.6
+        nt.links.new(mix.outputs[2], b.inputs['Base Color'])
+        b.inputs['Roughness'].default_value = 0.42
+        if 'Coat Weight' in b.inputs: b.inputs['Coat Weight'].default_value = 0.15
+
 def build(cid):
     name, g, age, wt, mu, ht, pr, suit, hair_name, top, bottom = CAST[cid]
     bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -182,6 +205,14 @@ def build(cid):
         elif 'shoes' in rel: recolor(o, (0.9, 0.9, 0.9) if cid in ('chen', 'classB') else (0.08, 0.08, 0.08))
         o.name = '%s_%s' % (cid, rel.split('/')[1])
     shell = parts.get('hair/%s/%s.mhclo' % (hair_name, hair_name))   # 真实发丝：以发片为发型轮廓生长
+    if cid in HAIR_ASSET:   # 成品发型：替换系统发片，不生成发丝
+        if shell is not None: bpy.data.objects.remove(shell, do_unlink=True); shell = None
+        ha = HumanService.add_mhclo_asset(os.path.join(config.TOOLS, HAIR_ASSET[cid]), body, asset_type='Hair', subdiv_levels=1)
+        ha.name = cid + '_hair'; recolor_asset_hair(ha, HAIR_COLOR.get(cid, (0.014, 0.011, 0.009)))
+    if cid in HAIR_SHAPE:   # 用社区发型做轮廓（替换系统发片），发丝沿着它生成
+        if shell is not None: bpy.data.objects.remove(shell, do_unlink=True)
+        shell = HumanService.add_mhclo_asset(os.path.join(config.TOOLS, HAIR_SHAPE[cid]), body, asset_type='Hair', subdiv_levels=1); shell.name = cid + '_hairshape'
+        hair_name = 'wavybob'
     if shell is not None and os.environ.get('V11_STRANDS', '1') == '1':
         bpy.context.view_layer.update(); hair.build(cid, rig, body, shell, hair_name, seed=sum(map(ord, cid)))
     sd = body.modifiers.new('subdiv', 'SUBSURF'); sd.levels = 0; sd.render_levels = 2   # 渲染时细分，去掉多边形棱角

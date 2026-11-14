@@ -14,14 +14,22 @@
 | Noto Sans SC | 字幕与字卡字体 | SIL Open Font License 1.1 | https://fonts.google.com/noto/specimen/Noto+Sans+SC |
 | Spark-TTS（代码） | 音色设计 | Apache-2.0 | https://github.com/SparkAudio/Spark-TTS |
 | Spark-TTS-0.5B（模型权重） | 音色设计 | **CC BY-NC-SA 4.0（仅限非商业用途）** | https://huggingface.co/SparkAudio/Spark-TTS-0.5B |
-| CosyVoice2-0.5B | 台词配音（零样本克隆） | Apache-2.0 | https://github.com/FunAudioLLM/CosyVoice |
+| IndexTTS2（代码与模型权重） | 台词配音（音色克隆 + 逐句情绪控制） | bilibili Model Use License Agreement（全文见 `licenses/`） | https://github.com/index-tts/index-tts |
+| MakeHuman 社区发型包 hair02 / hair03 | 发型轮廓参考（林母） | CC-BY（作者署名见包内说明） | http://www.makehumancommunity.org |
 | Whisper | 配音字错率自动校验 | MIT | https://github.com/openai/whisper |
 | Remotion | 最终合成 | Remotion License（个人及 3 人以下团队免费，其他需购买公司许可） | https://www.remotion.dev/license |
 | three.js | 网页预演查看器 | MIT | https://threejs.org |
 
 ## 关于配音资产的特别说明
 
-`assets/audio/` 中的 78 句配音由 CosyVoice2 克隆生成，克隆所用的参考音色由 Spark-TTS 设计生成。
+`assets/audio/` 中的全部台词配音由 **IndexTTS2** 生成（音色参考由 Spark-TTS 设计，不克隆任何真人；情绪按台词表的语气说明逐句控制）。
+按 bilibili Model Use License Agreement 的要求特此声明：
+
+> Any modifications made to the original model in this Derivative Work are not endorsed, warranted, or guaranteed by the original right-holder of the original model, and the original right-holder disclaims all liability related to this Derivative Work.
+> （本衍生作品对原模型所做的任何修改均未获得原权利人的认可、保证或担保，原权利人不承担与本衍生作品有关的任何责任。）
+
+协议全文随仓库（`licenses/bilibili_IndexTTS2_LICENSE*.txt`）和配音资产包（`assets/audio/bilibili_IndexTTS2_LICENSE.txt`）一并分发；
+使用、再分发本仓库配音的人同样须遵守该协议。
 由于 Spark-TTS 模型权重采用 CC BY-NC-SA 4.0 许可，本仓库的配音及参考音色同样以 **CC BY-NC-SA 4.0** 发布，**仅限非商业用途**。
 如需商业使用，请换用商业许可的配音方案重新配音（`voice_tools/` 提供了完整流程）。
 

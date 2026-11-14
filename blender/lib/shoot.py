@@ -12,7 +12,7 @@ import poses, face, retarget, sets
 import blocking
 
 VIS = config.VISEMES; MOCAP = config.MOCAP
-from segments import FPS, LEAD, META, TEXT, CID, EST_SET, audio_plan, beat_dur, beat_frames, loc_of, segments
+from segments import FPS, LEAD, META, TEXT, CID, EST_SET, audio_plan, screen_plan, beat_dur, beat_frames, loc_of, segments
 
 # ---------------- 场景/角色装配 ----------------
 def append_cast(cid):
@@ -218,7 +218,8 @@ def build_segment(seg_id, scene, set_name, beats):
         if cam is not cam_prev:
             m = sc.timeline_markers.new(bt['id'], frame=f0); m.camera = cam
         cam_prev = cam
-        timeline.append(dict(id=bt['id'], f0=f0, f1=f1, audio=[(round(f0 + o * FPS), l) for o, l, _ in audio_plan(bt)]))
+        timeline.append(dict(id=bt['id'], f0=f0, f1=f1, audio=[(round(f0 + o * FPS), l) for o, l, _ in audio_plan(bt)],
+                             screen=[(round(f0 + o * FPS), sid, d) for o, sid, d in screen_plan(bt)], sfx=bt.get('sfx', [])))
         f = f1 + 1
     sc.frame_start, sc.frame_end = 1, f - 1
     sc.camera = sc.timeline_markers[0].camera if sc.timeline_markers else None
@@ -235,6 +236,9 @@ def setup_render(out_dir, w=960, h=540):
     for d in prefs.devices: d.use = (d.type == 'OPTIX')
     sc.cycles.samples = int(os.environ.get('CY_SAMPLES', 64)); sc.cycles.use_denoising = True; sc.cycles.denoiser = 'OPENIMAGEDENOISE'
     sc.cycles.max_bounces = 6
+    if config.PREVIEW:   # 剧情预览：EEVEE 实时引擎，640x360，单帧不到 1 秒
+        sc.render.engine = 'BLENDER_EEVEE_NEXT'; sc.render.resolution_x, sc.render.resolution_y = 640, 360
+        sc.eevee.taa_render_samples = 16
     sc.view_settings.view_transform = 'AgX'; sc.view_settings.look = 'AgX - Medium High Contrast'
     night = any(k in bpy.data.filepath + sc.get('v11_set', '') for k in ('_nt', 'track', 'dusk'))
     sc.view_settings.exposure = 1.3 if night else 0.0          # 夜景提亮，避免整段死黑
