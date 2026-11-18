@@ -28,6 +28,10 @@ BASE = {
  'hug_knees': dict(dz=-0.85, pitch=0, spine=V(0, -0.35, 1), uleg=V(0.12, -0.6, 0.8), lleg=V(0.05, 0.25, -1), foot=V(0, -1, -0.2)),
  'lie':    dict(dz=-0.80, pitch=-90, spine=V(0, 0, 1), uleg=V(0, 0, -1), lleg=V(0, 0, -1), foot=V(0, -1, -0.3)),
  'crouch': dict(dz=-0.42, pitch=0, spine=V(0, -0.35, 1), uleg=V(0.12, -1, 0.35), lleg=V(0.04, 0.5, -1), foot=V(0, -1, -0.2)),
+ 'climbA': dict(dz=0.0, pitch=0, spine=V(0, -0.15, 1), uleg=V(0.05, -0.75, -0.65), lleg=V(0, 0.15, -1), foot=V(0, -1, -0.3),
+                 ulegL=V(-0.04, -0.05, -1), llegL=V(0, 0.05, -1)),   # 爬梯：右膝抬到上一级横档，左腿伸直
+ 'climbB': dict(dz=0.0, pitch=0, spine=V(0, -0.15, 1), uleg=V(0.04, -0.05, -1), lleg=V(0, 0.05, -1), foot=V(0, -1, -0.3),
+                 ulegL=V(-0.05, -0.75, -0.65), llegL=V(0, 0.15, -1)),
  'slump':  dict(dz=-0.42, pitch=0, spine=V(0, -1, 0.55), uleg=V(0.05, -1, 0.04), lleg=V(0, 0.12, -1), foot=V(0, -1, -0.3), head=V(0, -0.6, -0.8)),
 }
 # ---- 手臂叠加：右臂 (上臂, 前臂) 方向；左臂缺省 = 右臂镜像；None = 自然下垂 ----
@@ -43,7 +47,7 @@ ARMS = {
  'cover_face': dict(R=(V(-0.1, -0.55, -0.83), V(0.25, -0.35, 0.9)), head=V(0, -0.45, 0.89)),
  'wave':       dict(R=(V(-0.75, -0.1, 0.55), V(-0.15, -0.1, 1)), L=DOWN_R),
  'clap':       dict(R=(V(-0.1, -0.45, -0.88), V(0.55, -0.8, 0.25))),
- 'desk':       dict(R=(V(-0.05, -0.5, -0.86), V(0.15, -1, 0.0))),                                                                 # 手放桌上
+ 'desk':       dict(R=(V(-0.05, -0.5, -0.86), V(0.15, -1, 0.0)), ik='desk'),                                                      # 手放桌上（IK：前臂实际落在桌面）
  'tray':       dict(R=(V(-0.08, -0.25, -0.96), V(0.12, -1, 0.05)), prop='tray'),
  'pocket':     dict(R=(V(-0.15, 0.15, -1), V(0.25, -0.25, -1))),
  'gesture':    dict(R=(V(-0.2, -0.3, -0.93), V(-0.05, -0.9, 0.45)), L=DOWN_R),                                                  # 说话时比划
@@ -51,11 +55,36 @@ ARMS = {
  'cup':        dict(R=(V(-0.1, -0.5, -0.86), V(0.1, -1, 0.1)), L=DOWN_R, prop='hand'),
  'backpack':   dict(R=(V(-0.05, 0.25, -0.97), V(-0.1, -0.3, 0.95)), L=DOWN_R),                                                  # 一手拽书包带
  'knees':      dict(R=(V(-0.2, -0.75, -0.6), V(0.6, -0.4, -0.2))),                                                              # 抱膝
+ 'climb':      dict(R=(V(-0.15, -0.55, 0.8), V(-0.05, -0.35, 1))),                                                             # 双手握梯子扶手
  'face_hands': dict(R=(V(-0.15, -0.7, -0.7), V(0.35, -0.25, 0.9)), head=V(0, -0.6, 0.8)),                                       # 趴着/捂脸
 }
 
+# ---- 支撑面：坐/躺时用射线找到真实的椅面/床面，按各人体型把臀部/后背放在面上（防止陷进床板、悬空） ----
+SUPPORTED = {'sit': 'seat', 'slump': 'seat', 'sit_bed': 'seat', 'hug_knees': 'seat', 'lie': 'back'}
+SUPPORT_ON = True
+LAST_SUPPORT = {}          # 角色 -> 正在坐/躺的家具名（机位避让时不许移走它）
+
+SOFT = ('furn_quilt', 'furn_pillow', 'furn_blanket', 'furn_cushion')   # 软的：人会压进去/盖在身上，不当支撑面
+
+def _is_person(obj):
+    return (obj.type != 'MESH' or (obj.parent is not None and obj.parent.type == 'ARMATURE')
+            or obj.name.startswith(SOFT))
+
+def support_height(rig, x, y, z_hint):
+    """从髋部上方往下打射线，跳过人物，返回 (支撑面高度, 家具名)；找不到返回 None"""
+    sc = bpy.context.scene; dg = bpy.context.evaluated_depsgraph_get()
+    o = Vector((x, y, z_hint + 0.6)); d = Vector((0, 0, -1)); t = 0
+    while t < 2.5:
+        hit, loc, _, _, obj, _ = sc.ray_cast(dg, o + d * t, d, distance=2.5 - t)
+        if not hit: return None
+        if _is_person(obj) or obj.name.startswith('prop_'): t = (o - loc).length + 0.01; continue
+        return loc.z, obj.name
+    return None
+
 def body_rot(yaw, pitch):
-    return Euler((math.radians(pitch), 0, math.radians(yaw)), 'ZXY').to_quaternion()
+    # 先在身体坐标系里俯仰（躺下），再绕世界竖轴转朝向。原来用 'ZXY' 顺序会先转朝向再绕世界 X 轴倒下，
+    # 朝向 180° 的人就变成脸朝下趴着（手脚穿过床板），已修正为 'YXZ'
+    return Euler((math.radians(pitch), 0, math.radians(yaw)), 'YXZ').to_quaternion()
 
 def reset(rig):
     for n in BODY:
@@ -72,7 +101,7 @@ def aim(rig, name, wdir):
     pb.matrix = rig.matrix_world.inverted() @ Matrix.LocRotScale(W.translation, q, W.to_scale())
     bpy.context.view_layer.update()
 
-def apply_state(rig, st, frame=None):
+def apply_state(rig, st, frame=None, lag=0):
     """st: dict(pos=(x,y,z地面), yaw=°, base='stand', arms='down', look=Vector世界目标点或None, look_w=0.6)"""
     reset(rig)
     b = BASE[st.get('base', 'stand')]; a = ARMS[st.get('arms', 'down')]
@@ -81,6 +110,9 @@ def apply_state(rig, st, frame=None):
     R0 = rig.matrix_world @ root.bone.matrix_local
     x, y, z = st.get('pos', (0, 0, 0))
     hip = R0.translation.z + b['dz'] + z
+    kind = SUPPORTED.get(st.get('base', 'stand'))
+    support = support_height(rig, x, y, hip) if (kind and SUPPORT_ON) else None
+    if support is not None and abs(support[0] - (hip - 0.1)) > 0.6: support = None   # 离得太远：不是它坐/躺的那件家具
     root.matrix = rig.matrix_world.inverted() @ Matrix.LocRotScale(Vector((x, y, hip)), Rb @ R0.to_quaternion(), R0.to_scale())
     bpy.context.view_layer.update()
     W = lambda d: Rb @ d
@@ -95,8 +127,10 @@ def apply_state(rig, st, frame=None):
         hd = (hd * (1 - w) + (to + Vector((0, 0, 0.9))).normalized() * w).normalized()
     aim(rig, 'head', hd)
     for side, mir in (('L', True), ('R', False)):
-        aim(rig, 'upperleg01.' + side, W(mirror(b['uleg']) if mir else b['uleg'])); aim(rig, 'upperleg02.' + side, W(mirror(b['uleg']) if mir else b['uleg']))
-        aim(rig, 'lowerleg01.' + side, W(mirror(b['lleg']) if mir else b['lleg'])); aim(rig, 'lowerleg02.' + side, W(mirror(b['lleg']) if mir else b['lleg']))
+        ul = b['ulegL'] if (mir and 'ulegL' in b) else (mirror(b['uleg']) if mir else b['uleg'])   # 左右腿不对称的姿态（爬梯）
+        ll = b['llegL'] if (mir and 'llegL' in b) else (mirror(b['lleg']) if mir else b['lleg'])
+        aim(rig, 'upperleg01.' + side, W(ul)); aim(rig, 'upperleg02.' + side, W(ul))
+        aim(rig, 'lowerleg01.' + side, W(ll)); aim(rig, 'lowerleg02.' + side, W(ll))
         aim(rig, 'foot.' + side, W(b['foot']))
         arm = a.get(side) or (tuple(mirror(d) for d in a['R']) if side == 'L' else a['R'])
         if side == 'L' and 'L' not in a: arm = tuple(mirror(d) for d in a['R'])
@@ -108,14 +142,165 @@ def apply_state(rig, st, frame=None):
             ua_w, la_w = W(ua), W(la)
         aim(rig, 'upperarm01.' + side, ua_w); aim(rig, 'upperarm02.' + side, ua_w)
         aim(rig, 'lowerarm01.' + side, la_w); aim(rig, 'lowerarm02.' + side, la_w)
-    if frame is not None: key(rig, frame)
+    if a.get('ik') == 'desk' and SUPPORT_ON: hands_on_surface(rig, Rb)
+    if support is not None:
+        settle_on(rig, support, kind)
+        if a.get('ik') == 'desk': hands_on_surface(rig, Rb)          # 坐稳后高度变了，再落一次手
+        if kind == 'seat' and SUPPORT_ON: clear_space(rig, zmin_rel=0.25, radius=0.34)   # 坐着：上身/头别钻进书架、桌上隔板
+    elif st.get('base', 'stand') in ('stand', 'crouch') and SUPPORT_ON: clear_space(rig)
+    if frame is not None: key(rig, frame, lag)
 
-def key(rig, frame):
+def _two_bone(rig, side, target, pole):
+    """解析两骨 IK：肩 -> 肘 -> 腕，肘部朝 pole 方向弯"""
+    pb = rig.pose.bones; M = rig.matrix_world
+    S = M @ pb['upperarm01.' + side].head
+    E0 = M @ pb['lowerarm01.' + side].head; W0 = M @ pb['wrist.' + side].head
+    a, b = (E0 - S).length, (W0 - E0).length
+    d = target - S; dist = min(d.length, (a + b) * 0.97); dn = d.normalized()
+    ca = max(-1, min(1, (a * a + dist * dist - b * b) / (2 * a * dist)))
+    perp = pole - dn * pole.dot(dn)
+    perp = perp.normalized() if perp.length > 1e-5 else Vector((0, 0, -1))
+    elbow = S + dn * (a * ca) + perp * (a * math.sqrt(1 - ca * ca))
+    wrist = S + dn * dist
+    aim(rig, 'upperarm01.' + side, (elbow - S).normalized()); aim(rig, 'upperarm02.' + side, (elbow - S).normalized())
+    aim(rig, 'lowerarm01.' + side, (wrist - elbow).normalized()); aim(rig, 'lowerarm02.' + side, (wrist - elbow).normalized())
+
+def hands_on_surface(rig, Rb):
+    """前臂搭在面前的桌面上：射线找桌面高度，手腕落在桌沿内侧约 15 cm、身体两侧略向内收"""
+    sc = bpy.context.scene; dg = bpy.context.evaluated_depsgraph_get(); M = rig.matrix_world
+    fwd = Rb @ Vector((0, -1, 0)); fwd.z = 0; fwd.normalize(); left = Rb @ Vector((1, 0, 0)); left.z = 0; left.normalize()
+    for side, sgn in (('L', 1), ('R', -1)):
+        S = M @ rig.pose.bones['upperarm01.' + side].head
+        surf = None
+        for reach in (0.30, 0.40, 0.22):                     # 在手前方几处找桌面
+            p = S + fwd * reach + left * (-sgn * 0.08); o = Vector((p.x, p.y, S.z + 0.1)); t = 0
+            while t < 1.0:
+                hit, loc, _, _, obj, _ = sc.ray_cast(dg, o + Vector((0, 0, -t)), Vector((0, 0, -1)), distance=1.0 - t)
+                if not hit: break
+                if _is_person(obj) or obj.name.startswith('prop_'): t = o.z - loc.z + 0.005; continue
+                if S.z - 0.55 < loc.z < S.z - 0.12: surf = (p, loc.z)
+                break
+            if surf: break
+        if surf is None: continue                            # 面前没有合适高度的桌面：保持原姿势
+        p, z = surf
+        _two_bone(rig, side, Vector((p.x, p.y, z + 0.035)), Vector((0, 0, -1)) + left * sgn * 0.6 - fwd * 0.2)
+
+def _body_points(rig):
+    import numpy as np
+    dg = bpy.context.evaluated_depsgraph_get(); pts = []
+    for o in rig.children:
+        if o.type != 'MESH' or not any(k in o.name for k in ('_body', 'suit')): continue
+        ev = o.evaluated_get(dg); m = ev.to_mesh()
+        co = np.empty(len(m.vertices) * 3, np.float32); m.vertices.foreach_get('co', co); ev.to_mesh_clear()
+        M = np.array(o.matrix_world, np.float32); pts.append(co.reshape(-1, 3) @ M[:3, :3].T + M[:3, 3])
+    return np.concatenate(pts) if pts else None
+
+WALLISH = ('wall', 'mirror', 'glass', 'facade', 'curtain')
+
+def clear_space(rig, iters=4, zmin_rel=None, radius=0.27):
+    """躯干/腿钻进家具或墙：沿水平方向把人推出来（标记点离家具太近、胖角色肚子顶进柜子等）。
+    手臂只和墙/镜子/玻璃比较——手搭在桌上是正常的，伸进墙里不正常。zmin_rel：只看髋部以上多高的部分（坐着时用）"""
+    import numpy as np
+    root = rig.pose.bones['root']
+    for _ in range(iters):
+        allp = _body_points(rig)
+        if allp is None: return
+        rh = rig.matrix_world @ root.head
+        zmin = rh.z + zmin_rel if zmin_rel is not None else 0.08
+        core = allp[(np.hypot(allp[:, 0] - rh.x, allp[:, 1] - rh.y) < radius) & (allp[:, 2] > zmin)]
+        arms = allp[allp[:, 2] > zmin]
+        if not len(core): return
+        push = Vector((0, 0, 0))
+        for o in bpy.context.scene.objects:
+            if o.type != 'MESH' or _is_person(o) or o.hide_render or o.name.startswith(('prop_', 'cam_')): continue
+            w = arms if any(k in o.name for k in WALLISH) else core
+            lo, hi = w.min(0), w.max(0)
+            bb = [o.matrix_world @ Vector(c) for c in o.bound_box]
+            olo = Vector([min(c[i] for c in bb) for i in range(3)]); ohi = Vector([max(c[i] for c in bb) for i in range(3)])
+            if ohi.z < 0.06 or olo.z > 2.3: continue                    # 地面、天花板
+            if olo.x > hi[0] or ohi.x < lo[0] or olo.y > hi[1] or ohi.y < lo[1] or olo.z > hi[2] or ohi.z < lo[2]: continue
+            inv = np.array(o.matrix_world.inverted(), np.float32); q = w @ inv[:3, :3].T + inv[:3, 3]
+            blo = np.array([min(c[i] for c in o.bound_box) for i in range(3)], np.float32)
+            bhi = np.array([max(c[i] for c in o.bound_box) for i in range(3)], np.float32)
+            inside = np.all((q > blo + 0.005) & (q < bhi - 0.005), axis=1)
+            if not inside.any(): continue
+            qi = q[inside]; sx = np.array(o.matrix_world.to_scale(), np.float32)
+            best = None                                                  # 沿局部 x 或 y 推出去最短的那个方向
+            for ax in (0, 1):
+                d_neg = float((qi[:, ax] - blo[ax]).max() * sx[ax]); d_pos = float((bhi[ax] - qi[:, ax]).max() * sx[ax])
+                for dist, sgn in ((d_neg, -1), (d_pos, 1)):
+                    if best is None or dist < best[0]: best = (dist, ax, sgn)
+            dist, ax, sgn = best
+            dirv = o.matrix_world.to_3x3() @ Vector([sgn if i == ax else 0 for i in range(3)]); dirv.z = 0
+            if dirv.length < 1e-6: continue
+            push += dirv.normalized() * (dist + 0.01)
+        if push.length < 0.004: return
+        if push.length > 0.6: push = push.normalized() * 0.6
+        M = rig.matrix_world @ root.matrix; M.translation += push
+        root.matrix = rig.matrix_world.inverted() @ M
+        bpy.context.view_layer.update()
+
+def settle_on(rig, support, kind):
+    """实测：摆好姿势后找出落在家具上方的身体/衣服最低点，整个人上下平移到正好压在面上（软垫允许陷 1 cm）"""
+    import numpy as np
+    surf, name = support; LAST_SUPPORT[rig.name] = name
+    root = rig.pose.bones['root']; rh = rig.matrix_world @ root.head
+    dg = bpy.context.evaluated_depsgraph_get(); pts = []
+    for o in rig.children:
+        if o.type != 'MESH' or not any(k in o.name for k in ('_body', 'suit')): continue
+        ev = o.evaluated_get(dg); m = ev.to_mesh()
+        co = np.empty(len(m.vertices) * 3, np.float32); m.vertices.foreach_get('co', co); ev.to_mesh_clear()
+        co = co.reshape(-1, 3); M = np.array(o.matrix_world, np.float32)
+        pts.append(co @ M[:3, :3].T + M[:3, 3])
+    if not pts: return
+    w = np.concatenate(pts)
+    reach = 0.35 if kind == 'seat' else 1.2           # 坐：只看臀部/大腿（小腿垂到地上不算）；躺：整个身体
+    w = w[(np.hypot(w[:, 0] - rh.x, w[:, 1] - rh.y) < reach) & (w[:, 2] < rh.z + 0.3)]
+    if not len(w): return
+    cell = np.floor(w[:, :2] / 0.06).astype(np.int64)  # 6 cm 网格，每格取最低点，逐点往下打射线找它正下方的面
+    key = cell[:, 0] * 100003 + cell[:, 1]
+    order = np.lexsort((w[:, 2], key)); first = np.ones(len(order), bool); first[1:] = key[order][1:] != key[order][:-1]
+    sc = bpy.context.scene; gap = None
+    for p in w[order][first]:
+        o = Vector((float(p[0]), float(p[1]), float(p[2]) + 0.35)); t = 0.0
+        while t < 1.2:
+            hit, loc, _, _, obj, _ = sc.ray_cast(dg, o + Vector((0, 0, -t)), Vector((0, 0, -1)), distance=1.2 - t)
+            if not hit: break
+            if _is_person(obj) or obj.name.startswith('prop_') or obj.hide_render: t = o.z - loc.z + 0.005; continue
+            g = float(p[2]) - loc.z; gap = g if gap is None else min(gap, g); break
+    if gap is None: return
+    dz = -0.01 - gap                                     # 最贴近的那一处压在面上（软垫陷 1 cm）
+    M = rig.matrix_world @ root.matrix; M.translation.z += dz
+    root.matrix = rig.matrix_world.inverted() @ M
+    bpy.context.view_layer.update()
+
+# 两个状态之间真人需要的过渡时间（秒）：下半身换姿态最慢，转身按角度，手臂动作约 0.8 秒
+BASE_T = {frozenset(('stand', 'sit')): 1.5, frozenset(('stand', 'crouch')): 1.2, frozenset(('sit', 'slump')): 1.1,
+          frozenset(('sit_bed', 'lie')): 1.7, frozenset(('sit_bed', 'stand')): 1.8, frozenset(('sit_bed', 'hug_knees')): 1.3,
+          frozenset(('stand', 'lie')): 2.4, frozenset(('crouch', 'sit')): 1.3}
+
+def trans_time(a, b):
+    t = 0.0
+    ba, bb = a.get('base', 'stand'), b.get('base', 'stand')
+    if ba != bb: t = max(t, BASE_T.get(frozenset((ba, bb)), 1.4))
+    if a.get('arms') != b.get('arms') or a.get('reach') != b.get('reach'): t = max(t, 0.8)
+    dyaw = abs((b.get('yaw', 0) - a.get('yaw', 0) + 180) % 360 - 180)
+    t = max(t, dyaw / 90 * 0.5)
+    d = (Vector(a.get('pos', (0, 0, 0))) - Vector(b.get('pos', (0, 0, 0)))).length
+    if d > 0.02: t = max(t, 0.5 + d / 0.7)               # 原地挪一两步
+    return t
+
+HEADNECK = set(NECK + ['head'])
+ARM_BONES = {n for n in BODY if any(k in n for k in ('clavicle', 'shoulder', 'arm', 'wrist'))}
+
+def key(rig, frame, lag=0):
+    """lag>0：动作分层错开——躯干先到，头颈晚 lag/2 帧，手臂晚 lag 帧（跟随动作，避免全身同时启停的机器感）"""
     for n in BODY:
         pb = rig.pose.bones.get(n)
         if pb is None: continue
-        pb.keyframe_insert('rotation_quaternion', frame=frame, group=n)
-        if n == 'root': pb.keyframe_insert('location', frame=frame, group=n)
+        f = frame + (lag if n in ARM_BONES else (lag // 2 if n in HEADNECK else 0))
+        pb.keyframe_insert('rotation_quaternion', frame=f, group=n)
+        if n == 'root': pb.keyframe_insert('location', frame=f, group=n)
 
 def head_pos(rig):
     return (rig.matrix_world @ rig.pose.bones['head'].matrix).translation.copy()

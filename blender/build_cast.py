@@ -27,6 +27,17 @@ CAST = {
  'classA': ('同学甲', 1.0, 0.44, 0.50, 0.62, 0.55, 0.50, 'male_casualsuit04',   'short01',    (0.08, 0.12, 0.35), (0.10, 0.10, 0.12)),  # 深蓝运动外套
  'classB': ('同学乙', 0.0, 0.43, 0.42, 0.45, 0.48, 0.55, 'female_casualsuit01', 'ponytail01', (0.85, 0.80, 0.70), (0.20, 0.22, 0.30)),  # 米色高领
 }
+# 路人学生（外景里走动、骑车的背景人物）：普通脸、不同体型/发型/穿搭；为了轻量，不长发丝，直接用发片
+EXTRAS = {
+ 'extM1': ('路人男1', 1.0, 0.42, 0.45, 0.50, 0.55, 0.50, 'male_casualsuit06', 'short03', (0.55, 0.16, 0.14), (0.18, 0.24, 0.40)),  # 红外套牛仔裤
+ 'extM2': ('路人男2', 1.0, 0.44, 0.60, 0.40, 0.45, 0.50, 'male_casualsuit03', 'short01', (0.86, 0.86, 0.82), (0.55, 0.48, 0.36)),  # 白T卡其裤
+ 'extM3': ('路人男3', 1.0, 0.43, 0.30, 0.60, 0.70, 0.55, 'male_casualsuit04', 'short04', (0.15, 0.32, 0.22), (0.10, 0.10, 0.11)),  # 墨绿卫衣
+ 'extF1': ('路人女1', 0.0, 0.42, 0.40, 0.40, 0.45, 0.55, 'female_casualsuit02', 'long01', (0.80, 0.58, 0.66), (0.45, 0.55, 0.70)),  # 粉上衣浅牛仔
+ 'extF2': ('路人女2', 0.0, 0.43, 0.50, 0.45, 0.40, 0.50, 'female_sportsuit01', 'bob02', (0.22, 0.28, 0.45), (0.14, 0.14, 0.16)),   # 运动装
+ 'extF3': ('路人女3', 0.0, 0.42, 0.35, 0.40, 0.55, 0.55, 'female_casualsuit01', 'braid01', (0.92, 0.88, 0.70), (0.30, 0.22, 0.20)),  # 奶黄上衣
+}
+CAST.update(EXTRAS)
+HEIGHT.update({'extM1': 1.76, 'extM2': 1.71, 'extM3': 1.80, 'extF1': 1.62, 'extF2': 1.58, 'extF3': 1.65})
 from bl_ext.user_default.mpfb.services.targetservice import TargetService
 LR = lambda name, v: {'l-' + name: v, 'r-' + name: v}
 FACE = {   # 五官个性化（MakeHuman 形态目标，0~1）：每人不同的基础头型 + 大幅度的局部特征，避免「大众脸」
@@ -50,9 +61,12 @@ FACE = {   # 五官个性化（MakeHuman 形态目标，0~1）：每人不同的
             'nose-point-up': 0.3, 'mouth-cupidsbow-incr': 0.6, 'mouth-lowerlip-volume-incr': 0.4, 'chin-triangle': 0.7, **LR('cheek-bones-incr', 0.25)},
 }
 EYEBROW = {'lin': 'eyebrow005', 'chen': 'eyebrow009', 'zhou': 'eyebrow002', 'wang': 'eyebrow007', 'mom': 'eyebrow011',
-           'classA': 'eyebrow004', 'classB': 'eyebrow010'}                                                    # 每人不同眉形
+           'classA': 'eyebrow004', 'classB': 'eyebrow010',                                                    # 每人不同眉形
+           'extM1': 'eyebrow001', 'extM2': 'eyebrow003', 'extM3': 'eyebrow006', 'extF1': 'eyebrow011', 'extF2': 'eyebrow010', 'extF3': 'eyebrow012'}
 SKIN_TINT = {'lin': (1.03, 1.0, 0.98), 'chen': (1.04, 1.01, 1.0), 'zhou': (0.94, 0.92, 0.92), 'wang': (0.93, 0.88, 0.84),
-             'mom': (1.0, 0.97, 0.95), 'classA': (0.88, 0.80, 0.72), 'classB': (1.06, 1.02, 1.0)}           # 肤色差异（乘在皮肤贴图上）
+             'mom': (1.0, 0.97, 0.95), 'classA': (0.88, 0.80, 0.72), 'classB': (1.06, 1.02, 1.0),           # 肤色差异（乘在皮肤贴图上）
+             'extM1': (0.95, 0.92, 0.9), 'extM2': (1.0, 0.97, 0.95), 'extM3': (0.9, 0.85, 0.8), 'extF1': (1.04, 1.0, 0.98),
+             'extF2': (0.98, 0.95, 0.92), 'extF3': (1.05, 1.02, 1.0)}
 
 def tint_skin(body, rgb):
     for slot in body.material_slots:
@@ -71,7 +85,9 @@ def apply_face(body, cid):
         try: TargetService.load_target(body, TargetService.target_full_path(name), weight=v * FACE_SCALE, name=name)
         except Exception as e: print('FACE WARN', cid, name, e, flush=True)
 SKINS = {'lin': 'young_asian_male', 'chen': 'young_asian_male', 'zhou': 'young_asian_male', 'classA': 'young_asian_male',
-         'wang': 'middleage_asian_male', 'mom': 'middleage_asian_female', 'classB': 'young_asian_female'}
+         'wang': 'middleage_asian_male', 'mom': 'middleage_asian_female', 'classB': 'young_asian_female',
+         'extM1': 'young_asian_male', 'extM2': 'young_asian_male', 'extM3': 'young_asian_male',
+         'extF1': 'young_asian_female', 'extF2': 'young_asian_female', 'extF3': 'young_asian_female'}
 
 def mat(name, rgb, rough=0.8):
     m = bpy.data.materials.get(name) or bpy.data.materials.new(name); m.use_nodes = True
@@ -213,7 +229,9 @@ def build(cid):
         if shell is not None: bpy.data.objects.remove(shell, do_unlink=True)
         shell = HumanService.add_mhclo_asset(os.path.join(config.TOOLS, HAIR_SHAPE[cid]), body, asset_type='Hair', subdiv_levels=1); shell.name = cid + '_hairshape'
         hair_name = 'wavybob'
-    if shell is not None and os.environ.get('V11_STRANDS', '1') == '1':
+    if shell is not None and cid in EXTRAS:   # 路人：发片直接当头发（远景足够），染成深色
+        recolor_asset_hair(shell)
+    elif shell is not None and os.environ.get('V11_STRANDS', '1') == '1':
         bpy.context.view_layer.update(); hair.build(cid, rig, body, shell, hair_name, seed=sum(map(ord, cid)))
     sd = body.modifiers.new('subdiv', 'SUBSURF'); sd.levels = 0; sd.render_levels = 2   # 渲染时细分，去掉多边形棱角
     if cid == 'chen': glasses(rig)

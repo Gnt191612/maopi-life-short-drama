@@ -30,6 +30,10 @@ def visemes():
 
 def segment(seg_id, n_frames):
     out = os.path.join(config.RENDERS, seg_id)
+    def real_frames(n0):   # 拍子可能因真人动作所需时间而加长：以拍摄引擎写出的实际时间轴为准
+        tlp = os.path.join(config.SHOTS, seg_id + '_timeline.json')
+        return max(n0, max(b['f1'] for b in json.load(open(tlp, encoding='utf-8')))) if os.path.exists(tlp) else n0
+    n_frames = real_frames(n_frames)
     done = len(glob.glob(os.path.join(out, 'beauty_*.png')))
     if done >= n_frames and os.path.exists(os.path.join(config.SHOTS, seg_id + '.blend')): return True
     for f in glob.glob(os.path.join(out, '*.png')): os.remove(f)
@@ -37,7 +41,7 @@ def segment(seg_id, n_frames):
     with open(os.path.join(config.LOGS, 'blender_%s.log' % seg_id), 'w', encoding='utf-8') as lf:
         r = subprocess.run([BL, '-b', '--factory-startup', '-P', os.path.join(config.BLENDER_SCRIPTS, 'shoot_segment.py'), '--', seg_id],
                            stdout=lf, stderr=lf, env=config.blender_env())
-    n = len(glob.glob(os.path.join(out, 'beauty_*.png')))
+    n = len(glob.glob(os.path.join(out, 'beauty_*.png'))); n_frames = real_frames(n_frames)
     log('segment', seg_id, 'rc=%d' % r.returncode, 'frames %d/%d' % (n, n_frames), '%.0fs' % (time.time() - t0))
     return r.returncode == 0 and n >= n_frames
 

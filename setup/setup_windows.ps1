@@ -67,6 +67,9 @@ if (-not (Test-Path "$T\ffmpeg\ffmpeg.exe")) {
 Write-Host '[6/7] 开源字体 Noto Sans SC（SIL OFL）'
 New-Item -ItemType Directory -Force "$T\fonts" | Out-Null
 Get-File @('https://github.com/google/fonts/raw/main/ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf') "$T\fonts\NotoSansSC-Regular.ttf"
+# 手机屏幕界面要用静态字重（Blender 读可变字体只会用最细的字重）：用 fontTools 从同一个字体实例化出常规/粗体
+python -m pip install -q fonttools
+foreach ($w in @(@(400, 'Regular'), @(700, 'Bold'))) { if (-not (Test-Path "$T\fonts\NotoSansSC-Static-$($w[1]).ttf")) { python -m fontTools.varLib.instancer "$T\fonts\NotoSansSC-Regular.ttf" "wght=$($w[0])" -o "$T\fonts\NotoSansSC-Static-$($w[1]).ttf" } }
 
 Write-Host '[7/7] CMU 动作捕捉片段（CMU Graphics Lab，可自由使用、需署名）+ Python 依赖'
 $mo = Join-Path $Root 'build\mocap'; New-Item -ItemType Directory -Force $mo | Out-Null

@@ -26,7 +26,7 @@ def read_time(sid):
 def screen_plan(bt):
     """[(开始秒, 屏幕文字id, 显示秒数)]：说完的台词之后，评论/来电/动态一条条弹出"""
     ap = audio_plan(bt)
-    t = max([o + META[l]['dur'] for o, l, _ in ap], default=LEAD - 0.1) + 0.1
+    t = max([o + META[l]['dur'] for o, l, _ in ap], default=0.8) + 0.1      # 先看清人物约 1 秒，再看屏幕
     out = []
     for sid in bt.get('screen', []):
         out.append((t, sid, read_time(sid))); t += read_time(sid)
@@ -36,7 +36,7 @@ def beat_dur(bt):
     ap = audio_plan(bt)
     end = max([o + META[l]['dur'] for o, l, _ in ap], default=0) + (0.45 if ap else 0)
     sp = screen_plan(bt)
-    if sp: end = max(end, sp[-1][0] + sp[-1][2] + 0.3)
+    if sp: end = max(end, sp[-1][0] + sp[-1][2] + 1.2)   # 看完屏幕后留 1.2 秒给人物反应
     return max(bt['dur'], end)
 
 def beat_frames(bt):

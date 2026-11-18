@@ -55,6 +55,9 @@ get "$DL/ffmpeg-static.tar.xz" "https://johnvansickle.com/ffmpeg/releases/ffmpeg
 
 echo "[6/7] 开源字体 Noto Sans SC（SIL OFL）"
 mkdir -p "$T/fonts"; get "$T/fonts/NotoSansSC-Regular.ttf" "https://github.com/google/fonts/raw/main/ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf"
+# 手机屏幕界面要用静态字重（Blender 读可变字体只会用最细的字重）
+python3 -m pip install -q fonttools
+for w in "400 Regular" "700 Bold"; do set -- $w; [ -f "$T/fonts/NotoSansSC-Static-$2.ttf" ] || python3 -m fontTools.varLib.instancer "$T/fonts/NotoSansSC-Regular.ttf" "wght=$1" -o "$T/fonts/NotoSansSC-Static-$2.ttf"; done
 
 echo "[7/7] CMU 动作捕捉片段 + Python 依赖"
 mkdir -p "$ROOT/build/mocap"
