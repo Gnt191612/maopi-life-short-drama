@@ -118,17 +118,21 @@ SCN = {
    }),
  # ---------------- 第四幕 · 茶话会 ----------------
  's08': dict(side=-1,
+   # 围坐没有桌子：每人按性格/心境用不同坐姿，手都有落点（林晓拘谨并腿、陈瑶双手交握、周明远前倾倾听、同学甲后靠、同学乙端坐）
    init={'wang': dict(pos=(0, -0.3, 0), face=0, base='stand', arms='gesture'),
-         'lin': dict(at='lin_seat', base='sit', arms='desk'), 'chen': dict(at='chen_seat', base='sit', arms='desk'),
-         'zhou': dict(at='zhou_seat', base='sit', arms='desk'), 'classA': dict(at='classA_seat', base='sit', arms='desk'),
-         'classB': dict(at='classB_seat', base='sit', arms='desk')},
+         'lin': dict(at='lin_seat', base='sit_tight', arms='thighs'), 'chen': dict(at='chen_seat', base='sit', arms='lap'),
+         'zhou': dict(at='zhou_seat', base='sit_lean', arms='elbows_knees'), 'classA': dict(at='classA_seat', base='sit_back', arms='thighs'),
+         'classB': dict(at='classB_seat', base='sit_tight', arms='lap')},
    extras={'class': ['林晓', '陈瑶', '周明远', '王老师', '同学甲', '同学乙']},
    phones={},
    beats={
-    's08_03': {'wang': Wk(at='wang_seat', base='sit', arms='gesture')},
-    's08_06': {'classA': S(arms='gesture')},
-    's08_07': {'classA': S(arms='desk'), 'classB': S(arms='cover_face')},
-    's08_08': {'classB': S(arms='desk'), 'chen': Bl(0.8, base='stand', arms='gesture')},
+    's08_02': {'lin': S(arms='lap')},                                   # 低头搓手
+    's08_03': {'wang': Wk(at='wang_seat', base='sit', arms='thighs')},
+    's08_04': {'wang': Bl(1.0, base='sit_lean', arms='gesture')},       # 后半句身体前倾、变得认真
+    's08_12': {'lin': S(arms='lap')},                                   # 攥紧衣角
+    's08_06': {'classA': S(base='sit_lean', arms='gesture')},
+    's08_07': {'classA': S(base='sit_lean', arms='elbows_knees'), 'classB': S(arms='cover_face'), 'wang': S(arms='thighs')},
+    's08_08': {'classB': S(arms='lap'), 'chen': Bl(0.8, base='stand', arms='gesture')},
     's08_13': {'lin': Bl(0.9, base='stand', arms='down')},
     's08_16': {'chen': S(arms='clap'), 'zhou': S(arms='clap'), 'classA': S(arms='clap'), 'classB': S(arms='clap'), 'wang': S(arms='clap')},
    }),

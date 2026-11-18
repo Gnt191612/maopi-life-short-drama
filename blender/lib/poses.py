@@ -32,6 +32,9 @@ BASE = {
                  ulegL=V(-0.04, -0.05, -1), llegL=V(0, 0.05, -1)),   # 爬梯：右膝抬到上一级横档，左腿伸直
  'climbB': dict(dz=0.0, pitch=0, spine=V(0, -0.15, 1), uleg=V(0.04, -0.05, -1), lleg=V(0, 0.05, -1), foot=V(0, -1, -0.3),
                  ulegL=V(-0.05, -0.75, -0.65), llegL=V(0, 0.15, -1)),
+ 'sit_lean':  dict(dz=-0.42, pitch=0, spine=V(0, -0.45, 1), uleg=V(0.12, -1, 0.04), lleg=V(0.04, 0.05, -1), foot=V(0, -1, -0.3), seat=True),   # 前倾坐（专注地听）
+ 'sit_back':  dict(dz=-0.42, pitch=0, spine=V(0, 0.22, 1), uleg=V(0.10, -1, 0.06), lleg=V(0.03, -0.35, -1), foot=V(0, -1, -0.2), seat=True),   # 后靠、腿往前伸（放松）
+ 'sit_tight': dict(dz=-0.42, pitch=0, spine=V(0, -0.12, 1), uleg=V(0.0, -1, 0.04), lleg=V(-0.02, 0.18, -1), foot=V(0, -1, -0.4), seat=True),  # 并腿拘谨坐
  'slump':  dict(dz=-0.42, pitch=0, spine=V(0, -1, 0.55), uleg=V(0.05, -1, 0.04), lleg=V(0, 0.12, -1), foot=V(0, -1, -0.3), head=V(0, -0.6, -0.8)),
 }
 # ---- 手臂叠加：右臂 (上臂, 前臂) 方向；左臂缺省 = 右臂镜像；None = 自然下垂 ----
@@ -55,12 +58,15 @@ ARMS = {
  'cup':        dict(R=(V(-0.1, -0.5, -0.86), V(0.1, -1, 0.1)), L=DOWN_R, prop='hand'),
  'backpack':   dict(R=(V(-0.05, 0.25, -0.97), V(-0.1, -0.3, 0.95)), L=DOWN_R),                                                  # 一手拽书包带
  'knees':      dict(R=(V(-0.2, -0.75, -0.6), V(0.6, -0.4, -0.2))),                                                              # 抱膝
+ 'lap':        dict(R=DOWN_R, ik='lap'),          # 坐着：双手交叠放在腿上（IK 落在大腿根部上方）
+ 'thighs':     dict(R=DOWN_R, ik='thighs'),       # 坐着：两手各搭在自己大腿上
+ 'elbows_knees': dict(R=DOWN_R, ik='knees_fwd', head=V(0, -0.35, 0.94)),   # 身体前倾，手肘撑膝、双手相握
  'climb':      dict(R=(V(-0.15, -0.55, 0.8), V(-0.05, -0.35, 1))),                                                             # 双手握梯子扶手
  'face_hands': dict(R=(V(-0.15, -0.7, -0.7), V(0.35, -0.25, 0.9)), head=V(0, -0.6, 0.8)),                                       # 趴着/捂脸
 }
 
 # ---- 支撑面：坐/躺时用射线找到真实的椅面/床面，按各人体型把臀部/后背放在面上（防止陷进床板、悬空） ----
-SUPPORTED = {'sit': 'seat', 'slump': 'seat', 'sit_bed': 'seat', 'hug_knees': 'seat', 'lie': 'back'}
+SUPPORTED = {'sit': 'seat', 'slump': 'seat', 'sit_lean': 'seat', 'sit_back': 'seat', 'sit_tight': 'seat', 'sit_bed': 'seat', 'hug_knees': 'seat', 'lie': 'back'}
 SUPPORT_ON = True
 LAST_SUPPORT = {}          # 角色 -> 正在坐/躺的家具名（机位避让时不许移走它）
 
@@ -142,10 +148,16 @@ def apply_state(rig, st, frame=None, lag=0):
             ua_w, la_w = W(ua), W(la)
         aim(rig, 'upperarm01.' + side, ua_w); aim(rig, 'upperarm02.' + side, ua_w)
         aim(rig, 'lowerarm01.' + side, la_w); aim(rig, 'lowerarm02.' + side, la_w)
-    if a.get('ik') == 'desk' and SUPPORT_ON: hands_on_surface(rig, Rb)
+    def place_hands():
+        ik = a.get('ik')
+        if not ik or not SUPPORT_ON: return
+        if ik == 'desk' and hands_on_surface(rig, Rb): return
+        if SUPPORTED.get(st.get('base', 'stand')) == 'seat' or ik != 'desk':
+            hands_on_lap(rig, Rb, {'desk': 'thighs'}.get(ik, ik))   # 面前没桌子（茶话会围坐）：手放腿上，绝不悬空
+    place_hands()
     if support is not None:
         settle_on(rig, support, kind)
-        if a.get('ik') == 'desk': hands_on_surface(rig, Rb)          # 坐稳后高度变了，再落一次手
+        place_hands()                                                 # 坐稳后高度变了，再落一次手
         if kind == 'seat' and SUPPORT_ON: clear_space(rig, zmin_rel=0.25, radius=0.34)   # 坐着：上身/头别钻进书架、桌上隔板
     elif st.get('base', 'stand') in ('stand', 'crouch') and SUPPORT_ON: clear_space(rig)
     if frame is not None: key(rig, frame, lag)
@@ -181,9 +193,26 @@ def hands_on_surface(rig, Rb):
                 if S.z - 0.55 < loc.z < S.z - 0.12: surf = (p, loc.z)
                 break
             if surf: break
-        if surf is None: continue                            # 面前没有合适高度的桌面：保持原姿势
+        if surf is None: return False                        # 面前没有合适高度的桌面
         p, z = surf
         _two_bone(rig, side, Vector((p.x, p.y, z + 0.035)), Vector((0, 0, -1)) + left * sgn * 0.6 - fwd * 0.2)
+    return True
+
+def hands_on_lap(rig, Rb, mode):
+    """坐姿手部：thighs=各搭在同侧大腿中段；lap=双手交叠在两腿之间靠近小腹；knees_fwd=前倾、双手在两膝之间相握"""
+    M = rig.matrix_world; pb = rig.pose.bones
+    fwd = Rb @ Vector((0, -1, 0)); fwd.z = 0; fwd.normalize(); left = Rb @ Vector((1, 0, 0)); left.z = 0; left.normalize()
+    th = {s: (M @ pb['upperleg02.' + s].head, M @ pb['lowerleg01.' + s].head) for s in 'LR'}   # 大腿：中段、膝盖
+    mid = (th['L'][0] + th['R'][0]) / 2; knee = (th['L'][1] + th['R'][1]) / 2
+    for side, sgn in (('L', 1), ('R', -1)):
+        hip_mid, kn = th[side]
+        if mode == 'thighs':
+            t = hip_mid.lerp(kn, 0.55) + Vector((0, 0, 0.075))
+        elif mode == 'lap':
+            t = mid.lerp(knee, 0.30) + Vector((0, 0, 0.085)) + left * sgn * 0.03
+        else:   # knees_fwd
+            t = knee + fwd * 0.10 + Vector((0, 0, 0.02)) + left * sgn * 0.02
+        _two_bone(rig, side, t, Vector((0, 0, -0.4)) + left * sgn * 1.0 - fwd * 0.6)
 
 def _body_points(rig):
     import numpy as np
