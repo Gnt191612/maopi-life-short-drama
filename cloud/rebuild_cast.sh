@@ -5,7 +5,10 @@
 cd /root/v11
 export BLENDER_USER_RESOURCES=/root/v11/.tools/blender_user V11_CAST_DIR=/root/v11/assets/cast_next \
        V11_MH_COMMUNITY=/root/v11_assets/mh_community V11_NO_LINEUP=1
-B=/root/v11/.tools/blender/blender; IDS=${@:-lin chen zhou wang mom classA classB}
+IDS=${@:-lin chen zhou wang mom classA classB}
+# 关机备份恢复后，大文件变成指向平台存储的链接（那里不能直接运行程序）：开机后先把 Blender 复制到本机目录
+[ -x /opt/v11blender/blender ] || { rm -rf /opt/v11blender; cp -rL /root/v11/.tools/blender /opt/v11blender && chmod -R u+x /opt/v11blender/blender /opt/v11blender/*/python/bin; }
+B=/opt/v11blender/blender
 mkdir -p $V11_CAST_DIR build/logs; rm -f build/logs/*.log; T0=$(date +%s)
 for c in $IDS; do $B -b --factory-startup -P blender/build_cast.py -- $c > build/logs/build_$c.log 2>&1 & done; wait
 grep -h -E 'CAST OK|Traceback|Error' build/logs/build_*.log | grep -v 'Error: Not freed' ; echo "BUILD $(( $(date +%s) - T0 ))s"

@@ -346,7 +346,8 @@ def build_short(cid, rig, body, shell, seed=1):
 LONG = {
  # front/temple：前额、太阳穴发际线相对眉高（米，建模时未缩放的头：头顶在眼睛上方约 10cm，原先 4.5cm 的前额发际线几乎到头顶）
  # 参照真人马尾：头顶圆润有发量（sleek 1.4cm），扎发点在后脑勺约耳朵上缘高度（tie_up），马尾粗（tail_r）、长到背中部、顺着后背垂下
- 'classB': dict(style='ponytail', n=110000, sleek=0.014, tail=0.36, tail_r=0.034, tie_up=0.22, front=0.018, temple=0.0, ear=-0.018, behind=-0.045, radius=0.0002),
+ 'classB': dict(style='ponytail', n=110000, sleek=0.014, tail=0.36, tail_r=0.034, tie_up=-0.05, front=0.018, temple=0.0, ear=-0.018, behind=-0.045, radius=0.0002,
+                headband=(0.012, 0.012, 0.014)),   # 低马尾 + 黑色发箍（照用户选定的标准长相）
  # 林母：及胸披发（建模时未缩放：发尾在眼睛下方 27cm ≈ 成人 30cm，到胸口）；tuck 发尾内扣程度
  'mom':    dict(style='bob', n=95000, L=0.46, vol=0.020, hem=-0.27, tuck=0.15, part='L', wave=0.0, melanin=0.85, front=0.022, temple=0.002),   # 卷发节点会把发丝拧成扁带，先不用
 }
@@ -473,9 +474,39 @@ def build_long(cid, rig, body, shell, seed=1):
     _hair_nodes(obj, 'Smooth Hair Curves', **{'Amount': 0.6, 'Iterations': 6, 'Weight': 0.5, 'Preserve Length': True})
     _scalp_cap(cid, bv, bp, cap_faces, H, rig, obj.matrix_parent_inverse)
     if tie is not None: _hair_tie(cid, rig, *tie)
+    if S.get('headband'): _headband(cid, rig, bb, H, S['sleek'], S['headband'], obj.matrix_parent_inverse, eyes.z)
     if shell is not None: shell.hide_render = True; shell.hide_viewport = True
     print('HAIR OK', cid, S['style'], len(strands), 'strands', 'scalp faces', len(cap_faces), flush=True)
     return obj
+
+def _headband(cid, rig, bb, H, sleek, rgb, parent_inverse, eyes_z, width=0.010):
+    """发箍：从一侧耳上绕过头顶到另一侧耳上的窄带，压在头发表面（发际线后约 4cm），哑光深色。
+    离头皮的距离跟发层厚度一致（头顶厚、两侧薄），不浮空"""
+    pts = []
+    for k in range(41):
+        a = -1.40 + 2.80 * k / 40
+        d = Vector((math.sin(a), -0.38 * math.cos(a), math.cos(a))).normalized()   # 头顶处略向前倾
+        hit = bb.ray_cast(H, d, 0.3)[0]
+        if hit is None: continue
+        crown = 0.35 + 0.65 * _smooth(eyes_z - 0.01, H.z + 0.06, hit.z)
+        pts.append((hit + d * (0.0012 + sleek * crown * 0.75 + 0.0015), d))
+    if len(pts) < 4: return None
+    bm2 = bmesh.new(); rows = []
+    for i, (p, d) in enumerate(pts):
+        t = (pts[min(i + 1, len(pts) - 1)][0] - pts[max(i - 1, 0)][0]).normalized()
+        side = t.cross(d).normalized() * width / 2
+        rows.append((bm2.verts.new(p + side), bm2.verts.new(p - side)))
+    for (a0, b0), (a1, b1) in zip(rows, rows[1:]): bm2.faces.new((a0, b0, b1, a1))
+    me = bpy.data.meshes.new(cid + '_headband'); bm2.to_mesh(me); bm2.free()
+    for poly in me.polygons: poly.use_smooth = True
+    m = bpy.data.materials.new(cid + '_headband'); m.use_nodes = True
+    b = m.node_tree.nodes['Principled BSDF']; b.inputs['Base Color'].default_value = (*rgb, 1); b.inputs['Roughness'].default_value = 0.9
+    if 'Specular IOR Level' in b.inputs: b.inputs['Specular IOR Level'].default_value = 0.15   # 哑光布面，不反灰光
+    me.materials.append(m)
+    ob = bpy.data.objects.new(cid + '_headband', me); bpy.context.scene.collection.objects.link(ob)
+    s = ob.modifiers.new('thick', 'SOLIDIFY'); s.thickness = 0.003; s.offset = 1.0
+    ob.parent = rig; ob.parent_type = 'BONE'; ob.parent_bone = 'head'; ob.matrix_parent_inverse = parent_inverse.copy()
+    return ob
 
 def _hair_tie(cid, rig, T, axis):
     """发圈：深色布艺发圈套在扎发处"""

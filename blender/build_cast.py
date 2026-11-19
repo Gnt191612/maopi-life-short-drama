@@ -67,11 +67,12 @@ FACE = {   # 五官个性化（MakeHuman 形态目标，0~1）：每人不同的
             **LR('eye-bag-incr', 0.8), 'mouth-angles-up': 0.4, 'nose-scale-horiz-incr': 0.3, 'eyebrows-angle-up': 0.3, 'neck-double-incr': 0.3},
  'classA': {'head-scale-horiz-incr': 0.6, **LR('ear-flap-incr', 0.8), 'eyebrows-trans-down': 0.35, 'mouth-scale-horiz-incr': 0.5, 'head-diamond': 0.9, 'chin-prominent-incr': 0.7, 'mouth-angles-up': 0.6, 'mouth-scale-horiz-incr': 0.4, 'nose-point-up': 0.5,
             **LR('eye-scale-decr', 0.3), **LR('eye-corner1-up', 0.5), 'eyebrows-angle-up': 0.6, **LR('ear-wing-incr', 0.7), **LR('cheek-bones-incr', 0.4)},
- 'classB': {'head-oval': 0.8, 'head-scale-horiz-decr': 0.35, **LR('eye-scale-incr', 0.95), **LR('eye-height2-incr', 0.7), **LR('eye-eyefold-up', 0.6),
-            'eyebrows-trans-up': 0.6, 'eyebrows-trans-backward': 0.3,                         # 眉毛上移、往后收：不压双眼皮
+ # 同学乙向用户选定的标准长相（写实化第四张）靠拢：正常大小的杏眼 + 双眼皮、平直眉、窄长脸、柔和下颌（2026-11-19）
+ 'classB': {'head-oval': 0.8, 'head-scale-horiz-decr': 0.35, 'head-scale-vert-incr': 0.15, **LR('eye-scale-incr', 0.45), **LR('eye-height2-incr', 0.35), **LR('eye-eyefold-up', 0.6),
+            'eyebrows-trans-up': 0.25, 'eyebrows-angle-down': 0.25, 'eyebrows-trans-backward': 0.3,   # 眉毛略上移、放平：平直眉、不压双眼皮
             'nose-greek-incr': 0.7, 'nose-width1-decr': 0.35, 'nose-hump-decr': 0.2,          # 鼻梁挺直、山根立起来
             'nose-scale-horiz-decr': 0.5,
-            'nose-point-up': 0.3, 'mouth-cupidsbow-incr': 0.6, 'mouth-lowerlip-volume-incr': 0.4, 'chin-triangle': 0.7, **LR('cheek-bones-incr', 0.25)},
+            'nose-point-up': 0.3, 'mouth-cupidsbow-incr': 0.6, 'mouth-lowerlip-volume-incr': 0.4, 'chin-triangle': 0.35, **LR('cheek-bones-incr', 0.25)},
 }
 EYEBROW = {'lin': 'eyebrow005', 'chen': 'eyebrow012', 'zhou': 'eyebrow007', 'wang': 'eyebrow001', 'mom': 'eyebrow011',
            'classA': 'eyebrow009', 'classB': 'eyebrow008',                                                    # 每人不同眉形
@@ -82,7 +83,7 @@ SKIN_TINT = {'lin': (1.03, 1.0, 0.98), 'chen': (1.04, 1.01, 1.0), 'zhou': (0.94,
              'extF2': (0.98, 0.95, 0.92), 'extF3': (1.05, 1.02, 1.0)}
 
 STOCKINGS = {'classB': (0.012, 0.011, 0.013)}   # 黑丝（同学乙）
-IRIS = {'classB': dict(scale=1.22, rgb=(0.045, 0.036, 0.032))}   # 黑眼仁、眼仁放大 22%（同学乙）
+IRIS = {'classB': dict(scale=1.0, rgb=(0.045, 0.036, 0.032))}   # 黑眼仁（同学乙）；原放大 22% 像娃娃，写实化时每次被「纠正」得不一样
 
 def iris_edit(eye_obj, scale, rgb):
     """改眼球贴图：虹膜按比例放大（以各自圆心做径向重映射，外圈眼白平滑过渡、不变形），颜色换成近黑的深褐（保留虹膜纹理明暗）。
