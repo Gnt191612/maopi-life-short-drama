@@ -33,6 +33,8 @@ LOGS = P('build', 'logs')
 
 # ---- 外部工具（.tools/ 下，由 setup 脚本下载）----
 TOOLS = P('.tools')
+# MakeHuman 社区服装包（上衣/裤子/裙子/鞋，约 500 MB，放 E 盘；安装脚本 setup/get_mh_community.ps1 下载）
+MH_COMMUNITY = os.environ.get('V11_MH_COMMUNITY') or (r'E:\v11_assets\mh_community' if os.path.isdir(r'E:\v11_assets\mh_community') else os.path.join(TOOLS, 'mh_community_clothes'))
 BLENDER_VERSION = '4.5.16'
 BLENDER_USER = os.path.join(TOOLS, 'blender_user')   # Blender 用户目录放在仓库内：插件与 MakeHuman 素材都在这里，不污染系统
 

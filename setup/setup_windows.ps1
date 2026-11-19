@@ -80,6 +80,7 @@ foreach ($c in (Get-Content (Join-Path $Root 'setup\mocap_clips.txt') | Where-Ob
 }
 python -m pip install --quiet -r (Join-Path $Root 'setup\requirements.txt')
 
+Write-Host '[可选] 重新生成人物时才需要：MakeHuman 社区服装包  setup\get_mh_community.ps1'
 if ($WithRemotion) { Write-Host '[可选] Remotion 合成工程'; Push-Location (Join-Path $Root 'remotion'); npm install --no-fund --no-audit; Pop-Location }
 if ($WithTTS) { & (Join-Path $PSScriptRoot 'setup_tts_windows.ps1') }
 Write-Host ''

@@ -89,7 +89,7 @@ def enhance_character(rig):
             if not m: continue
             if o.name.endswith('_body'): skin(m)
             elif o.name.endswith('_high-poly'): eyes(m)
-            elif 'suit' in o.name: cloth(m)
+            elif 'suit' in o.name or o.get('v11_cloth'): cloth(m)
 
 # 每个场景用哪张 HDRI、多亮（室内主要靠房间灯，HDRI 只提供窗外天空与柔和反射）
 HDRI_OF = {'dorm_am': ('morning', 0.5), 'dorm_pm': ('day', 0.5), 'dorm_dusk': ('dusk', 0.4), 'dorm_nt': ('night', 0.6),

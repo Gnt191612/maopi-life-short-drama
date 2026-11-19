@@ -33,3 +33,5 @@ assets/lookdev/
 assets/cast_next/
 # 人物审阅器的模型（每个 60–85 MB，由 blender/export_viewer.py 生成）
 viewer/models/
+# 其他 AI 工具的本地工作日志
+.workbuddy/

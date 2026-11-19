@@ -67,7 +67,10 @@ FACE = {   # 五官个性化（MakeHuman 形态目标，0~1）：每人不同的
             **LR('eye-bag-incr', 0.8), 'mouth-angles-up': 0.4, 'nose-scale-horiz-incr': 0.3, 'eyebrows-angle-up': 0.3, 'neck-double-incr': 0.3},
  'classA': {'head-scale-horiz-incr': 0.6, **LR('ear-flap-incr', 0.8), 'eyebrows-trans-down': 0.35, 'mouth-scale-horiz-incr': 0.5, 'head-diamond': 0.9, 'chin-prominent-incr': 0.7, 'mouth-angles-up': 0.6, 'mouth-scale-horiz-incr': 0.4, 'nose-point-up': 0.5,
             **LR('eye-scale-decr', 0.3), **LR('eye-corner1-up', 0.5), 'eyebrows-angle-up': 0.6, **LR('ear-wing-incr', 0.7), **LR('cheek-bones-incr', 0.4)},
- 'classB': {'head-oval': 0.8, 'head-scale-horiz-decr': 0.35, **LR('eye-scale-incr', 0.95), **LR('eye-height2-incr', 0.7), **LR('eye-eyefold-up', 0.6), 'eyebrows-trans-up': 0.15, 'nose-scale-horiz-decr': 0.5,
+ 'classB': {'head-oval': 0.8, 'head-scale-horiz-decr': 0.35, **LR('eye-scale-incr', 0.95), **LR('eye-height2-incr', 0.7), **LR('eye-eyefold-up', 0.6),
+            'eyebrows-trans-up': 0.6, 'eyebrows-trans-backward': 0.3,                         # 眉毛上移、往后收：不压双眼皮
+            'nose-greek-incr': 0.7, 'nose-width1-decr': 0.35, 'nose-hump-decr': 0.2,          # 鼻梁挺直、山根立起来
+            'nose-scale-horiz-decr': 0.5,
             'nose-point-up': 0.3, 'mouth-cupidsbow-incr': 0.6, 'mouth-lowerlip-volume-incr': 0.4, 'chin-triangle': 0.7, **LR('cheek-bones-incr', 0.25)},
 }
 EYEBROW = {'lin': 'eyebrow005', 'chen': 'eyebrow012', 'zhou': 'eyebrow007', 'wang': 'eyebrow001', 'mom': 'eyebrow011',
@@ -79,6 +82,59 @@ SKIN_TINT = {'lin': (1.03, 1.0, 0.98), 'chen': (1.04, 1.01, 1.0), 'zhou': (0.94,
              'extF2': (0.98, 0.95, 0.92), 'extF3': (1.05, 1.02, 1.0)}
 
 STOCKINGS = {'classB': (0.012, 0.011, 0.013)}   # 黑丝（同学乙）
+IRIS = {'classB': dict(scale=1.22, rgb=(0.045, 0.036, 0.032))}   # 黑眼仁、眼仁放大 22%（同学乙）
+
+def iris_edit(eye_obj, scale, rgb):
+    """改眼球贴图：虹膜按比例放大（以各自圆心做径向重映射，外圈眼白平滑过渡、不变形），颜色换成近黑的深褐（保留虹膜纹理明暗）。
+    贴图里两只眼球各一个虹膜；新贴图打包进 .blend"""
+    import numpy as np
+    m = eye_obj.material_slots[0].material if eye_obj.material_slots else None
+    node = next((n for n in m.node_tree.nodes if n.type == 'TEX_IMAGE' and n.image), None) if m and m.use_nodes else None
+    if node is None: print('IRIS SKIP', eye_obj.name, flush=True); return
+    img = node.image; w, h = img.size
+    src = np.empty(w * h * 4, np.float32); img.pixels.foreach_get(src); src = src.reshape(h, w, 4)
+    out = src.copy(); rgb0 = src[..., :3]; mx_, mn_ = rgb0.max(2), rgb0.min(2)
+    iris = ((mx_ - mn_) / np.maximum(mx_, 1e-4) > 0.35) & (rgb0[..., 0] > rgb0[..., 1] * 1.2)
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    for half in (xx < w / 2, xx >= w / 2):
+        sel = iris & half
+        if sel.sum() < 100: continue
+        cy, cx = yy[sel].mean(), xx[sel].mean(); r = math.sqrt(sel.sum() / math.pi); r_out = r * 2.0
+        d = np.hypot(xx - cx, yy - cy); zone = d < r_out
+        rk = r * scale                                                  # 放大后的虹膜半径：里面按 1/scale 取样，外圈线性过渡回原样
+        sd = np.where(d < rk, d / scale, r + (d - rk) * (r_out - r) / (r_out - rk))
+        f = np.where(d > 1e-3, sd / np.maximum(d, 1e-3), 0)
+        sx = np.clip(cx + (xx - cx) * f, 0, w - 1).astype(np.int32); sy = np.clip(cy + (yy - cy) * f, 0, h - 1).astype(np.int32)
+        out[zone] = src[sy[zone], sx[zone]]
+    rgb1 = out[..., :3]; mx_, mn_ = rgb1.max(2), rgb1.min(2)
+    iris = ((mx_ - mn_) / np.maximum(mx_, 1e-4) > 0.35) & (rgb1[..., 0] > rgb1[..., 1] * 1.2)
+    lum = rgb1.mean(2); ref = float(lum[iris].mean())
+    k = np.clip(lum / max(ref, 1e-3), 0.35, 1.8)[..., None]
+    rgb1[iris] = (np.array(rgb, np.float32) * k)[iris]
+    new = bpy.data.images.new(eye_obj.name + '_iris', w, h, alpha=True); new.pixels.foreach_set(out.ravel()); new.pack()
+    node.image = new
+    print('IRIS', eye_obj.name, 'scale', scale, flush=True)
+
+# 主要角色的分件穿搭（MakeHuman 社区服装包，宽松款；替换原来连体紧身的系统套装）。
+# 每件：(包内路径, 颜色)，第一件是外层（其余被它盖住的部分往里收）；颜色 None = 保留原贴图配色（牛仔布、格纹、毛衣花纹）。鞋写包内路径，或系统鞋名
+C = lambda pack, name: '%s/clothes/%s/%s.mhclo' % (pack, name, name)
+OUTFIT = {
+ 'lin':    [(C('shirts02', 'elvs_hooded_sweat_jacket1'), (0.22, 0.22, 0.24)),       # 深灰连帽卫衣
+            (C('pants02', 'elvs_jeans_straight_leg'), None)],                        # 直筒牛仔裤
+ 'chen':   [(C('shirts02', 'elvs_male_shirt_untucked_bd1'), (0.90, 0.90, 0.88)),    # 白衬衫（不扎进裤子）
+            (C('pants02', 'mindfront_male_trousers_1'), (0.12, 0.12, 0.14))],        # 黑色长裤
+ 'zhou':   [(C('shirts02', 'mindfront_knitted_sweater_01'), (0.30, 0.33, 0.22)),    # 橄榄绿针织毛衣
+            (C('pants01', 'cortu_cargo_pants'), (0.20, 0.19, 0.16))],                # 工装裤
+ 'wang':   [(C('pants02', 'elvs_male_trouser'), (0.22, 0.22, 0.24)),                # 灰色西裤（衬衫扎在裤子里，裤子是外层）
+            (C('shirts02', 'elvs_male_shirt_tie_tucked1'), (0.62, 0.75, 0.90))],     # 浅蓝衬衫
+ 'mom':    [(C('shirts02', 'janexx_old_female_sweater'), (0.78, 0.70, 0.58)),       # 米色毛衣
+            (C('pants01', 'toigo_wool_pants'), (0.30, 0.27, 0.25))],                 # 深褐宽松羊毛长裤（原来那条像紧身打底裤）
+ 'classA': [(C('shirts01', 'elvs_crude_t-shirt_male'), (0.10, 0.14, 0.36)),         # 宽松深蓝 T 恤
+            (C('pants02', 'punkduck_male_classic_jeans'), None)],                    # 牛仔裤
+ 'classB': [(C('shirts02', 'mindfront_knitted_sweater_02'), (0.85, 0.80, 0.70)),    # 米色针织毛衣
+            (C('skirts02', 'elvs_pleated_plaid_mini_skirt'), None)],                 # 百褶格纹短裙
+}
+SHOES.update({'classB': C('shoes01', 'toigo_ballet_flats')})                         # 配黑丝的平底鞋
 
 def stockings(body, rgb):
     """丝袜：按腿部骨骼权重算出「丝袜区域」（脚到大腿上部，大腿根渐变），在皮肤材质上叠一层半透明黑色——
@@ -95,29 +151,36 @@ def stockings(body, rgb):
     for v in me.vertices:
         vals[v.index] = min(1.0, sum(g.weight * gid[g.group] for g in v.groups if g.group in gid))
     att.data.foreach_set('value', vals)
+    def principled_tree(nt):   # MPFB 的写实皮肤把 Principled BSDF 包在节点组里：进组里改（在外面混合着色器，EEVEE 下带次表面散射的皮肤混不上）
+        b = next((n for n in nt.nodes if n.type == 'BSDF_PRINCIPLED'), None)
+        if b: return nt, b
+        for g in (n for n in nt.nodes if n.type == 'GROUP' and n.node_tree):
+            r = principled_tree(g.node_tree)
+            if r[1]: return r
+        return nt, None
     for slot in body.material_slots:
         m = slot.material
         if not m or not m.use_nodes: continue
-        nt = m.node_tree; b = next((n for n in nt.nodes if n.type == 'BSDF_PRINCIPLED'), None)
+        nt, b = principled_tree(m.node_tree)
         if b is None: continue
         bc = b.inputs['Base Color']; src = bc.links[0].from_socket if bc.links else None
         at = nt.nodes.new('ShaderNodeAttribute'); at.attribute_name = 'v11_stocking'
         lw = nt.nodes.new('ShaderNodeLayerWeight'); lw.inputs['Blend'].default_value = 0.45
         dens = nt.nodes.new('ShaderNodeMapRange'); dens.inputs['To Min'].default_value = 0.62; dens.inputs['To Max'].default_value = 0.97
-        nt.links.new(lw.outputs['Facing'], dens.inputs['Value'])                 # 越侧着看越不透（丝线叠得越密）
+        nt.links.new(lw.outputs['Facing'], dens.inputs['Value'])                 # 越侧着看越不透（丝线叠得越密），正对处微微透肤
         fac = nt.nodes.new('ShaderNodeMath'); fac.operation = 'MULTIPLY'
         nt.links.new(at.outputs['Fac'], fac.inputs[0]); nt.links.new(dens.outputs['Result'], fac.inputs[1])
         mx = nt.nodes.new('ShaderNodeMix'); mx.data_type = 'RGBA'; mx.inputs[7].default_value = (*rgb, 1)
         if src: nt.links.new(src, mx.inputs[6])
         else: mx.inputs[6].default_value = bc.default_value
         nt.links.new(fac.outputs[0], mx.inputs['Factor']); nt.links.new(mx.outputs[2], bc)
-        sss = b.inputs.get('Subsurface Weight')                                   # 丝袜处不要皮肤的次表面透光
-        if sss is not None and not sss.links:
-            inv = nt.nodes.new('ShaderNodeMapRange'); inv.inputs['To Min'].default_value = sss.default_value; inv.inputs['To Max'].default_value = 0.0
-            nt.links.new(at.outputs['Fac'], inv.inputs['Value']); nt.links.new(inv.outputs['Result'], sss)
-        if not b.inputs['Roughness'].links:
-            rr = nt.nodes.new('ShaderNodeMapRange'); rr.inputs['To Min'].default_value = b.inputs['Roughness'].default_value; rr.inputs['To Max'].default_value = 0.38
-            nt.links.new(at.outputs['Fac'], rr.inputs['Value']); nt.links.new(rr.outputs['Result'], b.inputs['Roughness'])
+        for name, to in (('Subsurface Weight', 0.0), ('Roughness', 0.38)):        # 丝袜处：不要皮肤的次表面透光；织物略带光泽
+            s = b.inputs.get(name)
+            if s is None: continue
+            mr = nt.nodes.new('ShaderNodeMapRange'); mr.inputs['To Max'].default_value = to
+            if s.links: nt.links.new(s.links[0].from_socket, mr.inputs['To Min'])
+            else: mr.inputs['To Min'].default_value = s.default_value
+            nt.links.new(at.outputs['Fac'], mr.inputs['Value']); nt.links.new(mr.outputs['Result'], s)
         sh = b.inputs.get('Sheen Weight')
         if sh is not None and not sh.links: nt.links.new(at.outputs['Fac'], sh)   # 丝袜的柔光
     print('STOCKINGS', body.name, flush=True)
@@ -179,7 +242,14 @@ def tint(mat, rgb):
     if not bc.links: bc.default_value = (*tuple(c ** 2.2 for c in rgb), 1); return True
     src = bc.links[0].from_socket
     bw = nt.nodes.new('ShaderNodeRGBToBW'); nt.links.new(src, bw.inputs['Color'])
-    gain = nt.nodes.new('ShaderNodeMath'); gain.operation = 'MULTIPLY'; gain.inputs[1].default_value = 1.8; gain.use_clamp = False
+    k = 1.8                                                                   # 按贴图实际平均亮度归一（固定 1.8 倍时，偏暗的贴图染出来发灰：白衬衫成了灰衬衫）
+    img = bc.links[0].from_node.image if bc.links[0].from_node.type == 'TEX_IMAGE' else None
+    if img is not None and img.size[0] > 0:
+        import numpy as np
+        px = np.empty(img.size[0] * img.size[1] * 4, np.float32); img.pixels.foreach_get(px)
+        lum = float((px.reshape(-1, 4)[::97, :3] ** 2.2).mean())   # 贴图像素是 sRGB，着色器里是线性值
+        if lum > 1e-3: k = max(1.0, min(4.0, 1.0 / lum))
+    gain = nt.nodes.new('ShaderNodeMath'); gain.operation = 'MULTIPLY'; gain.inputs[1].default_value = k; gain.use_clamp = False
     nt.links.new(bw.outputs['Val'], gain.inputs[0])
     mx = nt.nodes.new('ShaderNodeMix'); mx.data_type = 'RGBA'; mx.blend_type = 'MULTIPLY'; mx.inputs['Factor'].default_value = 1.0
     mx.inputs[6].default_value = (*tuple(c ** 2.2 for c in rgb), 1)
@@ -250,7 +320,84 @@ def darken_hair(obj, tint=(0.18, 0.15, 0.13)):
         nt.links.new(mix.outputs[2], b.inputs['Base Color'])
 
 def add(body, rel, kind):
-    return HumanService.add_mhclo_asset(os.path.join(ASSET, rel), body, asset_type=kind, subdiv_levels=1 if kind in ('Clothes', 'Hair') else 0)
+    path = os.path.join(config.MH_COMMUNITY, rel[len('community:'):]) if rel.startswith('community:') else os.path.join(ASSET, rel)
+    return HumanService.add_mhclo_asset(path, body, asset_type=kind, subdiv_levels=1 if kind in ('Clothes', 'Hair') else 0)
+
+def hide_under(under, over, margin=None):
+    """内层衣服被外层盖住的那一截直接隐藏（遮罩修改器）：裙腰/裤腰藏在毛衣下摆里、衬衫下摆藏在裤腰里。
+    按身体周围 36 个方位分别求外层的边缘高度（上衣取下摆最低点，扎进去的裤子取裤腰最高点），
+    内层超过边缘 margin 的顶点隐藏。原先「往里收」的置换做法会把裙腰扯出一条条竖缝"""
+    import math as _m
+    bpy.context.view_layer.update(); dg = bpy.context.evaluated_depsgraph_get()
+    ev = over.evaluated_get(dg); me = ev.to_mesh(); ov = [over.matrix_world @ v.co for v in me.vertices]; ev.to_mesh_clear()
+    uv = [under.matrix_world @ v.co for v in under.data.vertices]
+    cx = sum(v.x for v in uv) / len(uv); cy = sum(v.y for v in uv) / len(uv)
+    over_is_lower = sum(v.z for v in ov) / len(ov) < sum(v.z for v in uv) / len(uv)   # 外层是下装（衬衫扎进裤子）
+    if margin is None:   # 裙子的裙腰一直顶到下摆处（留 1.2cm）；裤子、衬衫多留一段——裆部、后腰那里身体没被遮住，藏多了会露肉
+        margin = 0.012 if 'skirt' in under.name else 0.045
+    sec = lambda v: int((_m.atan2(v.y - cy, v.x - cx) + _m.pi) / (2 * _m.pi) * 36) % 36
+    zu0, zu1 = min(v.z for v in uv), max(v.z for v in uv)
+    rad = {}                                                            # 内层每个方位的最大半径：外层只算贴着它的那一圈（排除垂在身侧的袖子）
+    for v in uv:
+        if (v.z < zu0 + 0.10) if over_is_lower else (v.z > zu1 - 0.10):   # 只量重叠的那一段（裙腰/衬衫下摆），不量张开的裙摆
+            s = sec(v); rad[s] = max(rad.get(s, 0), _m.hypot(v.x - cx, v.y - cy))
+    edge = {}
+    for v in ov:
+        s = sec(v)
+        if not (zu0 - 0.05 < v.z < zu1 + 0.05) or _m.hypot(v.x - cx, v.y - cy) > rad.get(s, 0) + 0.06: continue
+        edge[s] = max(edge.get(s, -9), v.z) if over_is_lower else min(edge.get(s, 9), v.z)
+    hid = []
+    for i, v in enumerate(uv):
+        e = edge.get(sec(v))
+        if e is None: continue
+        if (v.z < e - margin) if over_is_lower else (v.z > e + margin): hid.append(i)
+    vg = under.vertex_groups.new(name='v11_covered'); vg.add(hid, 1.0, 'REPLACE')
+    m = under.modifiers.new('v11_covered', 'MASK'); m.vertex_group = vg.name; m.invert_vertex_group = True
+    i = next((k for k, mm in enumerate(under.modifiers) if mm.type == 'ARMATURE'), -1)
+    under.modifiers.move(len(under.modifiers) - 1, i + 1)
+    print('HIDE', under.name, 'under', over.name, len(hid), 'verts', 'lower-outer' if over_is_lower else 'upper-outer', flush=True)
+
+def hide_body_under(body, garment, reach=0.03):
+    """衣服盖住的皮肤隐藏：从皮肤顶点沿法线两个方向 3cm 内碰到这件衣服 = 被盖住。
+    素材自带的删除区域常漏掉膝盖、手肘，坐下弯腿时膝盖会从裤子里顶出来"""
+    from mathutils.bvhtree import BVHTree
+    bpy.context.view_layer.update(); dg = bpy.context.evaluated_depsgraph_get()
+    ev = garment.evaluated_get(dg); me = ev.to_mesh()
+    tree = BVHTree.FromPolygons([garment.matrix_world @ v.co for v in me.vertices], [tuple(p.vertices) for p in me.polygons]); ev.to_mesh_clear()
+    M = body.matrix_world; N = M.to_3x3().inverted().transposed(); hid = []
+    for v in body.data.vertices:
+        p = M @ v.co; n = (N @ v.normal).normalized()
+        if tree.ray_cast(p, n, reach)[0] is not None or tree.ray_cast(p, -n, reach)[0] is not None: hid.append(v.index)
+    name = 'v11_under_' + garment.name[-20:]
+    vg = body.vertex_groups.new(name=name); vg.add(hid, 1.0, 'REPLACE')
+    m = body.modifiers.new(name, 'MASK'); m.vertex_group = name; m.invert_vertex_group = True
+    i = next((k for k, mm in enumerate(body.modifiers) if mm.type == 'ARMATURE'), -1)
+    body.modifiers.move(len(body.modifiers) - 1, i + 1)
+    print('BODY HIDE', garment.name, len(hid), flush=True)
+
+def tuck_under(under, over, depth=0.007):
+    """内层衣服被外层盖住的部分往里收（裙腰、裤腰藏进毛衣/卫衣下摆里）：
+    沿法线向外 6cm 内碰到外层 = 被盖住，往里缩 depth；沿法线向里 3cm 内碰到外层 = 跑到外层外面了（下摆漏出），
+    按实际距离收到外层里面。用置换修改器（权重 = 各顶点需要收的距离）"""
+    from mathutils.bvhtree import BVHTree
+    bpy.context.view_layer.update(); dg = bpy.context.evaluated_depsgraph_get()
+    ev = over.evaluated_get(dg); me = ev.to_mesh()
+    tree = BVHTree.FromPolygons([over.matrix_world @ v.co for v in me.vertices], [tuple(p.vertices) for p in me.polygons]); ev.to_mesh_clear()
+    vg = under.vertex_groups.new(name='v11_tucked'); M = under.matrix_world; N = M.to_3x3().inverted().transposed()
+    need = {}
+    for v in under.data.vertices:
+        p = M @ v.co; n = (N @ v.normal).normalized()
+        if tree.ray_cast(p, n, 0.06)[0] is not None: need[v.index] = depth          # 被外层盖住：往里收 depth
+        else:
+            h = tree.ray_cast(p, -n, 0.03)                                            # 跑到外层外面去了（下摆处漏出来）：收到外层里面再多 depth
+            if h[0] is not None: need[v.index] = h[3] + depth
+    top = max(need.values(), default=depth)
+    for i, a in need.items(): vg.add([i], a / top, 'REPLACE')
+    hits = list(need)
+    d = under.modifiers.new('v11_tuck', 'DISPLACE'); d.direction = 'NORMAL'; d.strength = -top; d.mid_level = 0.0; d.vertex_group = vg.name
+    i = next((k for k, m in enumerate(under.modifiers) if m.type == 'ARMATURE'), -1)
+    under.modifiers.move(len(under.modifiers) - 1, i + 1)   # 紧跟在绑骨之前的形状上做（在细分、厚度之前）
+    print('TUCK', under.name, 'under', over.name, len(hits), 'verts', flush=True)
 
 def bone_child(obj, rig, bone):
     """把程序建模的配件挂到骨骼上（随头/脖子运动）"""
@@ -325,23 +472,34 @@ def build(cid):
     tint_skin(body, SKIN_TINT[cid])
     if cid in STOCKINGS: stockings(body, STOCKINGS[cid])
     parts = {}
-    for rel, kind in (('eyes/high-poly/high-poly.mhclo', 'Eyes'), ('eyebrows/%s/%s.mhclo' % (EYEBROW[cid], EYEBROW[cid]), 'Eyebrows'),
+    shoe = SHOES.get(cid, 'shoes02')
+    shoe_rel = ('community:' + shoe) if '/' in shoe else 'clothes/%s/%s.mhclo' % (shoe, shoe)
+    wear = [('community:' + rel, 'Clothes') for rel, _ in OUTFIT[cid]] if cid in OUTFIT else [('clothes/%s/%s.mhclo' % (suit, suit), 'Clothes')]
+    for rel, kind in [('eyes/high-poly/high-poly.mhclo', 'Eyes'), ('eyebrows/%s/%s.mhclo' % (EYEBROW[cid], EYEBROW[cid]), 'Eyebrows'),
                       ('eyelashes/eyelashes01/eyelashes01.mhclo', 'Eyelashes'), ('teeth/teeth_base/teeth_base.mhclo', 'Teeth'),
-                      ('hair/%s/%s.mhclo' % (hair_name, hair_name), 'Hair'), ('clothes/%s/%s.mhclo' % (suit, suit), 'Clothes'),
-                      ('clothes/%s/%s.mhclo' % (SHOES.get(cid, 'shoes02'), SHOES.get(cid, 'shoes02')), 'Clothes')):
+                      ('hair/%s/%s.mhclo' % (hair_name, hair_name), 'Hair')] + wear + [(shoe_rel, 'Clothes')]:
         try: parts[rel] = add(body, rel, kind)
         except Exception as e: print('ASSET FAIL', cid, rel, e, flush=True)
+    color_of = {'community:' + rel: rgb for rel, rgb in OUTFIT.get(cid, [])}
     for rel, o in parts.items():
         if o is None: continue
+        asset = os.path.basename(rel)[:-6]
         if 'eyebrow' in rel: darken_hair(o)
-        elif 'hair' in rel: pass   # 头发由 hair.build 处理（发帽 + 发丝）
+        elif rel.startswith('hair/'): pass   # 头发由 hair.build 处理（发帽 + 发丝）
+        elif 'eyes' in rel and cid in IRIS: iris_edit(o, **IRIS[cid])
         elif 'eyelash' in rel or 'eyes' in rel or 'teeth' in rel: pass   # 保留资产自带的写实材质
-        elif 'clothes' in rel and 'shoes' not in rel: recolor(o, top, bottom, asset=rel.split('/')[1]); cloth_volume(o)
-        elif 'shoes' in rel: pass   # 鞋子保留原贴图
-        o.name = '%s_%s' % (cid, rel.split('/')[1])
-    if cid in ('chen', 'wang'):     # 衬衫：纽扣 + 胸袋
-        shirt = next((o for r_, o in parts.items() if o is not None and 'clothes' in r_ and 'shoes' not in r_), None)
-        if shirt is not None: shirt_details(cid, rig, shirt, pocket=True)
+        elif rel == shoe_rel: pass   # 鞋子保留原贴图
+        elif rel in color_of:        # 分件服装：按件染色（None = 保留原配色）
+            if color_of[rel] is not None: recolor(o, color_of[rel], asset=asset)
+            cloth_volume(o, 0.003); o['v11_cloth'] = True
+        else: recolor(o, top, bottom, asset=asset); cloth_volume(o)
+        o.name = '%s_%s' % (cid, asset)
+    if cid in OUTFIT:   # 第一件是外层，其余收进去
+        layers = [parts.get('community:' + rel) for rel, _ in OUTFIT[cid]]
+        for under in layers[1:]:
+            if layers[0] is not None and under is not None: hide_under(under, layers[0])
+        for g_ in layers:
+            if g_ is not None and 'skirt' not in g_.name: hide_body_under(body, g_)   # 裙子下面是黑丝腿，不藏
     shell = parts.get('hair/%s/%s.mhclo' % (hair_name, hair_name))   # 真实发丝：以发片为发型轮廓生长
     if cid in HAIR_ASSET:   # 成品发型：替换系统发片，不生成发丝
         if shell is not None: bpy.data.objects.remove(shell, do_unlink=True); shell = None
@@ -374,6 +532,7 @@ def lineup():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     sc = bpy.context.scene
     for i, cid in enumerate(CAST):
+        if not os.path.exists(os.path.join(OUT, cid + '.blend')): continue   # 暂存目录里只建了部分角色
         with bpy.data.libraries.load(os.path.join(OUT, cid + '.blend')) as (src, dst):
             dst.objects = [n for n in src.objects]
         for o in dst.objects:

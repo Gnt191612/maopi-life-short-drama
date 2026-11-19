@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""侧脸特写（检查耳朵上方、两鬓头发是否贴着头皮）：每人正侧面 + 斜后方各一张。
+"""头部特写（检查发量、秃处、耳朵上方两鬓是否贴头皮）：每人正面 + 正侧面 + 斜后方各一张。
 blender -b --factory-startup -P blender/tests/side_heads.py -- [角色id ...]"""
 import os, sys, math
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -7,7 +7,7 @@ import config
 import bpy
 from mathutils import Vector
 import poses, realism, life
-IDS = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv and sys.argv[-1] != '--' else ['lin', 'chen', 'zhou', 'wang', 'classA']
+IDS = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv and sys.argv[-1] != '--' else ['lin', 'chen', 'zhou', 'wang', 'mom', 'classA', 'classB']
 OUT = os.path.join(config.RENDERS, 'side_heads'); os.makedirs(OUT, exist_ok=True)
 for cid in IDS:
     bpy.ops.wm.read_factory_settings(use_empty=True); sc = bpy.context.scene
@@ -23,7 +23,7 @@ for cid in IDS:
         l.rotation_euler = (head - Vector(loc)).to_track_quat('-Z', 'Y').to_euler(); sc.collection.objects.link(l)
     cam = bpy.data.objects.new('cam', bpy.data.cameras.new('cam')); sc.collection.objects.link(cam); sc.camera = cam; cam.data.lens = 85
     sc.render.engine = 'BLENDER_EEVEE_NEXT'; sc.render.resolution_x = sc.render.resolution_y = 520; sc.view_settings.view_transform = 'AgX'
-    for view, ang in (('side', 90), ('backside', 140)):
+    for view, ang in (('front', 0), ('side', 90), ('backside', 140)):
         a = math.radians(ang); cam.location = head + Vector((0.62 * math.sin(a), -0.62 * math.cos(a), 0.0))
         cam.rotation_euler = (head - cam.location).to_track_quat('-Z', 'Y').to_euler()
         sc.render.filepath = os.path.join(OUT, '%s_%s.png' % (cid, view)); bpy.ops.render.render(write_still=True)

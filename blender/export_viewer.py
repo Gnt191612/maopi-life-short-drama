@@ -64,8 +64,10 @@ def fix_eyes(o):
     o.data.materials.clear(); o.data.materials.append(nm)
     print('EYES', o.name, 'cornea faces removed', len(dead), flush=True)
 
-def hair_to_tubes(o, keep=0.50, scale=3.0):
-    """发丝曲线 -> 细管网格（随机保留一部分发丝，管子加粗一点，网页里看得出发量又不卡）"""
+def hair_to_tubes(o, keep=0.85, scale=1.8):
+    """发丝曲线 -> 细管网格：保留大部分发丝、把管子做细，避免一根根等粗「塑料面条」感。
+    发丝越细越密越接近真发，也能盖住发帽让发际线自然过渡。
+    【稳定版】只用几何节点 + 纯色材质——实测顶点色/大 numpy 写入会在大网格上让 Blender 崩溃或导出漏掉发丝。"""
     ng = bpy.data.node_groups.new('hair_tubes', 'GeometryNodeTree')
     ng.interface.new_socket('Geometry', in_out='INPUT', socket_type='NodeSocketGeometry')
     ng.interface.new_socket('Geometry', in_out='OUTPUT', socket_type='NodeSocketGeometry')
@@ -73,11 +75,9 @@ def hair_to_tubes(o, keep=0.50, scale=3.0):
     gi, go = N.new('NodeGroupInput'), N.new('NodeGroupOutput')
     rnd = N.new('FunctionNodeRandomValue'); rnd.data_type = 'BOOLEAN'; rnd.inputs['Probability'].default_value = 1 - keep
     dl = N.new('GeometryNodeDeleteGeometry'); dl.domain = 'CURVE'
-    rad = N.new('GeometryNodeInputRadius'); mul = N.new('ShaderNodeMath'); mul.operation = 'MULTIPLY'; mul.inputs[1].default_value = scale
-    sr = N.new('GeometryNodeSetCurveRadius')
-    circ = N.new('GeometryNodeCurvePrimitiveCircle'); circ.inputs['Resolution'].default_value = 3; circ.inputs['Radius'].default_value = 0.00016 * scale   # 4.5 的曲线转网格不按点半径缩放截面：直接给截面半径
+    circ = N.new('GeometryNodeCurvePrimitiveCircle'); circ.inputs['Resolution'].default_value = 3; circ.inputs['Radius'].default_value = 0.00016 * scale   # 截面半径 0.00029m ≈ 0.58mm 直径
     c2m = N.new('GeometryNodeCurveToMesh')
-    rs = N.new('GeometryNodeResampleCurve'); rs.inputs['Count'].default_value = 8          # 每根发丝 6 个点就够网页用
+    rs = N.new('GeometryNodeResampleCurve'); rs.inputs['Count'].default_value = 8          # 每根发丝 8 个点
     sel = next(s for s in rnd.outputs if s.type == 'BOOLEAN' and s.enabled)                # 布尔输出（按类型找，不靠序号）
     L.new(gi.outputs[0], dl.inputs['Geometry']); L.new(sel, dl.inputs['Selection'])
     L.new(dl.outputs[0], rs.inputs['Curve'])
@@ -87,7 +87,7 @@ def hair_to_tubes(o, keep=0.50, scale=3.0):
     bpy.ops.object.convert(target='MESH')
     o = bpy.context.view_layer.objects.active
     m = bpy.data.materials.new(o.name + '_hairweb'); m.use_nodes = True
-    b = m.node_tree.nodes['Principled BSDF']; b.inputs['Base Color'].default_value = (0.022, 0.017, 0.013, 1); b.inputs['Roughness'].default_value = 0.42
+    b = m.node_tree.nodes['Principled BSDF']; b.inputs['Base Color'].default_value = (0.028, 0.021, 0.016, 1); b.inputs['Roughness'].default_value = 0.42
     o.data.materials.clear(); o.data.materials.append(m)
     return o
 
@@ -126,7 +126,7 @@ def export(cid):
         if o.name.endswith('_high-poly'):   # 眼睛：去掉透明角膜层（网页里会变成不透明的灰白壳，盖住黑眼珠），虹膜改成深棕
             fix_eyes(o); keep.append(o); continue
         if not o.data.uv_layers:   # 没有 UV（发帽、纽扣、口袋等程序建模的小件）：直接用纯色材质
-            col = (0.035, 0.028, 0.022, 1) if 'scalpcap' in o.name else (principled(o.material_slots[0].material).inputs['Base Color'].default_value[:]
+            col = (0.030, 0.023, 0.018, 1) if 'scalpcap' in o.name else (principled(o.material_slots[0].material).inputs['Base Color'].default_value[:]
                                                                          if o.material_slots and principled(o.material_slots[0].material) else (0.8, 0.8, 0.8, 1))
             nm = bpy.data.materials.new(o.name + '_web'); nm.use_nodes = True; nm.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = col
             o.data.materials.clear(); o.data.materials.append(nm); keep.append(o); continue

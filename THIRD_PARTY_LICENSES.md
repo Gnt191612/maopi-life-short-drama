@@ -16,6 +16,7 @@
 | Spark-TTS-0.5B（模型权重） | 音色设计 | **CC BY-NC-SA 4.0（仅限非商业用途）** | https://huggingface.co/SparkAudio/Spark-TTS-0.5B |
 | IndexTTS2（代码与模型权重） | 台词配音（音色克隆 + 逐句情绪控制） | bilibili Model Use License Agreement（全文见 `licenses/`） | https://github.com/index-tts/index-tts |
 | MakeHuman 社区发型包 hair02 / hair03 | 发型轮廓参考（林母） | CC-BY（作者署名见包内说明） | http://www.makehumancommunity.org |
+| MakeHuman 社区服装包 shirts01/02、pants01/02、skirts02、shoes01 | 角色分件服装（逐件署名见下方「角色服装署名」） | CC0 / CC-BY | http://www.makehumancommunity.org |
 | ACE-Step v1 3.5B（代码与模型权重） | 原创配乐生成（纯音乐） | Apache-2.0（生成的音乐可自由使用） | https://github.com/ace-step/ACE-Step |
 | 古典录音 5 首（萨蒂、德彪西、肖邦、巴赫） | 配乐 | 公有领域 / CC0（逐首来源见 assets/music/LICENSES.txt） | https://commons.wikimedia.org |
 | Poly Haven HDRI 5 张 | 环境光照与反射 | CC0（逐张来源见 assets/hdri/LICENSES.txt） | https://polyhaven.com |
@@ -44,3 +45,25 @@
 
 `assets/cast/` 中的角色由 MPFB（GPL-3.0 插件）调用 MakeHuman CC0 素材生成。生成的 .blend 资产本身（网格、贴图引用、骨骼）
 基于 CC0 素材，按本仓库资产许可（CC BY-NC-SA 4.0）发布；MPFB 插件本身不随仓库分发。
+
+## 角色服装署名
+
+主要角色的服装来自 MakeHuman 社区素材（`blender/build_cast.py` 的 `OUTFIT`），已按角色重新配色、加厚。CC-BY 素材按要求署名如下：
+
+| 服装 | 角色 | 作者 | 许可证 | 来源 |
+|---|---|---|---|---|
+| elvs_hooded_sweat_jacket1（连帽卫衣） | 林晓 | Elvaerwyn | CC-BY | http://www.makehumancommunity.org/node/1450 |
+| elvs_jeans_straight_leg（直筒牛仔裤） | 林晓 | Elvaerwyn | CC-BY | http://www.makehumancommunity.org/node/1802 |
+| elvs_male_shirt_untucked_bd1（衬衫） | 陈瑶 | Elvaerwyn | CC-BY | http://www.makehumancommunity.org/node/1800 |
+| mindfront_male_trousers_1（长裤） | 陈瑶 | Mindfront | CC-BY | http://www.makehumancommunity.org/node/746 |
+| mindfront_knitted_sweater_01（针织毛衣） | 周明远 | Mindfront | CC-BY | http://www.makehumancommunity.org/node/660 |
+| cortu_cargo_pants（工装裤） | 周明远 | Cortu | CC0 | http://www.makehumancommunity.org/node/2798 |
+| elvs_male_shirt_tie_tucked1（衬衫） | 王老师 | Elvaerwyn | CC-BY | http://www.makehumancommunity.org/node/1799 |
+| elvs_male_trouser（西裤） | 王老师 | Elvaerwyn | CC-BY | http://www.makehumancommunity.org/node/1796 |
+| janexx_old_female_sweater（毛衣） | 林母 | janexx | CC-BY | http://www.makehumancommunity.org/node/2767 |
+| toigo_wool_pants（羊毛长裤） | 林母 | MargaretToigo | CC0 | http://www.makehumancommunity.org/node/1194 |
+| elvs_crude_t-shirt_male（T 恤） | 同学甲 | Elvaerwyn | CC0 | http://www.makehumancommunity.org/node/1416 |
+| punkduck_male_classic_jeans（牛仔裤） | 同学甲 | punkduck | CC-BY | http://www.makehumancommunity.org/node/1655 |
+| mindfront_knitted_sweater_02（针织毛衣） | 同学乙 | Mindfront | CC-BY | http://www.makehumancommunity.org/node/661 |
+| elvs_pleated_plaid_mini_skirt（百褶格纹短裙） | 同学乙 | Elvaerwyn | CC-BY | http://www.makehumancommunity.org/node/1925 |
+| toigo_ballet_flats（平底鞋） | 同学乙 | MargaretToigo | CC0 | http://www.makehumancommunity.org/node/1734 |

@@ -72,6 +72,14 @@ blender -b --factory-startup -P blender/export_viewer.py      # 把演员表导�
 `cloud/realism.py`（Wan2.1-VACE 写实化），把结果拉回本地后 `python run_all.py --previs-only --real=<结果目录>` 合成成片。
 详见 `cloud/README_仙宫云.md` 与 `docs/cloud_render.md`。
 
+**已验证（2026-11-19）**：仙宫云社区镜像「Moss/Krea2 超写实人像」里的 Krea2「二转三」工作流可把白模图直接转成照片级真人（RTX 4090D 约 1 分钟/张），
+调用脚本 `cloud/comfy_run.py`（界面工作流自动转 API 格式）。经验：白模的穿模、秃发等瑕疵会被当真画出来，白模不必逼真但不能有错；
+不同机位长相需要参考图或角色 LoRA 锁定。
+
+### 5. 人物修改流程
+见 `docs/人物建模修改流程.md`：改脚本 → `viewer/更新模型.ps1` 重建并在审阅器里查看；`blender/tests/outfit_check.py`、`side_heads.py` 出全身与头部检查图。
+人物重建也可放到云端（`cloud/rebuild_setup.sh` 搭环境）。
+
 ## 目录结构
 
 | 目录 | 内容 | 是否入库 |
