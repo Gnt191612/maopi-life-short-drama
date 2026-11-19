@@ -24,3 +24,6 @@ voice_tools/voices_v2/*.wav
 !voice_tools/voices_v2/林母_1.wav
 !voice_tools/voices_v2/同学甲_5.wav
 !voice_tools/voices_v2/同学乙_5.wav
+
+# 配乐（AI 原创 + 古典录音）随资产包走 Release
+assets/music/

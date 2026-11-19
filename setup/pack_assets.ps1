@@ -7,7 +7,7 @@ $Root = Split-Path -Parent $PSScriptRoot
 $dist = Join-Path $Root 'dist'; New-Item -ItemType Directory -Force $dist | Out-Null
 $zip = Join-Path $dist "assets_$Version.zip"
 if (Test-Path $zip) { Remove-Item $zip }
-$items = @('assets\cast', 'assets\sets', 'assets\audio') | ForEach-Object { Join-Path $Root $_ }
+$items = @('assets\cast', 'assets\sets', 'assets\audio', 'assets\music') | ForEach-Object { Join-Path $Root $_ }
 foreach ($i in $items) { if (-not (Test-Path $i)) { throw "缺少 $i" } }
 Get-ChildItem (Join-Path $Root 'assets') -Recurse -Filter *.blend1 | Remove-Item -Force   # Blender 自动备份文件不打包
 Compress-Archive -Path $items -DestinationPath $zip -CompressionLevel Optimal

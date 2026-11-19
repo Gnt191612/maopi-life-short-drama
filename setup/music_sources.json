@@ -1,0 +1,8 @@
+{
+ "_说明": "配乐中的古典录音：全部来自维基共享资源（Wikimedia Commons），公有领域或 CC0，可自由使用与再分发。setup 脚本按此表下载到 assets/music/。",
+ "gymnopedie1": {"title": "Erik Satie - Gymnopédie No. 1", "license": "CC0", "commons": "File:Gymnopedie No. 1..ogg"},
+ "clair_de_lune": {"title": "Claude Debussy - Clair de Lune (Suite bergamasque, piano solo)", "license": "Public domain", "commons": "File:Clair de Lune by Claude Debussy (1905, piano solo).opus"},
+ "gnossienne1": {"title": "Erik Satie - Gnossienne No. 1", "license": "Public domain", "commons": "File:Satie - Gnossienne 1.ogg"},
+ "nocturne_op9_2": {"title": "Frédéric Chopin - Nocturne Op. 9 No. 2", "license": "CC0", "commons": "File:Chopin Nocturne No. 2 in E Flat Major, Op. 9.ogg"},
+ "bach_prelude_c": {"title": "J. S. Bach - Prelude No. 1 in C major, BWV 846 (Kimiko Ishizaka)", "license": "CC0", "commons": "File:Kimiko Ishizaka - Bach - Well-Tempered Clavier, Book 1 - 01 Prelude No. 1 in C major, BWV 846.ogg"}
+}
