@@ -16,6 +16,8 @@ BL, RB, FF = config.BLENDER, config.RHUBARB, config.FFMPEG
 for _n, _x in (('Blender', BL), ('Rhubarb', RB), ('ffmpeg', FF)):
     if not _x: sys.exit('找不到 %s：请先运行 setup/ 下的安装脚本' % _n)
 LOG = os.path.join(config.LOGS, 'run_all.log'); PRE = config.PREVIS
+REAL_DIR = next((a.split('=', 1)[1] for a in sys.argv if a.startswith('--real=')), None)   # 成片合成：--previs-only --real=<云端 out 目录>
+if REAL_DIR: PRE = os.path.join(config.ROOT, 'build', 'final'); os.makedirs(PRE, exist_ok=True)   # 写实版输出到 build/final/，不覆盖预演
 
 def log(*a):
     s = time.strftime('%m-%d %H:%M:%S ') + ' '.join(str(x) for x in a)
@@ -91,6 +93,10 @@ def previs(seg_ids, out_mp4):
     for sid in seg_ids:
         tl = json.load(open(os.path.join(config.SHOTS, sid + '_timeline.json'), encoding='utf-8'))
         frames = sorted(glob.glob(os.path.join(config.RENDERS, sid, 'beauty_*.png')))
+        if REAL_DIR:   # 云端写实化回来的画面（out/<镜头任务>/frame_####.png）优先，缺的帧用白模补
+            real = {}
+            for f in glob.glob(os.path.join(REAL_DIR, sid + '_*', 'frame_*.png')): real[int(f[-8:-4])] = f
+            frames = [real.get(int(f[-8:-4]), f) for f in frames]
         lst += frames
         for b in tl:
             beat_t[b['id']] = (t + (b['f0'] - 1) / 24.0, t + b['f1'] / 24.0)

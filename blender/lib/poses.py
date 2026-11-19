@@ -165,6 +165,9 @@ def apply_state(rig, st, frame=None, lag=0):
     for side, mir in (('L', True), ('R', False)):
         ul = b['ulegL'] if (mir and 'ulegL' in b) else (mirror(b['uleg']) if mir else b['uleg'])   # 左右腿不对称的姿态（爬梯）
         ll = b['llegL'] if (mir and 'llegL' in b) else (mirror(b['lleg']) if mir else b['lleg'])
+        if rig.get('v11_female') and st.get('base', 'stand') in ('stand', 'stand_rest'):   # 女性站姿：双腿略向内收（髋宽，直着站会显得腿分得太开）
+            inward = Vector((-0.075 if mir else 0.075, 0, 0))
+            ul = (ul + inward).normalized(); ll = (ll + inward * 0.4).normalized()
         aim(rig, 'upperleg01.' + side, W(ul)); aim(rig, 'upperleg02.' + side, W(ul))
         aim(rig, 'lowerleg01.' + side, W(ll)); aim(rig, 'lowerleg02.' + side, W(ll))
         aim(rig, 'foot.' + side, W(b['foot']))

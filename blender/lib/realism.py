@@ -53,10 +53,18 @@ def eyes(mat):
     if b is None: return
     b.inputs['Coat Weight'].default_value = 1.0; b.inputs['Coat Roughness'].default_value = 0.02
     bc = b.inputs['Base Color']
-    if bc.links:   # 虹膜原贴图偏红棕：降饱和、压暗成自然的深棕（东亚人常见瞳色）
-        nt = mat.node_tree; hsv = nt.nodes.new('ShaderNodeHueSaturation')
-        hsv.inputs['Hue'].default_value = 0.53; hsv.inputs['Saturation'].default_value = 0.8; hsv.inputs['Value'].default_value = 0.55
-        nt.links.new(bc.links[0].from_socket, hsv.inputs['Color']); nt.links.new(hsv.outputs['Color'], bc)
+    if bc.links:   # 原贴图虹膜是暗红色：只把高饱和的虹膜区域换成自然深棕（东亚人常见瞳色），眼白不动
+        nt = mat.node_tree; src = bc.links[0].from_socket
+        sep = nt.nodes.new('ShaderNodeSeparateColor'); sep.mode = 'HSV'; nt.links.new(src, sep.inputs['Color'])
+        mask = nt.nodes.new('ShaderNodeMapRange'); mask.inputs['From Min'].default_value = 0.30; mask.inputs['From Max'].default_value = 0.50
+        nt.links.new(sep.outputs['Green'], mask.inputs['Value'])                 # HSV 的 S 通道：虹膜饱和度高，眼白低
+        val = nt.nodes.new('ShaderNodeMath'); val.operation = 'MULTIPLY'; val.inputs[1].default_value = 0.55
+        nt.links.new(sep.outputs['Blue'], val.inputs[0])
+        comb = nt.nodes.new('ShaderNodeCombineColor'); comb.mode = 'HSV'
+        comb.inputs['Red'].default_value = 0.075; comb.inputs['Green'].default_value = 0.62; nt.links.new(val.outputs[0], comb.inputs['Blue'])
+        mx = nt.nodes.new('ShaderNodeMix'); mx.data_type = 'RGBA'
+        nt.links.new(mask.outputs['Result'], mx.inputs['Factor']); nt.links.new(src, mx.inputs[6]); nt.links.new(comb.outputs['Color'], mx.inputs[7])
+        nt.links.new(mx.outputs[2], bc)
     if not b.inputs['Roughness'].links: b.inputs['Roughness'].default_value = 0.08
     mat['v11_real'] = True
 
@@ -65,10 +73,12 @@ def cloth(mat):
     nt = mat.node_tree; b = next((n for n in nt.nodes if n.type == 'BSDF_PRINCIPLED'), None)
     if b is None: return
     tc = nt.nodes.new('ShaderNodeTexCoord')
-    folds = nt.nodes.new('ShaderNodeTexWave'); folds.wave_type = 'BANDS'; folds.bands_direction = 'Z'   # 竖向自然垂坠的褶
-    folds.inputs['Scale'].default_value = 7; folds.inputs['Distortion'].default_value = 9; folds.inputs['Detail'].default_value = 3
-    nt.links.new(tc.outputs['Object'], folds.inputs['Vector'])
-    _bump_chain(nt, b, folds.outputs['Fac'], 0.35, 0.01)
+    # 竖向、不规则的垂坠褶：把噪声在竖直方向拉长（原先用横向波纹，看起来像瓦楞板）
+    mp = nt.nodes.new('ShaderNodeMapping'); mp.inputs['Scale'].default_value = (1.0, 1.0, 0.18)
+    folds = nt.nodes.new('ShaderNodeTexNoise'); folds.inputs['Scale'].default_value = 9; folds.inputs['Detail'].default_value = 4
+    folds.inputs['Roughness'].default_value = 0.45
+    nt.links.new(tc.outputs['Object'], mp.inputs['Vector']); nt.links.new(mp.outputs['Vector'], folds.inputs['Vector'])
+    _bump_chain(nt, b, folds.outputs['Fac'], 0.22, 0.01)
     mat['v11_real'] = True
 
 def enhance_character(rig):

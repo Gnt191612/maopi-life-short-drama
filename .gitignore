@@ -29,3 +29,7 @@ voice_tools/voices_v2/*.wav
 assets/music/
 assets/hdri/
 assets/lookdev/
+# 人物定稿前的暂存演员表（定稿后提升为 assets/cast）
+assets/cast_next/
+# 人物审阅器的模型（每个 60–85 MB，由 blender/export_viewer.py 生成）
+viewer/models/

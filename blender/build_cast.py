@@ -11,6 +11,16 @@ from bl_ext.user_default.mpfb.services.humanservice import HumanService
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   # 仓库根目录
 import config
 import hair
+from mathutils import Vector
+# 鞋子：保留原资产贴图（皮革、网面、磨旧感），按人物身份选鞋型
+SHOES = {'lin': 'shoes02', 'chen': 'shoes05', 'zhou': 'shoes02', 'wang': 'shoes04', 'mom': 'shoes01', 'classA': 'shoes06', 'classB': 'shoes05',
+         'extM1': 'shoes06', 'extM2': 'shoes05', 'extM3': 'shoes02', 'extF1': 'shoes05', 'extF2': 'shoes06', 'extF3': 'shoes05'}
+# 五官立体度（所有人共用一层，不按 FACE_SCALE 缩小）：鼻梁更挺、眉弓、眼窝、人中与嘴唇的起伏——白模「像娃娃」主要因为脸太平
+DEPTH_M = {'nose-scale-depth-incr': 0.35, 'nose-trans-forward': 0.15, 'eyebrows-trans-forward': 0.30, 'l-eye-push1-in': 0.30, 'r-eye-push1-in': 0.30,
+           'mouth-philtrum-volume-incr': 0.25, 'mouth-upperlip-volume-incr': 0.15, 'mouth-lowerlip-volume-incr': 0.15, 'chin-prominent-incr': 0.12}
+DEPTH_F = {'nose-scale-depth-incr': 0.25, 'nose-trans-forward': 0.10, 'eyebrows-trans-forward': 0.15, 'l-eye-push1-in': 0.20, 'r-eye-push1-in': 0.20,
+           'mouth-philtrum-volume-incr': 0.20, 'mouth-upperlip-volume-incr': 0.20, 'mouth-lowerlip-volume-incr': 0.20}
+WARM = (0.93, 0.86, 0.80)   # 肤色整体压暗、偏暖（原来偏白，像打了粉的蜡像）
 
 OUT = config.CAST
 ASSET = config.mpfb_data()   # MakeHuman 素材（安装脚本放在 .tools/blender_user 下）
@@ -21,10 +31,10 @@ HEIGHT = {'lin': 1.72, 'chen': 1.82, 'zhou': 1.76, 'wang': 1.74, 'mom': 1.60, 'c
 CAST = {
  'lin':    ('林晓',   1.0, 0.50, 1.00, 0.30, 0.50, 0.40, 'male_casualsuit02',   'short02',    (0.22, 0.22, 0.24), (0.15, 0.18, 0.28)),  # 深灰卫衣
  'chen':   ('陈瑶',   1.0, 0.44, 0.30, 0.45, 0.80, 0.60, 'male_casualsuit01',   'short04',    (0.90, 0.90, 0.88), (0.12, 0.12, 0.14)),  # 白衬衫
- 'zhou':   ('周明远', 1.0, 0.47, 0.25, 0.55, 0.60, 0.55, 'male_casualsuit05',   'short01',    (0.25, 0.28, 0.18), (0.10, 0.10, 0.10)),  # 橄榄夹克
- 'wang':   ('王老师', 1.0, 0.56, 0.55, 0.45, 0.55, 0.50, 'male_casualsuit03',   'short04',    (0.62, 0.75, 0.90), (0.20, 0.20, 0.22)),  # 浅蓝衬衫
+ 'zhou':   ('周明远', 1.0, 0.47, 0.12, 0.42, 0.60, 0.55, 'male_casualsuit05',   'short01',    (0.25, 0.28, 0.18), (0.10, 0.10, 0.10)),  # 橄榄夹克
+ 'wang':   ('王老师', 1.0, 0.64, 0.70, 0.40, 0.55, 0.50, 'male_casualsuit03',   'short04',    (0.62, 0.75, 0.90), (0.20, 0.20, 0.22)),  # 浅蓝衬衫
  'mom':    ('林母',   0.0, 0.69, 0.62, 0.40, 0.40, 0.45, 'female_elegantsuit01', 'bob01',     (0.82, 0.75, 0.62), (0.35, 0.30, 0.28)),  # 米色毛衣
- 'classA': ('同学甲', 1.0, 0.44, 0.50, 0.62, 0.55, 0.50, 'male_casualsuit04',   'short01',    (0.08, 0.12, 0.35), (0.10, 0.10, 0.12)),  # 深蓝运动外套
+ 'classA': ('同学甲', 1.0, 0.43, 0.58, 0.82, 0.55, 0.50, 'male_casualsuit04',   'short01',    (0.08, 0.12, 0.35), (0.10, 0.10, 0.12)),  # 深蓝运动外套
  'classB': ('同学乙', 0.0, 0.43, 0.42, 0.45, 0.48, 0.55, 'female_casualsuit01', 'ponytail01', (0.85, 0.80, 0.70), (0.20, 0.22, 0.30)),  # 米色高领
 }
 # 路人学生（外景里走动、骑车的背景人物）：普通脸、不同体型/发型/穿搭；为了轻量，不长发丝，直接用发片
@@ -47,26 +57,70 @@ FACE = {   # 五官个性化（MakeHuman 形态目标，0~1）：每人不同的
  'chen':   {'head-oval': 0.9, 'head-scale-vert-incr': 0.5, 'head-scale-horiz-decr': 0.6, **LR('cheek-volume-decr', 0.4), **LR('cheek-bones-incr', 0.4),
             'chin-prominent-incr': 0.5, 'chin-width-decr': 0.5, 'chin-height-incr': 0.4, 'nose-scale-vert-incr': 0.5, 'nose-trans-forward': 0.4,
             'nose-point-width-decr': 0.4, **LR('eye-height2-decr', 0.3), 'mouth-scale-horiz-decr': 0.3, 'mouth-lowerlip-volume-decr': 0.4},
- 'zhou':   {'head-rectangular': 0.9, 'head-fat-decr': 0.9, **LR('cheek-volume-decr', 1.0), **LR('cheek-bones-incr', 0.8), 'chin-bones-incr': 0.7,
+ 'zhou':   {'mouth-scale-horiz-decr': 0.35, **LR('eye-scale-decr', 0.35), 'nose-scale-horiz-decr': 0.4, 'head-rectangular': 0.9, 'head-fat-decr': 0.9, **LR('cheek-volume-decr', 1.0), **LR('cheek-bones-incr', 0.8), 'chin-bones-incr': 0.7,
             'chin-prominent-incr': 0.3, 'forehead-scale-vert-incr': 0.4, 'nose-hump-incr': 0.5, 'nose-scale-vert-incr': 0.3,
             **LR('eye-bag-incr', 0.4), **LR('eye-push2-in', 0.5), 'eyebrows-angle-down': 0.4, 'mouth-scale-horiz-incr': 0.2},
- 'wang':   {'head-square': 0.9, 'head-age-incr': 0.6, 'chin-width-incr': 0.7, 'head-scale-horiz-incr': 0.3, 'nose-scale-horiz-incr': 0.5,
+ 'wang':   {'head-fat-incr': 0.7, 'head-scale-horiz-incr': 0.5, **LR('cheek-volume-incr', 0.6), 'head-square': 0.9, 'head-age-incr': 0.9, 'chin-width-incr': 0.7, 'head-scale-horiz-incr': 0.3, 'nose-scale-horiz-incr': 0.5,
             'nose-flaring-incr': 0.5, 'mouth-laugh-lines-out': 0.9, 'mouth-scale-horiz-incr': 0.3, **LR('eye-bag-incr', 0.5),
-            'forehead-scale-vert-incr': 0.5, 'eyebrows-angle-up': 0.3, 'neck-double-incr': 0.3},
+            'forehead-scale-vert-incr': 0.5, 'eyebrows-angle-up': 0.3, 'neck-double-incr': 0.7},
  'mom':    {'head-round': 0.6, 'head-age-incr': 0.9, **LR('cheek-volume-incr', 0.5), **LR('cheek-trans-down', 0.5), 'mouth-laugh-lines-out': 1.0,
             **LR('eye-bag-incr', 0.8), 'mouth-angles-up': 0.4, 'nose-scale-horiz-incr': 0.3, 'eyebrows-angle-up': 0.3, 'neck-double-incr': 0.3},
- 'classA': {'head-diamond': 0.9, 'chin-prominent-incr': 0.7, 'mouth-angles-up': 0.6, 'mouth-scale-horiz-incr': 0.4, 'nose-point-up': 0.5,
+ 'classA': {'head-scale-horiz-incr': 0.6, **LR('ear-flap-incr', 0.8), 'eyebrows-trans-down': 0.35, 'mouth-scale-horiz-incr': 0.5, 'head-diamond': 0.9, 'chin-prominent-incr': 0.7, 'mouth-angles-up': 0.6, 'mouth-scale-horiz-incr': 0.4, 'nose-point-up': 0.5,
             **LR('eye-scale-decr', 0.3), **LR('eye-corner1-up', 0.5), 'eyebrows-angle-up': 0.6, **LR('ear-wing-incr', 0.7), **LR('cheek-bones-incr', 0.4)},
- 'classB': {'head-oval': 0.8, 'head-scale-horiz-decr': 0.35, **LR('eye-scale-incr', 0.55), **LR('eye-height2-incr', 0.4), 'nose-scale-horiz-decr': 0.5,
+ 'classB': {'head-oval': 0.8, 'head-scale-horiz-decr': 0.35, **LR('eye-scale-incr', 0.95), **LR('eye-height2-incr', 0.7), **LR('eye-eyefold-up', 0.6), 'eyebrows-trans-up': 0.15, 'nose-scale-horiz-decr': 0.5,
             'nose-point-up': 0.3, 'mouth-cupidsbow-incr': 0.6, 'mouth-lowerlip-volume-incr': 0.4, 'chin-triangle': 0.7, **LR('cheek-bones-incr', 0.25)},
 }
-EYEBROW = {'lin': 'eyebrow005', 'chen': 'eyebrow009', 'zhou': 'eyebrow002', 'wang': 'eyebrow007', 'mom': 'eyebrow011',
-           'classA': 'eyebrow004', 'classB': 'eyebrow010',                                                    # 每人不同眉形
+EYEBROW = {'lin': 'eyebrow005', 'chen': 'eyebrow012', 'zhou': 'eyebrow007', 'wang': 'eyebrow001', 'mom': 'eyebrow011',
+           'classA': 'eyebrow009', 'classB': 'eyebrow008',                                                    # 每人不同眉形
            'extM1': 'eyebrow001', 'extM2': 'eyebrow003', 'extM3': 'eyebrow006', 'extF1': 'eyebrow011', 'extF2': 'eyebrow010', 'extF3': 'eyebrow012'}
 SKIN_TINT = {'lin': (1.03, 1.0, 0.98), 'chen': (1.04, 1.01, 1.0), 'zhou': (0.94, 0.92, 0.92), 'wang': (0.93, 0.88, 0.84),
              'mom': (1.0, 0.97, 0.95), 'classA': (0.88, 0.80, 0.72), 'classB': (1.06, 1.02, 1.0),           # 肤色差异（乘在皮肤贴图上）
              'extM1': (0.95, 0.92, 0.9), 'extM2': (1.0, 0.97, 0.95), 'extM3': (0.9, 0.85, 0.8), 'extF1': (1.04, 1.0, 0.98),
              'extF2': (0.98, 0.95, 0.92), 'extF3': (1.05, 1.02, 1.0)}
+
+STOCKINGS = {'classB': (0.012, 0.011, 0.013)}   # 黑丝（同学乙）
+
+def stockings(body, rgb):
+    """丝袜：按腿部骨骼权重算出「丝袜区域」（脚到大腿上部，大腿根渐变），在皮肤材质上叠一层半透明黑色——
+    正对镜头处透肤、侧面边缘更黑（真实丝袜的光学特征），表面带一点织物光泽"""
+    me = body.data
+    att = me.attributes.get('v11_stocking') or me.attributes.new('v11_stocking', 'FLOAT', 'POINT')
+    w = {'lowerleg01': 1.0, 'lowerleg02': 1.0, 'foot': 1.0, 'toe1-1': 1.0, 'upperleg02': 1.0, 'upperleg01': 0.55}
+    gid = {}
+    for vg in body.vertex_groups:
+        base = vg.name.rsplit('.', 1)[0]
+        for k, s in w.items():
+            if base.startswith(k): gid[vg.index] = s
+    vals = [0.0] * len(me.vertices)
+    for v in me.vertices:
+        vals[v.index] = min(1.0, sum(g.weight * gid[g.group] for g in v.groups if g.group in gid))
+    att.data.foreach_set('value', vals)
+    for slot in body.material_slots:
+        m = slot.material
+        if not m or not m.use_nodes: continue
+        nt = m.node_tree; b = next((n for n in nt.nodes if n.type == 'BSDF_PRINCIPLED'), None)
+        if b is None: continue
+        bc = b.inputs['Base Color']; src = bc.links[0].from_socket if bc.links else None
+        at = nt.nodes.new('ShaderNodeAttribute'); at.attribute_name = 'v11_stocking'
+        lw = nt.nodes.new('ShaderNodeLayerWeight'); lw.inputs['Blend'].default_value = 0.45
+        dens = nt.nodes.new('ShaderNodeMapRange'); dens.inputs['To Min'].default_value = 0.62; dens.inputs['To Max'].default_value = 0.97
+        nt.links.new(lw.outputs['Facing'], dens.inputs['Value'])                 # 越侧着看越不透（丝线叠得越密）
+        fac = nt.nodes.new('ShaderNodeMath'); fac.operation = 'MULTIPLY'
+        nt.links.new(at.outputs['Fac'], fac.inputs[0]); nt.links.new(dens.outputs['Result'], fac.inputs[1])
+        mx = nt.nodes.new('ShaderNodeMix'); mx.data_type = 'RGBA'; mx.inputs[7].default_value = (*rgb, 1)
+        if src: nt.links.new(src, mx.inputs[6])
+        else: mx.inputs[6].default_value = bc.default_value
+        nt.links.new(fac.outputs[0], mx.inputs['Factor']); nt.links.new(mx.outputs[2], bc)
+        sss = b.inputs.get('Subsurface Weight')                                   # 丝袜处不要皮肤的次表面透光
+        if sss is not None and not sss.links:
+            inv = nt.nodes.new('ShaderNodeMapRange'); inv.inputs['To Min'].default_value = sss.default_value; inv.inputs['To Max'].default_value = 0.0
+            nt.links.new(at.outputs['Fac'], inv.inputs['Value']); nt.links.new(inv.outputs['Result'], sss)
+        if not b.inputs['Roughness'].links:
+            rr = nt.nodes.new('ShaderNodeMapRange'); rr.inputs['To Min'].default_value = b.inputs['Roughness'].default_value; rr.inputs['To Max'].default_value = 0.38
+            nt.links.new(at.outputs['Fac'], rr.inputs['Value']); nt.links.new(rr.outputs['Result'], b.inputs['Roughness'])
+        sh = b.inputs.get('Sheen Weight')
+        if sh is not None and not sh.links: nt.links.new(at.outputs['Fac'], sh)   # 丝袜的柔光
+    print('STOCKINGS', body.name, flush=True)
 
 def tint_skin(body, rgb):
     for slot in body.material_slots:
@@ -76,14 +130,20 @@ def tint_skin(body, rgb):
         if not b or not b.inputs['Base Color'].links: continue
         src = b.inputs['Base Color'].links[0].from_socket; nt = m.node_tree
         mix = nt.nodes.new('ShaderNodeMix'); mix.data_type = 'RGBA'; mix.blend_type = 'MULTIPLY'; mix.inputs['Factor'].default_value = 1.0
-        mix.inputs[7].default_value = (*rgb, 1); nt.links.new(src, mix.inputs[6]); nt.links.new(mix.outputs[2], b.inputs['Base Color'])
+        mix.inputs[7].default_value = (*(c * w for c, w in zip(rgb, WARM)), 1); nt.links.new(src, mix.inputs[6]); nt.links.new(mix.outputs[2], b.inputs['Base Color'])
 
+FACE_SCALE_OF = {'zhou': 0.85, 'wang': 0.85, 'classA': 0.85, 'classB': 0.8}   # 长得太像的几个人加重各自特征
 FACE_SCALE = 0.5   # 统一按 50% 生效：保留各人头型与特征组合，但回到现实中普通人的自然比例（满强度会像漫画）
 
 def apply_face(body, cid):
     for name, v in FACE.get(cid, {}).items():
-        try: TargetService.load_target(body, TargetService.target_full_path(name), weight=v * FACE_SCALE, name=name)
+        try: TargetService.load_target(body, TargetService.target_full_path(name), weight=v * FACE_SCALE_OF.get(cid, FACE_SCALE), name=name)
         except Exception as e: print('FACE WARN', cid, name, e, flush=True)
+    depth = DEPTH_M if CAST[cid][1] > 0.5 else DEPTH_F
+    for name, v in depth.items():
+        if name in FACE.get(cid, {}): continue                            # 个人特征里已有的不重复叠加
+        try: TargetService.load_target(body, TargetService.target_full_path(name), weight=v, name='depth_' + name)
+        except Exception as e: print('DEPTH WARN', cid, name, e, flush=True)
 SKINS = {'lin': 'young_asian_male', 'chen': 'young_asian_male', 'zhou': 'young_asian_male', 'classA': 'young_asian_male',
          'wang': 'middleage_asian_male', 'mom': 'middleage_asian_female', 'classB': 'young_asian_female',
          'extM1': 'young_asian_male', 'extM2': 'young_asian_male', 'extM3': 'young_asian_male',
@@ -110,13 +170,70 @@ def fabric(name, rgb):
     nt.links.new(weave.outputs['Fac'], bump.inputs['Height']); nt.links.new(bump.outputs['Normal'], b.inputs['Normal'])
     return m
 
-def recolor(obj, rgb_top, rgb_bottom=None):
-    """服装：按部位换成角色配色的布料材质（保留原资产的 UV/形状）"""
+def tint(mat, rgb):
+    """保留原资产贴图的细节（牛仔布纹、针织纹理、缝线、法线贴图），只把颜色换成角色配色：
+    颜色 = 角色色 x 贴图亮度（按平均亮度归一）。原先整块换成平涂色，衣服看起来像紧身衣"""
+    nt = mat.node_tree; b = next((n for n in nt.nodes if n.type == 'BSDF_PRINCIPLED'), None)
+    if b is None: return False
+    bc = b.inputs['Base Color']
+    if not bc.links: bc.default_value = (*tuple(c ** 2.2 for c in rgb), 1); return True
+    src = bc.links[0].from_socket
+    bw = nt.nodes.new('ShaderNodeRGBToBW'); nt.links.new(src, bw.inputs['Color'])
+    gain = nt.nodes.new('ShaderNodeMath'); gain.operation = 'MULTIPLY'; gain.inputs[1].default_value = 1.8; gain.use_clamp = False
+    nt.links.new(bw.outputs['Val'], gain.inputs[0])
+    mx = nt.nodes.new('ShaderNodeMix'); mx.data_type = 'RGBA'; mx.blend_type = 'MULTIPLY'; mx.inputs['Factor'].default_value = 1.0
+    mx.inputs[6].default_value = (*tuple(c ** 2.2 for c in rgb), 1)
+    cv = nt.nodes.new('ShaderNodeCombineColor'); nt.links.new(gain.outputs[0], cv.inputs['Red']); nt.links.new(gain.outputs[0], cv.inputs['Green']); nt.links.new(gain.outputs[0], cv.inputs['Blue'])
+    nt.links.new(cv.outputs['Color'], mx.inputs[7]); nt.links.new(mx.outputs[2], bc)
+    return True
+
+LOGO_TOPS = ('male_casualsuit02', 'male_casualsuit04', 'male_casualsuit06', 'female_casualsuit01', 'female_casualsuit02', 'female_sportsuit01')   # 原贴图 T 恤上印着 MakeHuman 标志
+
+def recolor(obj, rgb_top, rgb_bottom=None, asset=''):
+    """服装：按部位染成角色配色（保留原资产的 UV/形状/布纹细节）；带标志的 T 恤上衣改用素色布料"""
     for i, slot in enumerate(obj.material_slots):
         n = (slot.material.name if slot.material else '').lower()
-        rgb = rgb_bottom if (rgb_bottom and any(k in n for k in ('jean', 'pant', 'trouser', 'skirt'))) else rgb_top
-        slot.material = fabric('%s_%d' % (obj.name, i), rgb)
+        bottom = bool(rgb_bottom and any(k in n for k in ('jean', 'pant', 'trouser', 'skirt')))
+        rgb = rgb_bottom if bottom else rgb_top
+        if asset in LOGO_TOPS and not bottom:
+            slot.material = fabric('%s_%d' % (obj.name, i), rgb); continue
+        if not (slot.material and slot.material.use_nodes and tint(slot.material, rgb)):
+            slot.material = fabric('%s_%d' % (obj.name, i), rgb)
     if not obj.material_slots: obj.data.materials.append(fabric(obj.name + '_m', rgb_top))
+
+def cloth_volume(obj, thick=0.004):
+    """衣服的厚度和松量：布料向外长出 4mm 厚度（不再贴肉，领口、袖口、下摆能看出边）。
+    不用「沿法线外扩」：素材里个别方向异常的点会被推出去几十厘米，变成尖刺/横穿画面的长线"""
+    s = obj.modifiers.new('v11_thickness', 'SOLIDIFY'); s.thickness = thick; s.offset = 1.0; s.use_even_offset = False   # 不开均匀厚度：素材里压扁的小三角面会被放大几百倍，顶点飞出好几米
+
+def shirt_details(cid, rig, shirt, pocket=True):
+    """衬衫细节：门襟一排纽扣 + 左胸口袋（贴在衬衫表面，挂在胸椎骨骼上随身体动）"""
+    from mathutils.bvhtree import BVHTree
+    dg = bpy.context.evaluated_depsgraph_get(); ev = shirt.evaluated_get(dg); me = ev.to_mesh()
+    tree = BVHTree.FromPolygons([shirt.matrix_world @ v.co for v in me.vertices], [tuple(p.vertices) for p in me.polygons]); ev.to_mesh_clear()
+    pb = rig.pose.bones; M = rig.matrix_world
+    top, low = (M @ pb['neck01'].head).z - 0.07, (M @ pb['root'].head).z + 0.03
+    btn_mat = mat('btn_%s' % cid, (0.92, 0.91, 0.88), 0.3)
+    z = top; k = 0
+    while z > low:
+        hit = tree.ray_cast(Vector((0, -1.0, z)), Vector((0, 1, 0)), 2.0)
+        if hit[0] is not None:
+            loc, nrm = hit[0], hit[1]
+            bpy.ops.mesh.primitive_cylinder_add(radius=0.0055, depth=0.0025, vertices=12, location=loc + nrm * 0.0015)
+            b = bpy.context.object; b.name = '%s_button%d' % (cid, k); b.rotation_euler = nrm.to_track_quat('Z', 'Y').to_euler()
+            b.data.materials.append(btn_mat); bone_child(b, rig, 'spine01' if z > (M @ pb['spine03'].head).z else 'spine03'); k += 1
+        z -= 0.085
+    if pocket:   # 角色左胸（+X）
+        zc = (M @ pb['spine01'].head).z + 0.02
+        hit = tree.ray_cast(Vector((0.09, -1.0, zc)), Vector((0, 1, 0)), 2.0)
+        if hit[0] is not None:
+            loc, nrm = hit[0], hit[1]
+            bpy.ops.mesh.primitive_cube_add(size=1, location=loc + nrm * 0.0012)
+            p = bpy.context.object; p.name = cid + '_pocket'; p.scale = (0.10, 0.11, 0.0015)
+            p.rotation_euler = nrm.to_track_quat('Z', 'Y').to_euler()
+            src = shirt.material_slots[0].material if shirt.material_slots else None
+            p.data.materials.append(src); bone_child(p, rig, 'spine01')
+    print('SHIRT DETAILS', cid, k, 'buttons', flush=True)
 
 def darken_hair(obj, tint=(0.18, 0.15, 0.13)):
     """头发：保留资产的写实发丝纹理，乘上深色，接近东亚人的自然黑发"""
@@ -137,6 +254,7 @@ def add(body, rel, kind):
 
 def bone_child(obj, rig, bone):
     """把程序建模的配件挂到骨骼上（随头/脖子运动）"""
+    bpy.context.view_layer.update()                    # 先刷新：刚设的缩放/旋转要先算进 matrix_world（否则口袋会变成 1 米大方块）
     mw = obj.matrix_world.copy()
     obj.parent = rig; obj.parent_type = 'BONE'; obj.parent_bone = bone
     obj.matrix_world = mw
@@ -205,11 +323,12 @@ def build(cid):
     skin = SKINS[cid]   # MakeHuman 写实皮肤（含纹理、次表面散射）
     HumanService.set_character_skin(os.path.join(ASSET, 'skins', skin, skin + '.mhmat'), body, skin_type='ENHANCED_SSS')
     tint_skin(body, SKIN_TINT[cid])
+    if cid in STOCKINGS: stockings(body, STOCKINGS[cid])
     parts = {}
     for rel, kind in (('eyes/high-poly/high-poly.mhclo', 'Eyes'), ('eyebrows/%s/%s.mhclo' % (EYEBROW[cid], EYEBROW[cid]), 'Eyebrows'),
                       ('eyelashes/eyelashes01/eyelashes01.mhclo', 'Eyelashes'), ('teeth/teeth_base/teeth_base.mhclo', 'Teeth'),
                       ('hair/%s/%s.mhclo' % (hair_name, hair_name), 'Hair'), ('clothes/%s/%s.mhclo' % (suit, suit), 'Clothes'),
-                      ('clothes/shoes02/shoes02.mhclo', 'Clothes')):
+                      ('clothes/%s/%s.mhclo' % (SHOES.get(cid, 'shoes02'), SHOES.get(cid, 'shoes02')), 'Clothes')):
         try: parts[rel] = add(body, rel, kind)
         except Exception as e: print('ASSET FAIL', cid, rel, e, flush=True)
     for rel, o in parts.items():
@@ -217,9 +336,12 @@ def build(cid):
         if 'eyebrow' in rel: darken_hair(o)
         elif 'hair' in rel: pass   # 头发由 hair.build 处理（发帽 + 发丝）
         elif 'eyelash' in rel or 'eyes' in rel or 'teeth' in rel: pass   # 保留资产自带的写实材质
-        elif 'clothes' in rel and 'shoes' not in rel: recolor(o, top, bottom)
-        elif 'shoes' in rel: recolor(o, (0.9, 0.9, 0.9) if cid in ('chen', 'classB') else (0.08, 0.08, 0.08))
+        elif 'clothes' in rel and 'shoes' not in rel: recolor(o, top, bottom, asset=rel.split('/')[1]); cloth_volume(o)
+        elif 'shoes' in rel: pass   # 鞋子保留原贴图
         o.name = '%s_%s' % (cid, rel.split('/')[1])
+    if cid in ('chen', 'wang'):     # 衬衫：纽扣 + 胸袋
+        shirt = next((o for r_, o in parts.items() if o is not None and 'clothes' in r_ and 'shoes' not in r_), None)
+        if shirt is not None: shirt_details(cid, rig, shirt, pocket=True)
     shell = parts.get('hair/%s/%s.mhclo' % (hair_name, hair_name))   # 真实发丝：以发片为发型轮廓生长
     if cid in HAIR_ASSET:   # 成品发型：替换系统发片，不生成发丝
         if shell is not None: bpy.data.objects.remove(shell, do_unlink=True); shell = None
@@ -243,6 +365,7 @@ def build(cid):
     top = max((ev.matrix_world @ v.co).z for v in ev.to_mesh().vertices); ev.to_mesh_clear()
     k = HEIGHT[cid] / top; rig.scale = (k, k, k)
     body['v11_char'] = name
+    rig['v11_female'] = g < 0.5
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, cid + '.blend'))
     print('CAST OK', cid, name, 'height %.2fm (scale %.3f)' % (top * k, k), 'parts', len([p for p in parts.values() if p]), flush=True)
 

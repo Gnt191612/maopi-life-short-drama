@@ -12,8 +12,9 @@ LIB = os.path.join(os.path.dirname(bpy.app.binary_path), bpy.app.version_string[
 # 发型参数：发丝最长(米)、生长步数、下垂程度、数量
 STYLE = {'short02': dict(L=0.09, steps=10, droop=0.45, n=26000), 'short04': dict(L=0.07, steps=9, droop=0.4, n=24000),
          'short03': dict(L=0.07, steps=9, droop=0.4, n=24000), 'short01': dict(L=0.022, steps=4, droop=0.1, n=30000),
-         'bob01': dict(L=0.22, steps=16, droop=0.75, n=26000), 'ponytail01': dict(L=0.36, steps=22, droop=0.8, n=26000),
-         'wavybob': dict(L=0.20, steps=18, droop=0.55, n=30000)}   # 林母：沿微卷波波头轮廓生长
+         'bob01': dict(L=0.22, steps=16, droop=0.75, n=26000),
+         'ponytail01': dict(L=0.36, steps=22, droop=0.8, n=55000, smooth=True),                  # 发丝加密一倍 + 理顺：去掉一道道条纹感
+         'wavybob': dict(L=0.20, steps=18, droop=0.55, n=30000, shrink=0.88, smooth=True)}       # 林母：轮廓往头部收 12%，不再蓬成一团
 
 def _world_bvh(obj, dg):
     ev = obj.evaluated_get(dg); me = ev.to_mesh(); mw = obj.matrix_world
@@ -41,11 +42,11 @@ def hair_material(name, melanin=0.97):
 # 长度单位米：top 头顶 / front 刘海 / side 两侧 / back 后脑；lift 发根立起程度（体积）；messy 凌乱度；
 # part 分缝（'L' 角色左侧 / 'R' 右侧 / None）；fringe 'down' 刘海下垂 / 'up' 上翘 / 'side' 梳向一侧；n 发丝数
 SHORT = {   # 「蓬松但干净」：保留体积，减少毛躁乱翘；clump=0 不做成缕（实测显油腻），curl 卷曲半径(米)
- 'lin':    dict(top=0.090, front=0.078, side=0.050, back=0.048, lift=0.48, messy=0.16, part=None, fringe='down', n=110000, clump=0, curl=0.0),     # 韩式碎盖
- 'chen':   dict(top=0.082, front=0.080, side=0.034, back=0.034, lift=0.40, messy=0.05, part='L', fringe='side', n=105000, clump=0, curl=0.0),     # 韩式偏分
- 'zhou':   dict(top=0.030, front=0.026, side=0.015, back=0.015, lift=0.70, messy=0.05, part=None, fringe='up', n=120000, clump=0, curl=0.0),      # 利落板寸
- 'wang':   dict(top=0.055, front=0.052, side=0.020, back=0.020, lift=0.30, messy=0.04, part='R', fringe='side', n=95000, clump=0, curl=0.0),      # 偏短侧分
- 'classA': dict(top=0.065, front=0.055, side=0.024, back=0.025, lift=0.70, messy=0.14, part=None, fringe='up', n=110000, clump=0, curl=0.0),     # 上翘短发
+ 'lin':    dict(top=0.090, front=0.078, side=0.050, back=0.048, lift=0.34, messy=0.08, part=None, fringe='down', n=145000, clump=0, curl=0.0),     # 韩式碎盖
+ 'chen':   dict(top=0.082, front=0.080, side=0.034, back=0.034, lift=0.30, messy=0.03, part='L', fringe='side', n=140000, clump=0, curl=0.0),     # 韩式偏分
+ 'zhou':   dict(top=0.030, front=0.026, side=0.015, back=0.015, lift=0.45, messy=0.03, part=None, fringe='up', n=150000, clump=0, curl=0.0),      # 利落板寸
+ 'wang':   dict(top=0.055, front=0.052, side=0.020, back=0.020, lift=0.22, messy=0.02, part='R', fringe='side', n=125000, melanin=0.80, clump=0, curl=0.0),      # 偏短侧分
+ 'classA': dict(top=0.058, front=0.050, side=0.022, back=0.024, lift=0.40, messy=0.05, part=None, fringe='up', n=150000, clump=0, curl=0.0),     # 上翘短发（收一点，不像鸡冠）
 }
 
 def _smooth(e0, e1, x):
@@ -64,8 +65,12 @@ def build_short(cid, rig, body, shell, seed=1):
     whorl = H + Vector((0, 0.055, 0.085))                     # 发旋：头顶偏后
     part_x = {'L': 0.035, 'R': -0.035}.get(S['part'])         # 分缝位置（角色左侧 = +X）
 
+    s1, s2 = rnd.uniform(0, 6.28), rnd.uniform(0, 6.28)
     def hairline_z(az):
-        """发际线高度（按方位角，0=正前方，90=侧面，180=正后方）"""
+        """发际线高度（按方位角，0=正前方，90=侧面，180=正后方）；叠加平滑起伏，真人发际线不是一条直线"""
+        return _hairline(az) + 0.004 * math.sin(math.radians(az) * 7 + s1) + 0.0022 * math.sin(math.radians(az) * 17 + s2)
+
+    def _hairline(az):
         a = abs(az)
         front = brow_z + 0.045          # 前额发际线：眉上约 4.5cm
         temple = brow_z + 0.016         # 太阳穴略后收
@@ -78,6 +83,13 @@ def build_short(cid, rig, body, shell, seed=1):
         if a < 130: return ear + (behind - ear) * _smooth(100, 130, a)
         return behind + (nape - behind) * _smooth(130, 170, a)
 
+    def side_of(c):
+        """0~1：这个点有多「靠两鬓、耳朵上方」（侧面、低于头顶）。那一圈真实头发是服帖贴着头皮的"""
+        rel = c - H; a = abs(math.degrees(math.atan2(rel.x, -rel.y)))
+        sidew = _smooth(50, 78, a) * (1 - _smooth(125, 160, a))
+        low = 1 - _smooth(eyes.z + 0.04, H.z + 0.06, c.z)
+        return sidew * low
+
     def region_len(c):
         """按部位插值长度：头顶长、两侧后脑短"""
         rel = c - H; az = math.degrees(math.atan2(rel.x, -rel.y))
@@ -88,7 +100,8 @@ def build_short(cid, rig, body, shell, seed=1):
         return L + (S['front'] - L) * frontness * height, az, height
 
     # 1) 头皮覆盖区（发际线以上、朝外的头部表面）
-    cover, soft_faces = [], []
+    cover, soft_faces, cap_faces, soft_w = [], [], [], {}
+    SOFT = 0.016                                                             # 发际线过渡带 1.6cm：越往外越稀
     for fi, p in enumerate(bp):
         if len(p) < 3: continue
         c = sum((bv[i] for i in p), Vector()) / len(p); rel = c - H
@@ -98,9 +111,11 @@ def build_short(cid, rig, body, shell, seed=1):
         if n.dot(rel.normalized()) < 0.2: continue
         az = math.degrees(math.atan2(rel.x, -rel.y))
         hz = hairline_z(az)
-        if c.z < hz - 0.012: continue
-        if c.z < hz: soft_faces.append(fi); continue                        # 发际线下 1.2cm：过渡区（只种稀疏细发，不铺底色）
+        if c.z < hz - SOFT: continue
+        if c.z < hz:                                                          # 过渡区：密度从发际线往外线性减到 0（不铺底色）
+            soft_faces.append(fi); soft_w[fi] = (c.z - (hz - SOFT)) / SOFT; continue
         cover.append(fi)
+        if c.z > hz + 0.008 * (1 - 0.7 * side_of(c)): cap_faces.append(fi)    # 深色发帽缩进发际线 8mm（两鬓只缩 2~3mm，耳朵上方不露出空隙）
     if not cover: return None
     tris = []
     for fi in cover:
@@ -110,7 +125,7 @@ def build_short(cid, rig, body, shell, seed=1):
     n_main = len(tris)
     for fi in soft_faces:
         p = bp[fi]; a, b_, c = bv[p[0]], bv[p[1]], bv[p[2]]
-        tris.append((a, b_, c, ((b_ - a).cross(c - a)).length / 2 * 0.3))
+        tris.append((a, b_, c, ((b_ - a).cross(c - a)).length / 2 * 0.4 * soft_w[fi] ** 2))
     import bisect
     total = sum(t[3] for t in tris); acc = []; s_ = 0
     for t in tris: s_ += t[3]; acc.append(s_)
@@ -121,7 +136,7 @@ def build_short(cid, rig, body, shell, seed=1):
         r = random.Random(hash(key) & 0xffffffff)
         return Vector((r.uniform(-1, 1), r.uniform(-1, 1), r.uniform(-1, 1)))
 
-    strands = []
+    strands, soft_flag = [], []
     for _ in range(S['n']):
         ti = min(len(tris) - 1, bisect.bisect_left(acc, rnd.random() * total)); t = tris[ti]; soft = ti >= n_main
         u, v = rnd.random(), rnd.random()
@@ -130,7 +145,7 @@ def build_short(cid, rig, body, shell, seed=1):
         nrm = ((t[1] - t[0]).cross(t[2] - t[0])).normalized()
         if nrm.dot(root - H) < 0: nrm = -nrm
         L, az, height = region_len(root); L *= rnd.uniform(0.8, 1.15)
-        if soft: L *= rnd.uniform(0.3, 0.7)                                         # 发际线过渡区：短而稀
+        if soft: L *= rnd.uniform(0.25, 0.6)                                        # 发际线过渡区：短、细、贴着头皮
         # 2) 发流方向：从发旋向外放射；刘海按发型向前垂/上翘/梳向一侧；分缝两侧各自梳开
         flow = root - whorl
         rel = root - H
@@ -148,7 +163,9 @@ def build_short(cid, rig, body, shell, seed=1):
         fstop = 0.004 + (clump_noise(root, 99).x * 0.5 + 0.5) * 0.028                   # 每一缕刘海停在不同高度
         if S['fringe'] == 'down' and -rel.y > 0.02: flow = (flow + Vector((clump_noise(root, 98).y * 0.6, 0, 0))).normalized()   # 碎刘海微微错开
         n_steps = max(4, min(16, int(L / 0.0045) + 3)); step = L / n_steps      # 控制点加密：曲线更柔顺
-        lift = S['lift'] * (0.15 + 0.85 * _smooth(0.025, 0.07, (root - whorl).length)) * (0.25 + 0.75 * height)   # 两侧后脑贴头型，不外翘   # 发旋附近的头发顺着发流平躺（不立起来反光）
+        lift = S['lift'] * (0.15 + 0.85 * _smooth(0.025, 0.07, (root - whorl).length)) * (0.25 + 0.75 * height)   # 两侧后脑贴头型，不外翘；发旋附近顺着发流平躺
+        if soft: lift *= 0.3                                                         # 发际线的细发顺着头皮趴着
+        lift *= 1 - 0.85 * side_of(root)                                             # 两鬓、耳朵上方：头发服帖地贴着头皮，不翘不鼓
         d = (nrm * lift + flow * (1 - lift)).normalized()
         p = root + nrm * 0.0008; pts = [p.copy()]
         for k in range(n_steps):
@@ -159,24 +176,26 @@ def build_short(cid, rig, body, shell, seed=1):
                 d = (d - (q_dir := (root - H).normalized()) * 0.45 - up * 0.25).normalized()
             q = p + d * step
             loc, nn, _, dist = bb.find_nearest(q)                               # 保持在头皮外：离开距离随长度增加 → 体积
-            min_off = 0.0015 + (k + 1) / n_steps * (0.006 + S['lift'] * 0.012)   # 离头皮越远越蓬松：发量感
-            if loc is not None and dist < min_off:
+            sf = side_of(q)                                                       # 越靠两鬓/耳朵上方，越贴头皮（那里不该有空隙）
+            min_off = (0.002 + (k + 1) / n_steps * (0.006 + S['lift'] * 0.010)) * (1 - 0.7 * sf)   # 发根贴头皮，越往发梢离头皮越远：有一层 1~2cm 的发量
+            max_off = min_off + 0.006 * (1 - 0.75 * sf) + (0.004 if S['fringe'] == 'down' and -(q - H).y > 0.03 else 0.0)   # 上限：头发贴着头皮走，不游离出去（刘海可稍离开额头）
+            if loc is not None and (dist < min_off or dist > max_off):
                 out = (q - loc).normalized() if (q - loc).length > 1e-7 else nn
                 if out.dot(q - H) < 0: out = -out
-                q = loc + out * min_off
+                q = loc + out * (min_off if dist < min_off else max_off)
             relq = q - H
             if relq.dot(fwd) > 0.035 and q.z < brow_z + fstop: break              # 刘海长短错落、不遮眼睛
             d = (q - p).normalized(); p = q; pts.append(p.copy())
-        if len(pts) >= 2: strands.append(pts)
+        if len(pts) >= 2: strands.append(pts); soft_flag.append(soft)
     # 3) 曲线 + 材质
     hc = bpy.data.hair_curves.new(cid + '_strands'); hc.add_curves([len(s) for s in strands])
     for i, v in enumerate(vv for s in strands for vv in s): hc.points[i].position = v
     r0 = 0.00012 if S['top'] < 0.035 else 0.00016
-    for c in hc.curves:
-        n = len(c.points)
-        for j, pt in enumerate(c.points): pt.radius = r0 * (1 - 0.7 * j / max(1, n - 1))
+    for c, sf in zip(hc.curves, soft_flag):
+        n = len(c.points); r_ = r0 * (0.45 if sf else 1.0)               # 发际线的细软绒发更细，远看是渐变而不是一排刺
+        for j, pt in enumerate(c.points): pt.radius = r_ * (1 - 0.7 * j / max(1, n - 1))
     obj = bpy.data.objects.new(cid + '_strands', hc); bpy.context.scene.collection.objects.link(obj)
-    hc.materials.append(hair_material(cid + '_hairmat'))
+    hc.materials.append(hair_material(cid + '_hairmat', S.get('melanin', 0.97)))   # 王老师：鬓角花白（黑色素低一点）
     def nodes(gname, **vals):   # 叠加一层程序化发丝节点，按名字设参数
         md = obj.modifiers.new(gname, 'NODES'); md.node_group = _node_group(gname)
         for item in md.node_group.interface.items_tree:
@@ -186,13 +205,13 @@ def build_short(cid, rig, body, shell, seed=1):
     if S['curl'] > 0:
         nodes('Curl Hair Curves', **{'Existing Guide Map': False, 'Guide Distance': S['clump'], 'Radius': S['curl'], 'Frequency': 2.5,
                                      'Curl Start': 0.25, 'Random Offset': 0.5, 'Seed': seed})                   # 纹理烫
-    nodes('Smooth Hair Curves', **{'Amount': 0.6, 'Iterations': 6, 'Weight': 0.5, 'Preserve Length': True})    # 理顺线条：干净利落
+    nodes('Smooth Hair Curves', **{'Amount': 0.7, 'Iterations': 8, 'Weight': 0.5, 'Preserve Length': True})    # 理顺线条：顺着头型、干净利落
     hb_ = rig.pose.bones['head']
     obj.parent = rig; obj.parent_type = 'BONE'; obj.parent_bone = 'head'
     obj.matrix_parent_inverse = (rig.matrix_world @ hb_.matrix @ Matrix.Translation((0, hb_.length, 0))).inverted()
     # 4) 头皮底色层：覆盖区外移 0.8mm，深色带细纹（短发/寸头透出的发根阴影），边缘收进皮肤
-    used = sorted({i for fi in cover for i in bp[fi]}); remap = {o: k for k, o in enumerate(used)}
-    cm = bpy.data.meshes.new(cid + '_scalpcap'); cm.from_pydata([bv[i] for i in used], [], [[remap[i] for i in bp[fi]] for fi in cover]); cm.update()
+    used = sorted({i for fi in cap_faces for i in bp[fi]}); remap = {o: k for k, o in enumerate(used)}
+    cm = bpy.data.meshes.new(cid + '_scalpcap'); cm.from_pydata([bv[i] for i in used], [], [[remap[i] for i in bp[fi]] for fi in cap_faces]); cm.update()
     cbm = bmesh.new(); cbm.from_mesh(cm); cbm.normal_update()
     for v in cbm.verts:
         nn_ = v.normal if (v.co - H).dot(v.normal) > 0 else -v.normal
@@ -203,7 +222,10 @@ def build_short(cid, rig, body, shell, seed=1):
     cb = nt.nodes['Principled BSDF']; cb.inputs['Roughness'].default_value = 0.65
     nz = nt.nodes.new('ShaderNodeTexNoise'); nz.inputs['Scale'].default_value = 1200; nz.inputs['Detail'].default_value = 8
     mx = nt.nodes.new('ShaderNodeMix'); mx.data_type = 'RGBA'
-    mx.inputs[6].default_value = (0.008, 0.006, 0.005, 1); mx.inputs[7].default_value = (0.05, 0.04, 0.035, 1)
+    if S['top'] < 0.04:   # 寸头：头皮透过短发看得见——发帽是发根深色与肤色的混合，不是一顶黑头盔
+        mx.inputs[6].default_value = (0.02, 0.015, 0.012, 1); mx.inputs[7].default_value = (0.20, 0.14, 0.11, 1)
+    else:
+        mx.inputs[6].default_value = (0.008, 0.006, 0.005, 1); mx.inputs[7].default_value = (0.05, 0.04, 0.035, 1)
     nt.links.new(nz.outputs['Fac'], mx.inputs['Factor']); nt.links.new(mx.outputs[2], cb.inputs['Base Color'])
     cm.materials.append(cap)
     capobj = bpy.data.objects.new(cid + '_scalpcap', cm); bpy.context.scene.collection.objects.link(capobj)
@@ -222,6 +244,10 @@ def build(cid, rig, body, shell, style_name, seed=1):
     sb, sv, sp = _world_bvh(shell, dg)
     bb, bv, bp = _world_bvh(body, dg)
     head = (rig.matrix_world @ rig.pose.bones['head'].matrix).translation
+    if st.get('shrink'):   # 轮廓整体往头部中心收（头顶以上不动，避免压进头皮）
+        hc_ = head + Vector((0, 0.01, 0.06))
+        sv = [hc_ + (v - hc_) * st['shrink'] if (v - hc_).length * st['shrink'] > 0.09 else v for v in sv]
+        sb = BVHTree.FromPolygons(sv, sp)
     neck_z = (rig.matrix_world @ rig.pose.bones['neck02'].matrix).translation.z
     eye = (rig.matrix_world @ rig.pose.bones['eye.L'].head)
     brow_z = eye.z + 0.03
@@ -306,6 +332,22 @@ def build(cid, rig, body, shell, style_name, seed=1):
             if hdist is not None and hdist < 0.002 and hb is not None: q = hb + (q - hb).normalized() * 0.002 if (q - hb).length > 1e-6 else q
             d = (q - p).normalized(); p = q; pts.append(p.copy())
         if len(pts) >= 3: strands.append(pts)
+    tie = None
+    if style_name.startswith('ponytail'):   # 马尾：找到扎发处，发丝在那里收拢成一束（扎口最紧，往下逐渐散开），再加一个发圈
+        band = [v for v in sv if head.z + 0.03 < v.z < head.z + 0.14]
+        if band:
+            tip = max(band, key=lambda v: v.y)                              # 发型轮廓最靠后的点：马尾从这里伸出去
+            tie = tip - Vector((0, 0.012, 0))
+            tail = [v for v in sv if v.y > tie.y - 0.01 and v.z < tie.z - 0.02]
+            axis = ((sum(tail, Vector()) / len(tail)) - tie).normalized() if tail else Vector((0, 0.3, -1)).normalized()
+            for pts in strands:
+                for i, p in enumerate(pts):
+                    rel = p - tie; t = rel.dot(axis)
+                    if t < -0.06: continue
+                    radial = rel - axis * t
+                    if t <= 0: f = 0.25 + 0.75 * min(1.0, radial.length / 0.06)   # 扎口前：往扎发点汇拢
+                    else: f = 0.22 + 0.78 * min(1.0, t / 0.16)                    # 扎口后：先紧后松
+                    pts[i] = tie + axis * t + radial * f
     # 3) 建发丝曲线
     hc = bpy.data.hair_curves.new(cid + '_strands')
     hc.add_curves([len(s) for s in strands])
@@ -326,6 +368,11 @@ def build(cid, rig, body, shell, style_name, seed=1):
                 if 'factor' in nm or 'strength' in nm or 'distance' in nm: md[item.identifier] = 0.0007
         except Exception as e:
             print('HAIR NODE WARN', gname, e)
+    if st.get('smooth'):
+        md = obj.modifiers.new('Smooth Hair Curves', 'NODES'); md.node_group = _node_group('Smooth Hair Curves')
+        for item in md.node_group.interface.items_tree:
+            if getattr(item, 'in_out', '') == 'INPUT' and item.name in ('Amount', 'Iterations', 'Weight', 'Preserve Length'):
+                md[item.identifier] = {'Amount': 0.5, 'Iterations': 5, 'Weight': 0.5, 'Preserve Length': True}[item.name]
     # 5) 挂到头部骨骼（世界位置保持不变）
     hb_ = rig.pose.bones['head']
     obj.parent = rig; obj.parent_type = 'BONE'; obj.parent_bone = 'head'
@@ -340,6 +387,22 @@ def build(cid, rig, body, shell, style_name, seed=1):
     cm.materials.append(cap)
     capobj.parent = rig; capobj.parent_type = 'BONE'; capobj.parent_bone = 'head'
     capobj.matrix_parent_inverse = obj.matrix_parent_inverse.copy()
+    if tie is not None:   # 发圈：深色布艺发圈套在扎发处
+        bm2 = bmesh.new(); segs, ring, R, r = 24, 8, 0.015, 0.0065
+        vs = [[bm2.verts.new(((R + r * math.cos(b * 2 * math.pi / ring)) * math.cos(a * 2 * math.pi / segs),
+                              (R + r * math.cos(b * 2 * math.pi / ring)) * math.sin(a * 2 * math.pi / segs), r * math.sin(b * 2 * math.pi / ring)))
+               for b in range(ring)] for a in range(segs)]
+        for a in range(segs):
+            for b in range(ring): bm2.faces.new((vs[a][b], vs[(a + 1) % segs][b], vs[(a + 1) % segs][(b + 1) % ring], vs[a][(b + 1) % ring]))
+        tm = bpy.data.meshes.new(cid + '_hairtie'); bm2.to_mesh(tm); bm2.free()
+        for poly in tm.polygons: poly.use_smooth = True
+        tmat = bpy.data.materials.new(cid + '_hairtie'); tmat.use_nodes = True
+        tmat.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (0.05, 0.06, 0.12, 1)
+        tmat.node_tree.nodes['Principled BSDF'].inputs['Roughness'].default_value = 0.8; tm.materials.append(tmat)
+        tob = bpy.data.objects.new(cid + '_hairtie', tm); bpy.context.scene.collection.objects.link(tob)
+        tob.matrix_world = Matrix.LocRotScale(tie + axis * 0.010, axis.to_track_quat('Z', 'Y'), None)
+        bpy.context.view_layer.update()
+        mw = tob.matrix_world.copy(); tob.parent = rig; tob.parent_type = 'BONE'; tob.parent_bone = 'head'; tob.matrix_world = mw
     shell.hide_render = True    # 原发片只用来定义发型轮廓，不参与渲染（避免硬边和透明空洞）
     print('HAIR OK', cid, style_name, len(strands), 'strands', 'cap faces', len(cover), flush=True)
     return obj

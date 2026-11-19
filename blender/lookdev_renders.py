@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config
 import bpy
 from mathutils import Vector
-import poses, realism
+import poses, realism, life
 
 IDS = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv and sys.argv[-1] != '--' else ['lin', 'chen', 'zhou', 'wang', 'mom', 'classA', 'classB']
 OUT = os.path.join(config.ROOT, 'build', 'lookdev'); os.makedirs(OUT, exist_ok=True)
@@ -47,7 +47,7 @@ for cid in IDS:
     for m in bpy.data.materials:
         b = m.node_tree.nodes.get('Principled BSDF') if m.use_nodes and m.node_tree else None
         if b and b.inputs['Subsurface Weight'].default_value > 0: b.inputs['Subsurface Scale'].default_value = 0.004
-    poses.apply_state(rig, dict(pos=(0, 0, 0), yaw=0, base='stand', arms='down')); bpy.context.view_layer.update()
+    poses.apply_state(rig, dict(pos=(0, 0, 0), yaw=0, base='stand', arms='down')); life.hands(rig, None); bpy.context.view_layer.update()
     head = poses.head_pos(rig)
     target = {'face': head + Vector((0, -0.06, 0.03)), 'chest': head + Vector((0, 0, -0.32)), 'body': Vector((0, 0, head.z * 0.52))}
     for name, part, ang, dist, lens, res in VIEWS:

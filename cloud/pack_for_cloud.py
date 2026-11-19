@@ -1,0 +1,72 @@
+# -*- coding: utf-8 -*-
+"""打包云端写实化任务（本地运行）：按镜头切换把全片切成若干「镜头任务」，每个任务一个文件夹：
+  beauty.mp4（白模画面）、depth.mp4（深度控制）、pose.mp4（骨架控制）、task.json（帧范围、提示词、出场角色、长相参考图）
+外加 refs/（每个角色的照片级定妆照）。输出 dist/cloud_pack/ 和 dist/cloud_pack.zip，上传到仙宫云实例即可。
+用法：python cloud/pack_for_cloud.py [片段id ...]   （默认全片；先跑完预演渲染 V11_PREVIEW=1 python run_all.py 与骨架导出）
+      --pose  先为缺骨架图的片段导出骨架（调用 Blender）
+"""
+import os, sys, json, glob, shutil, subprocess, zipfile
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import config
+import segments as S
+
+REN = os.environ.get('V11_PACK_RENDERS') or (os.path.join(config.ROOT, 'build', 'renders_preview')
+                                            if os.path.isdir(os.path.join(config.ROOT, 'build', 'renders_preview')) else config.RENDERS)
+OUT = os.path.join(config.ROOT, 'dist', 'cloud_pack')
+REFS = os.path.join(config.ROOT, 'assets', 'lookdev')
+CID = S.CID
+STYLE = ('photorealistic live-action film, shot on cinema camera, natural lighting, realistic skin texture, Chinese university campus, '
+         'contemporary, 2020s, everyday clothing')
+
+def encode(frames, out_mp4, fps=24):
+    lst = out_mp4 + '.txt'
+    open(lst, 'w', encoding='utf-8').write(''.join("file '%s'\nduration %.6f\n" % (f.replace('\\', '/'), 1 / fps) for f in frames))
+    subprocess.run([config.FFMPEG, '-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', lst, '-vf', 'fps=%d,scale=832:480:force_original_aspect_ratio=decrease,pad=832:480:(ow-iw)/2:(oh-ih)/2' % fps,
+                    '-c:v', 'libx264', '-crf', '14', '-pix_fmt', 'yuv420p', out_mp4], check=True)
+    os.remove(lst)
+
+def main():
+    args = [a for a in sys.argv[1:] if not a.startswith('--')]
+    segs = [s for s in S.segments() if not args or s[0] in args]
+    if os.path.isdir(OUT): shutil.rmtree(OUT)
+    os.makedirs(os.path.join(OUT, 'refs'), exist_ok=True)
+    for f in glob.glob(os.path.join(REFS, '*.png')): shutil.copy(f, os.path.join(OUT, 'refs'))
+    tasks = []
+    for sid, scene, set_name, beats in segs:
+        tl_p = os.path.join(config.SHOTS, sid + '_timeline.json'); cuts_p = os.path.join(config.SHOTS, sid + '_cuts.json')
+        if not os.path.exists(tl_p): print('跳过（还没拍）', sid); continue
+        if '--pose' in sys.argv and not glob.glob(os.path.join(config.RENDERS, sid, 'pose_*.png')):
+            subprocess.run([config.BLENDER, '-b', '--factory-startup', '-P', os.path.join(config.BLENDER_SCRIPTS, 'export_pose.py'), '--', sid],
+                           env=config.blender_env(), capture_output=True)
+        tl = json.load(open(tl_p, encoding='utf-8'))
+        n_end = max(b['f1'] for b in tl)
+        cuts = json.load(open(cuts_p, encoding='utf-8')) if os.path.exists(cuts_p) else [[b['f0'], b['id']] for b in tl]
+        bounds = [c[0] for c in cuts] + [n_end + 1]
+        byid = {b['id']: b for b in beats}
+        last_en = ''
+        for k in range(len(cuts)):
+            f0, f1 = bounds[k], bounds[k + 1] - 1
+            if f1 < f0: continue
+            bts = [b for b in tl if b['f0'] <= f1 and b['f1'] >= f0]
+            descs = [byid[b['id']].get('en') for b in bts if byid.get(b['id'], {}).get('en')]
+            en = descs[0] if descs else last_en; last_en = en or last_en
+            chars = sorted({CID[c] for b in bts for c in byid.get(b['id'], {}).get('chars', []) if c in CID})
+            tid = '%s_%04d' % (sid, f0); td = os.path.join(OUT, tid); os.makedirs(td)
+            for kind in ('beauty', 'depth', 'pose'):
+                fr = [os.path.join(REN if kind != 'pose' else config.RENDERS, sid, '%s_%04d.png' % (kind, f)) for f in range(f0, f1 + 1)]
+                fr = [p for p in fr if os.path.exists(p)]
+                if len(fr) == f1 - f0 + 1: encode(fr, os.path.join(td, kind + '.mp4'))
+            refs = [os.path.basename(p) for c in chars[:3] for p in (os.path.join(REFS, '%s_face_front.png' % c), os.path.join(REFS, '%s_full.png' % c)) if os.path.exists(p)]
+            task = dict(id=tid, segment=sid, frames=[f0, f1], n=f1 - f0 + 1, beats=[b['id'] for b in bts], characters=chars,
+                        prompt='%s. %s' % (en or 'a scene on a Chinese university campus', STYLE), refs=refs)
+            json.dump(task, open(os.path.join(td, 'task.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+            tasks.append(task)
+    json.dump(dict(fps=24, size=[832, 480], tasks=[t['id'] for t in tasks]), open(os.path.join(OUT, 'manifest.json'), 'w', encoding='utf-8'), indent=1)
+    zp = OUT + '.zip'
+    with zipfile.ZipFile(zp, 'w', zipfile.ZIP_STORED) as z:
+        for root, _, files in os.walk(OUT):
+            for f in files: z.write(os.path.join(root, f), os.path.relpath(os.path.join(root, f), os.path.dirname(OUT)))
+    print('打包完成：%d 个镜头任务，%s（%.0f MB）' % (len(tasks), zp, os.path.getsize(zp) / 1e6))
+
+if __name__ == '__main__':
+    main()

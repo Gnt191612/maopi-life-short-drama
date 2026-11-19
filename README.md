@@ -60,8 +60,17 @@ V11_PREVIEW=1 python run_all.py          # Windows PowerShell：$env:V11_PREVIEW
 > **导演原则：全片没有旁白。** 能用人物的台词、动作、表情和场景表现的，一律不用画外音：网友评论、来电、朋友圈动态
 > 都显示在手机屏幕上（`story/lines.py` 的 `SCREEN`），回忆段落是无声画面加环境声。
 
-### 3. 云端写实化与成片
-见 `docs/cloud_render.md`（云服务器确定后补充）。
+### 3. 人物审阅器（不用打开 Blender 也能 360° 看人物）
+```
+blender -b --factory-startup -P blender/export_viewer.py      # 把演员表导出为 viewer/models/*.js
+```
+然后双击 `viewer/启动人物审阅.bat`：可旋转/缩放、切换灯光与视角、显示身高标尺，并在模型上打点写修改意见、一键复制。
+说明见 `viewer/使用说明.txt`。
+
+### 4. 云端写实化与成片
+算力平台为仙宫云。`python cloud/pack_for_cloud.py` 打包预演帧与参考图，上传后在实例里执行 `cloud/setup_cloud.sh`、
+`cloud/realism.py`（Wan2.1-VACE 写实化），把结果拉回本地后 `python run_all.py --previs-only --real=<结果目录>` 合成成片。
+详见 `cloud/README_仙宫云.md` 与 `docs/cloud_render.md`。
 
 ## 目录结构
 
@@ -73,6 +82,8 @@ V11_PREVIEW=1 python run_all.py          # Windows PowerShell：$env:V11_PREVIEW
 | `assets/sets/` | 19 个场景白模（.blend，固定资产） | Release 附件（安装脚本自动下载） |
 | `assets/audio/` | 73 句台词配音（.wav）与时长表 | Release 附件（安装脚本自动下载） |
 | `voice_tools/` | 音色设计、自动挑选、重新配音的脚本与各角色选定的参考音色 | 是 |
+| `viewer/` | 人物 3D 审阅器（three.js，离线可用） | 是（不含 models/，可重新导出） |
+| `cloud/` | 仙宫云写实化套件：打包、环境安装、Wan2.1-VACE 推理 | 是 |
 | `remotion/` | 最终合成工程 | 是（不含 node_modules） |
 | `setup/` | 一键安装脚本、依赖清单 | 是 |
 | `build/` | 运行产物（口型、动画 .blend、渲染帧、预演视频） | 否，可重新生成 |

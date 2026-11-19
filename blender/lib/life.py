@@ -52,7 +52,8 @@ def inertia(rig):
             kp.interpolation = 'BACK'; kp.easing = 'EASE_OUT'; kp.back = back
 
 def _key_rot(pb, frame, euler):
-    pb.rotation_mode = 'XYZ'; pb.rotation_euler = euler; pb.keyframe_insert('rotation_euler', frame=frame, group=pb.name)
+    pb.rotation_mode = 'XYZ'; pb.rotation_euler = euler
+    if frame is not None: pb.keyframe_insert('rotation_euler', frame=frame, group=pb.name)   # frame=None：只摆姿势（静态展示图）
 
 def blinks(rig, f0, f1, seed):
     """眨眼：闭 2 帧、睁 3 帧（约 0.2 秒，真人眨眼时长）"""

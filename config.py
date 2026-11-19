@@ -17,6 +17,7 @@ STORY = P('story')                 # 剧本结构、台词、走位表
 BLENDER_SCRIPTS = P('blender')     # Blender 端脚本
 ASSETS = P('assets')               # 固定资产（入库，Git LFS）
 CAST = P('assets', 'cast')         # 7 个角色 .blend
+if os.environ.get('V11_CAST_DIR'): CAST = os.environ['V11_CAST_DIR']   # 迭代新版人物时先建到暂存目录（不影响正在跑的渲染）
 SETS = P('assets', 'sets')         # 19 个场景 .blend
 AUDIO = P('assets', 'audio')       # 78 句配音 wav + meta.json
 VISEMES = P('build', 'visemes')    # 口型序列（可重新生成）
