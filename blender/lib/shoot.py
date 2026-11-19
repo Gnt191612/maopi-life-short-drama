@@ -15,6 +15,17 @@ VIS = config.VISEMES; MOCAP = config.MOCAP
 from segments import FPS, LEAD, META, TEXT, CID, EST_SET, audio_plan, screen_plan, beat_dur, beat_frames, loc_of, segments
 from lines import SCREEN
 NAME = {v: k for k, v in CID.items()}
+# 人物习惯动作（不说话时在长镜头里自然流露）：林晓局促、陈瑶理性克制、周明远沉稳、王老师师长气、同学甲大大咧咧、同学乙文静、林母慈和
+HABITS = {'lin':    {'stand': ['scratch_head', 'neck_rub', 'pocket1', 'rub_hands'], 'sit': ['rub_hands', 'neck_rub', 'scratch_head']},
+          'chen':   {'stand': ['glasses', 'cross_arms', 'pockets'], 'sit': ['glasses', 'chin', 'cross_arms']},
+          'zhou':   {'stand': ['pockets', 'hands_back', 'chin'], 'sit': ['chin', 'rub_hands']},
+          'wang':   {'stand': ['hands_back', 'cross_arms', 'chin'], 'sit': ['chin', 'rub_hands']},
+          'classA': {'stand': ['scratch_head', 'hip_hand', 'pockets'], 'sit': ['scratch_head', 'neck_rub']},
+          'classB': {'stand': ['sleeves', 'hair_tuck', 'cross_arms'], 'sit': ['sleeves', 'hair_tuck']},
+          'mom':    {'stand': ['hand_chest'], 'sit': ['hair_tuck', 'hand_chest']}}
+TALK = {'lin': ['open_palms', 'scratch_head', 'hand_chest'], 'chen': ['glasses', 'open_palms'], 'zhou': ['open_palms', 'hand_chest'],
+        'wang': ['open_palms', 'hand_chest'], 'classA': ['scratch_head', 'open_palms'], 'classB': ['hand_chest', 'hair_tuck'],
+        'mom': ['hand_chest', 'open_palms']}
 
 # ---------------- 场景/角色装配 ----------------
 def append_cast(cid):
@@ -159,7 +170,7 @@ def shot_ok(cam, rigs, watch, subj, f0, f1):
             if Vector((cpos.x - rh.x, cpos.y - rh.y)).length < 0.3 and cpos.z < top: return False
         for s_ in subj:
             v = world_to_camera_view(sc, cam, poses.head_pos(rigs[s_]))
-            if v.z <= 0 or not (0.03 < v.x < 0.97 and 0.03 < v.y < 0.97): return False
+            if v.z <= 0 or not (0.05 < v.x < 0.95 and 0.05 < v.y < 0.88): return False
         for s_ in watch:
             fd, head = face_dir(rigs[s_]); to_cam = (cpos - head).normalized()
             if fd.dot(to_cam) < 0.15: return False
@@ -275,7 +286,7 @@ def build_segment(seg_id, scene, set_name, beats):
                 plans[cid] = ('climb', new, steps); need = max(need, steps[-1][0] + LAG + 4)
             elif kind in ('set', 'blend'):
                 tt = max(act[2] if kind == 'blend' and len(act) > 2 else 0, poses.trans_time(start, new))
-                plans[cid] = ('blend', new, round(tt * FPS)); need = max(need, round(tt * FPS) + LAG + 4)
+                plans[cid] = ('blend', new, round(tt * FPS)); need = max(need, round(tt * FPS) + LAG + 18)   # +站稳/坐定的晃动
             elif kind == 'walk':
                 route = nav.plan(start['pos'], new['pos'])               # 绕开家具的路线（拐点）
                 legs = [(route[i], route[i + 1]) for i in range(len(route) - 1) if (Vector(route[i + 1]) - Vector(route[i])).length > 0.05]
@@ -291,7 +302,7 @@ def build_segment(seg_id, scene, set_name, beats):
                 plans[cid] = ('snap', new, 0)
         n = max(beat_frames(bt), need); f0, f1 = f, f + n - 1
         # 1) 走位/姿态：拍开头的状态（继承上一拍）+ 本拍的变化
-        walking = {}
+        walking = {}; looks = {}
         for cid, rig in rigs.items():
             if cid not in [CID[c] for c in bt['chars']] and cid not in spec:
                 poses.apply_state(rig, blocking.with_look(state[cid], None), f0); continue
@@ -300,6 +311,7 @@ def build_segment(seg_id, scene, set_name, beats):
             elif speaker == cid:
                 lst = [o for o in rigs if o != cid and o in [CID[c] for c in bt['chars']]]
                 start['look'] = poses.head_pos(rigs[lst[0]]) if lst else None
+            looks[cid] = start.get('look')
             if cid not in plans:
                 poses.apply_state(rig, start, f0); poses.apply_state(rig, start, f1)
                 hand_ev[cid].append((f0, grips(start)))
@@ -309,9 +321,27 @@ def build_segment(seg_id, scene, set_name, beats):
             t_change = f0
             if kind == 'snap':       # 时间省略：拍开头已是新状态
                 poses.apply_state(rig, new_l, f0); poses.apply_state(rig, new_l, f1)
-            elif kind == 'blend':    # 真人速度过渡，躯干先动、手臂跟随
-                fe = min(f1 - LAG, f0 + max(6, arg))
-                poses.apply_state(rig, start, f0, lag=LAG); poses.apply_state(rig, new_l, fe, lag=LAG); poses.apply_state(rig, new_l, f1)
+            elif kind == 'blend':    # 真人速度过渡，躯干先动、手臂跟随；起身/坐下按重心移动分阶段（符合物理）
+                fe = min(f1 - LAG - 14, f0 + max(6, arg)); fe = max(f0 + 6, fe)
+                sb_, nb_ = start.get('base', 'stand'), new.get('base', 'stand')
+                seatish = lambda b_: poses.SUPPORTED.get(b_) == 'seat'
+                fw = Vector((math.sin(math.radians(new['yaw'])), -math.cos(math.radians(new['yaw'])), 0))
+                poses.apply_state(rig, start, f0, lag=LAG)
+                if seatish(sb_) and nb_ == 'stand':
+                    # 起身（按力学分阶段）：前倾、双手挪到膝盖上方撑住 -> 手撑腿蹬起（手按在腿上、手臂随身体升高伸直）
+                    # -> 臀部离开椅面后松手，手臂靠惯性甩下（回弹缓动略过头再回来）-> 直起身略后仰 -> 站稳
+                    T = fe - f0; p_ = Vector(start['pos']) + fw * 0.12
+                    poses.apply_state(rig, dict(start, base='sit_lean', arms='push', look=None), f0 + round(T * 0.28))
+                    poses.apply_state(rig, dict(new_l, base='rise', pos=tuple(p_), arms='push', look=None), f0 + round(T * 0.55))
+                    poses.apply_state(rig, dict(new_l, lean=-4), f0 + round(T * 0.82), lag=LAG)
+                    poses.apply_state(rig, dict(new_l, lean=1.5), fe + 5); poses.apply_state(rig, new_l, fe + 12)
+                elif sb_ == 'stand' and seatish(nb_):    # 坐下：前倾、屈膝放低 -> 坐实 -> 往后靠一下再坐定
+                    p_ = Vector(new['pos']) + fw * 0.12
+                    poses.apply_state(rig, dict(new_l, base='rise', pos=tuple(p_), arms=start.get('arms', 'down')), f0 + round((fe - f0) * 0.55), lag=LAG)
+                    poses.apply_state(rig, dict(new_l, lean=-3), fe, lag=LAG); poses.apply_state(rig, new_l, fe + 9)
+                else:
+                    poses.apply_state(rig, new_l, fe, lag=LAG)
+                poses.apply_state(rig, new_l, f1)
                 t_change = (f0 + fe) // 2
             elif kind == 'climb':    # 挪到床边 -> 转身面向梯子 -> 双手扶梯一级级踩下来 -> 落地
                 prev_f = f0; poses.apply_state(rig, start, f0, lag=LAG)
@@ -324,10 +354,12 @@ def build_segment(seg_id, scene, set_name, beats):
                 p0, p1 = start['pos'], new['pos']; walking[cid] = (Vector(p0[:2] + (0,)), Vector(p1[:2] + (0,)))
                 poses.apply_state(rig, start, f0, lag=LAG)
                 ws = f0 + prep + 5
-                if prep: poses.apply_state(rig, stand, f0 + prep, lag=0)
+                if prep: poses.apply_state(rig, dict(stand, lean=4), f0 + prep, lag=0)   # 起步前身体先微微前倾（预备动作）
                 for li, (a_, b_) in enumerate(legs):     # 拐点之间留 TURN 帧，由插值完成转身
                     ws += retarget.walk(WALK, rig, ws, a_, b_) + (TURN if li < len(legs) - 1 else 0)
                 we = ws
+                end_yaw = heading(legs[-1][0], legs[-1][1], stand['yaw'])
+                poses.apply_state(rig, dict(stand, pos=new['pos'], yaw=end_yaw, lean=5), min(f1 - LAG - 2, we + 4))   # 急停：惯性让上身往前一冲
                 poses.apply_state(rig, new_l, min(f1 - LAG, we + settle), lag=LAG); poses.apply_state(rig, new_l, f1)
                 t_change = we
             state[cid] = new
@@ -335,6 +367,24 @@ def build_segment(seg_id, scene, set_name, beats):
             prop = poses.ARMS[new.get('arms', 'down')].get('prop')
             show_phone(phones[cid], t_change, prop in ('hand', 'ear'))
             hand_ev[cid].append((f0, grips(start))); hand_ev[cid].append((t_change, grips(new)))
+        # 1b) 生活小动作：不说话的人在较长的镜头里做一次自己的习惯动作；说长句的人换一种说话手势（各有性格）
+        for cid, rig in rigs.items():
+            if cid in plans: continue
+            st = state[cid]; base = st.get('base', 'stand'); seated = poses.SUPPORTED.get(base) == 'seat'
+            if base not in ('stand', 'stand_rest') and not seated: continue
+            if st.get('arms', 'down') not in ('down', 'thighs', 'lap', 'desk', 'pocket', 'pockets', 'gesture'): continue
+            talking = cid == speaker
+            if n < (3.0 if talking else 3.6) * FPS: continue
+            pool = TALK.get(cid) if talking else HABITS.get(cid, {}).get('sit' if seated else 'stand')
+            if not pool: continue
+            act_ = pool[sum(map(ord, bt['id'] + cid)) % len(pool)]
+            if act_ == st.get('arms'): continue
+            lk = looks.get(cid); tr = round(0.75 * FPS)
+            fa, fb = f0 + round(n * 0.28), f0 + round(n * 0.70)
+            poses.apply_state(rig, dict(st, look=lk), fa, lag=LAG)
+            poses.apply_state(rig, dict(st, arms=act_, look=lk), fa + tr, lag=LAG)
+            poses.apply_state(rig, dict(st, arms=act_, look=lk), fb, lag=LAG)
+            poses.apply_state(rig, dict(st, look=lk), min(f1 - LAG, fb + tr), lag=LAG)
         # 2) 口型
         for off, lid, y in audio_plan(bt):
             if not y: continue
@@ -356,7 +406,7 @@ def build_segment(seg_id, scene, set_name, beats):
                 sc.frame_set(fr)
                 for s_ in subj_ids():
                     v = world_to_camera_view(sc, cam, poses.head_pos(rigs[s_]))
-                    if v.z <= 0 or not (0.04 < v.x < 0.96 and 0.04 < v.y < 0.98): return True
+                    if v.z <= 0 or not (0.06 < v.x < 0.94 and 0.06 < v.y < 0.86): return True   # 头顶要留出空间（头心在 0.86 以上，头顶就被切了）
             return False
         protect = {poses.LAST_SUPPORT.get(rigs[c].name) for c in rigs if state[c].get('base') in poses.SUPPORTED} - {None}
         if bt['cam'] == 'cont' and cam_prev is not None and not walking and not faces_away(cam_prev) and not out_of_frame(cam_prev):
@@ -390,8 +440,12 @@ def build_segment(seg_id, scene, set_name, beats):
                                    validate=None if 'from behind' in (bt.get('en') or '') else
                                    (lambda c_, w_=watch, a_=f0, b_=f1, all_=subj: shot_ok(c_, rigs, w_, all_, a_, b_)))
                 movers = [s_ for s_ in subj if s_ in walking]
+                sc.frame_set(f0); hz0 = {s_: poses.head_pos(rigs[s_]).z for s_ in subj}
+                sc.frame_set(f1)
+                movers += [s_ for s_ in subj if s_ not in movers and abs(poses.head_pos(rigs[s_]).z - hz0[s_]) > 0.2]   # 起身/坐下：镜头跟着上下摇
                 if movers:   # 走动的人：镜头跟着摇（真人摄影师的跟拍），不会拍着拍着人走出画面
-                    con = cam.constraints.new('DAMPED_TRACK'); con.target = rigs[movers[0]]; con.subtarget = 'spine01'
+                    con = cam.constraints.new('DAMPED_TRACK'); con.target = rigs[movers[0]]
+                    con.subtarget = 'spine01' if movers[0] in walking else 'neck01'
                     con.track_axis = 'TRACK_NEGATIVE_Z'; con.influence = 0.9
         if cam is not cam_prev:
             m = sc.timeline_markers.new(bt['id'], frame=f0); m.camera = cam
@@ -418,6 +472,7 @@ def build_segment(seg_id, scene, set_name, beats):
         f = f1 + 1
     for i, (cid, rig) in enumerate(sorted(rigs.items())):   # 活人感：呼吸、微动、眨眼、眼神、手指
         seed = sum(map(ord, seg_id + cid))
+        life.inertia(rig)
         life.add_idle(rig, seed)
         life.blinks(rig, 1, f - 1, seed)
         last = None

@@ -35,6 +35,15 @@ BASE = {
  'sit_lean':  dict(dz=-0.42, pitch=0, spine=V(0, -0.45, 1), uleg=V(0.12, -1, 0.04), lleg=V(0.04, 0.05, -1), foot=V(0, -1, -0.3), seat=True),   # 前倾坐（专注地听）
  'sit_back':  dict(dz=-0.42, pitch=0, spine=V(0, 0.22, 1), uleg=V(0.10, -1, 0.06), lleg=V(0.03, -0.35, -1), foot=V(0, -1, -0.2), seat=True),   # 后靠、腿往前伸（放松）
  'sit_tight': dict(dz=-0.42, pitch=0, spine=V(0, -0.12, 1), uleg=V(0.0, -1, 0.04), lleg=V(-0.02, 0.18, -1), foot=V(0, -1, -0.4), seat=True),  # 并腿拘谨坐
+ # ---- 腿部变化 ----
+ 'sit_cross':  dict(dz=-0.42, pitch=0, spine=V(0, 0.05, 1), uleg=V(0.32, -1, 0.30), lleg=V(0.10, 0.30, -1), foot=V(0, -1, -0.1),
+                    ulegL=V(-0.06, -1, 0.04), llegL=V(0, 0.10, -1), seat=True),   # 二郎腿：右腿搭在左腿上
+ 'sit_wide':   dict(dz=-0.42, pitch=0, spine=V(0, -0.05, 1), uleg=V(-0.38, -1, 0.04), lleg=V(-0.12, 0.10, -1), foot=V(0, -1, -0.3), seat=True),   # 分腿坐
+ 'sit_ankles': dict(dz=-0.42, pitch=0, spine=V(0, 0.08, 1), uleg=V(0.02, -1, 0.02), lleg=V(0.16, -0.45, -1), foot=V(0, -1, -0.2), seat=True),   # 腿前伸、脚踝交叉
+ 'stand_rest': dict(dz=-0.01, pitch=0, spine=V(0.03, 0, 1), uleg=V(0.03, 0.0, -1), lleg=V(0, 0, -1), foot=V(0, -1, -0.5),
+                    ulegL=V(-0.07, -0.13, -1), llegL=V(0, 0.14, -1)),   # 重心落在一条腿上的放松站姿
+ 'rise':   dict(dz=-0.30, pitch=0, spine=V(0, -0.75, 1), uleg=V(0.08, -0.85, -0.4), lleg=V(0.03, 0.25, -1), foot=V(0, -1, -0.3),
+               head=V(0, -0.2, 1)),   # 起身/坐下的中间姿态：上身前倾把重心移到脚上方、膝盖弯着发力
  'slump':  dict(dz=-0.42, pitch=0, spine=V(0, -1, 0.55), uleg=V(0.05, -1, 0.04), lleg=V(0, 0.12, -1), foot=V(0, -1, -0.3), head=V(0, -0.6, -0.8)),
 }
 # ---- 手臂叠加：右臂 (上臂, 前臂) 方向；左臂缺省 = 右臂镜像；None = 自然下垂 ----
@@ -60,13 +69,31 @@ ARMS = {
  'knees':      dict(R=(V(-0.2, -0.75, -0.6), V(0.6, -0.4, -0.2))),                                                              # 抱膝
  'lap':        dict(R=DOWN_R, ik='lap'),          # 坐着：双手交叠放在腿上（IK 落在大腿根部上方）
  'thighs':     dict(R=DOWN_R, ik='thighs'),       # 坐着：两手各搭在自己大腿上
+ 'push':       dict(R=DOWN_R, ik='push'),         # 起身发力：双手按在膝盖上方撑住
  'elbows_knees': dict(R=DOWN_R, ik='knees_fwd', head=V(0, -0.35, 0.94)),   # 身体前倾，手肘撑膝、双手相握
+ # ---- 生活化手部动作：hand=手腕落点（身体部位 + 前/左/上 偏移，米），由 IK 摆臂；没写的那只手保持 R/L 方向姿态 ----
+ 'cross_arms':  dict(R=DOWN_R, hand={'R': ('chest', (0.17, 0.10, -0.13)), 'L': ('chest', (0.13, -0.12, -0.10))}),   # 抱臂
+ 'chin':        dict(R=DOWN_R, hand={'R': ('chin', (0.04, 0.0, -0.04)), 'L': ('chest', (0.15, -0.04, -0.17))}),    # 托下巴思考（另一只手托着手肘）
+ 'glasses':     dict(R=DOWN_R, hand={'R': ('eyes', (0.06, 0.0, 0.0))}),                                            # 推眼镜
+ 'scratch_head': dict(R=DOWN_R, hand={'R': ('crown', (-0.02, -0.07, 0.0))}),                                       # 挠头
+ 'neck_rub':    dict(R=DOWN_R, hand={'R': ('neck', (-0.08, -0.03, 0.03))}),                                        # 摸后脖颈（尴尬）
+ 'hands_back':  dict(R=DOWN_R, hand={'R': ('hip', (-0.19, -0.04, 0.03)), 'L': ('hip', (-0.19, 0.04, 0.05))}),      # 背着手
+ 'pockets':     dict(R=DOWN_R, hand={'R': ('hip', (0.06, -0.17, -0.09)), 'L': ('hip', (0.06, 0.17, -0.09))}),      # 双手插兜
+ 'pocket1':     dict(R=DOWN_R, hand={'R': ('hip', (0.06, -0.17, -0.09))}),                                          # 单手插兜
+ 'hip_hand':    dict(R=DOWN_R, hand={'R': ('hip', (0.0, -0.21, 0.07))}, pole='out'),                               # 单手叉腰
+ 'sleeves':     dict(R=DOWN_R, hand={'R': ('belly', (0.22, 0.03, 0.0)), 'L': ('belly', (0.22, -0.03, 0.02))}),     # 缩着袖子两手拢在身前
+ 'rub_hands':   dict(R=DOWN_R, hand={'R': ('chest', (0.26, 0.02, -0.12)), 'L': ('chest', (0.26, -0.02, -0.12))}), # 搓手
+ 'hand_chest':  dict(R=DOWN_R, hand={'R': ('chest', (0.11, 0.03, 0.0))}),                                         # 手按胸口（真诚）
+ 'open_palms':  dict(R=DOWN_R, hand={'R': ('belly', (0.30, -0.22, 0.06)), 'L': ('belly', (0.30, 0.22, 0.06))}),    # 摊开双手说话
+ 'hair_tuck':   dict(R=DOWN_R, hand={'R': ('ear', (0.0, 0.0, 0.01))}),                                             # 把头发别到耳后
+ 'strap':       dict(R=DOWN_R, hand={'R': ('chest', (0.06, -0.13, 0.08))}),                                        # 抓着书包带
  'climb':      dict(R=(V(-0.15, -0.55, 0.8), V(-0.05, -0.35, 1))),                                                             # 双手握梯子扶手
  'face_hands': dict(R=(V(-0.15, -0.7, -0.7), V(0.35, -0.25, 0.9)), head=V(0, -0.6, 0.8)),                                       # 趴着/捂脸
 }
 
 # ---- 支撑面：坐/躺时用射线找到真实的椅面/床面，按各人体型把臀部/后背放在面上（防止陷进床板、悬空） ----
-SUPPORTED = {'sit': 'seat', 'slump': 'seat', 'sit_lean': 'seat', 'sit_back': 'seat', 'sit_tight': 'seat', 'sit_bed': 'seat', 'hug_knees': 'seat', 'lie': 'back'}
+SUPPORTED = {'sit': 'seat', 'slump': 'seat', 'sit_lean': 'seat', 'sit_back': 'seat', 'sit_tight': 'seat',
+             'sit_cross': 'seat', 'sit_wide': 'seat', 'sit_ankles': 'seat', 'sit_bed': 'seat', 'hug_knees': 'seat', 'lie': 'back'}
 SUPPORT_ON = True
 LAST_SUPPORT = {}          # 角色 -> 正在坐/躺的家具名（机位避让时不许移走它）
 
@@ -122,9 +149,12 @@ def apply_state(rig, st, frame=None, lag=0):
     root.matrix = rig.matrix_world.inverted() @ Matrix.LocRotScale(Vector((x, y, hip)), Rb @ R0.to_quaternion(), R0.to_scale())
     bpy.context.view_layer.update()
     W = lambda d: Rb @ d
-    for n in SPINE: aim(rig, n, W(b['spine']))
+    spine_d = b['spine']
+    if st.get('lean'):   # 额外前倾(+)/后仰(-)，用于起身后的晃动、急停时的惯性
+        spine_d = Quaternion(Vector((1, 0, 0)), math.radians(st['lean'])) @ spine_d   # 绕身体 X 轴正转 = 向 -Y（前方）倾
+    for n in SPINE: aim(rig, n, W(spine_d))
     head_d = a.get('head') or b.get('head') or V(0, -0.05, 1)
-    for n in NECK: aim(rig, n, W((b['spine'] + head_d).normalized()))
+    for n in NECK: aim(rig, n, W((spine_d + head_d).normalized()))
     look = st.get('look')
     hd = W(head_d)
     if look is not None:   # 视线：头部转向目标点（按权重与姿态方向混合）
@@ -159,8 +189,30 @@ def apply_state(rig, st, frame=None, lag=0):
         settle_on(rig, support, kind)
         place_hands()                                                 # 坐稳后高度变了，再落一次手
         if kind == 'seat' and SUPPORT_ON: clear_space(rig, zmin_rel=0.25, radius=0.34)   # 坐着：上身/头别钻进书架、桌上隔板
-    elif st.get('base', 'stand') in ('stand', 'crouch') and SUPPORT_ON: clear_space(rig)
+    elif st.get('base', 'stand') in ('stand', 'crouch', 'stand_rest') and SUPPORT_ON: clear_space(rig)
+    if a.get('hand'): body_hands(rig, Rb, a['hand'], a.get('pole'))   # 身体定位以后再摆手（坐稳/推开之后身体位置才确定）
     if frame is not None: key(rig, frame, lag)
+
+def body_anchor(rig, name, Rb):
+    """身体部位的世界坐标（随当前姿势）：头顶、眼睛、下巴、耳朵、后颈、胸口、小腹、胯部"""
+    M = rig.matrix_world; pb = rig.pose.bones
+    up = Rb @ Vector((0, 0, 1)); fwd = Rb @ Vector((0, -1, 0)); left = Rb @ Vector((1, 0, 0))
+    hd = M @ pb['head'].head; ht = M @ pb['head'].tail
+    hc = hd.lerp(ht, 0.45)
+    return {'crown': ht + up * 0.02, 'eyes': hc + fwd * 0.05 + up * 0.02, 'chin': hd + fwd * 0.07 - up * 0.02,
+            'ear': hc - left * 0.075, 'neck': M @ pb['neck01'].head, 'chest': M @ pb['spine01'].head,
+            'belly': M @ pb['spine04'].head, 'hip': M @ pb['root'].head}[name]
+
+def body_hands(rig, Rb, spec, pole_kind=None):
+    fwd = Rb @ Vector((0, -1, 0)); left = Rb @ Vector((1, 0, 0)); up = Rb @ Vector((0, 0, 1))
+    for side, sgn in (('L', 1), ('R', -1)):
+        if side not in spec: continue
+        anchor, (df, dl, du) = spec[side]
+        t = body_anchor(rig, anchor, Rb) + fwd * df + left * dl + up * du
+        if pole_kind == 'out': pole = left * sgn * 1.5 - fwd * 0.4
+        elif anchor in ('hip',) and df < 0: pole = left * sgn * 1.0 - fwd * 0.6 - up * 0.3   # 背手：手肘朝外后
+        else: pole = -up * 0.8 + left * sgn * 0.7 - fwd * 0.25                               # 一般：手肘朝下、略向外
+        _two_bone(rig, side, t, pole)
 
 def _two_bone(rig, side, target, pole):
     """解析两骨 IK：肩 -> 肘 -> 腕，肘部朝 pole 方向弯"""
@@ -208,6 +260,8 @@ def hands_on_lap(rig, Rb, mode):
         hip_mid, kn = th[side]
         if mode == 'thighs':
             t = hip_mid.lerp(kn, 0.55) + Vector((0, 0, 0.075))
+        elif mode == 'push':     # 膝盖上方、略偏外侧，手掌压在腿上
+            t = hip_mid.lerp(kn, 0.85) + Vector((0, 0, 0.07)) + left * sgn * 0.02
         elif mode == 'lap':
             t = mid.lerp(knee, 0.30) + Vector((0, 0, 0.085)) + left * sgn * 0.03
         else:   # knees_fwd
@@ -304,9 +358,9 @@ def settle_on(rig, support, kind):
     bpy.context.view_layer.update()
 
 # 两个状态之间真人需要的过渡时间（秒）：下半身换姿态最慢，转身按角度，手臂动作约 0.8 秒
-BASE_T = {frozenset(('stand', 'sit')): 1.5, frozenset(('stand', 'crouch')): 1.2, frozenset(('sit', 'slump')): 1.1,
+BASE_T = {frozenset(('stand', 'sit')): 2.0, frozenset(('stand', 'crouch')): 1.2, frozenset(('sit', 'slump')): 1.1,
           frozenset(('sit_bed', 'lie')): 1.7, frozenset(('sit_bed', 'stand')): 1.8, frozenset(('sit_bed', 'hug_knees')): 1.3,
-          frozenset(('stand', 'lie')): 2.4, frozenset(('crouch', 'sit')): 1.3}
+          frozenset(('stand', 'lie')): 2.4, frozenset(('crouch', 'sit')): 1.3, frozenset(('stand', 'sit_tight')): 2.0, frozenset(('stand', 'sit_lean')): 2.0, frozenset(('stand', 'sit_back')): 2.0}
 
 def trans_time(a, b):
     t = 0.0

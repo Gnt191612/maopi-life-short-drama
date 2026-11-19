@@ -25,9 +25,9 @@ SCN = {
     's01_10': {'lin': Wk(at='window', face=-90, arms='down')},
     's01_11': {'lin': S(at='window', face=-90, arms='selfie')},
     's01_12': {'lin': S(arms='phone2')},
-    's01_14': {'chen': Bl(1.0, pos=(0.55, -0.35, 0), face=180, base='stand', arms='backpack')},
-    's01_15': {'chen': Wk(at='door', face=180, arms='backpack')},
-    's01_16': {'chen': Wk(pos=(1.0, -3.6, 0), face=0, arms='backpack')},
+    's01_14': {'chen': Bl(1.0, pos=(0.55, -0.35, 0), face=180, base='stand', arms='strap')},
+    's01_15': {'chen': Wk(at='door', face=180, arms='strap')},
+    's01_16': {'chen': Wk(pos=(1.0, -3.6, 0), face=0, arms='strap')},
    }),
  # ---------------- 图书馆 ----------------
  's02': dict(side=-1,
@@ -61,10 +61,10 @@ SCN = {
    }),
  # ---------------- 第二幕 · 图书馆门口 ----------------
  's04': dict(side=1,
-   init={'lin': dict(pos=(0.0, -2.0, 0), face=180, base='stand', arms='backpack')},
+   init={'lin': dict(pos=(0.0, -2.0, 0), face=180, base='stand', arms='strap')},
    phones={'lin': (0, -50, -5)},
    beats={
-    's04_01': {'lin': Wk(pos=(0.2, 7.0, 1.2), face=180, arms='backpack')},
+    's04_01': {'lin': Wk(pos=(0.2, 7.0, 1.2), face=180, arms='strap')},
     's04_03': {'lin': S(face=180, arms='down')},
     's04_04': {'lin': Wk(pos=(0.8, 5.0, 0.74), face=0, base='sit', arms='phone')},
     's04_05': {'lin': S(arms='phone')},
@@ -101,34 +101,34 @@ SCN = {
  # ---------------- 第三幕 · 夜晚操场（含回忆） ----------------
  's07': dict(side=1,
    init={'lin': dict(pos=(-12, -2.6, 0), face=90, base='stand', arms='down'),
-         'zhou': dict(pos=(-12, -3.4, 0), face=90, base='stand', arms='pocket')},
+         'zhou': dict(pos=(-12, -3.4, 0), face=90, base='stand', arms='pockets')},
    init_dorm_nt={'zhou': dict(at='other2_bed', face=180, base='hug_knees', arms='knees')},
    init_dorm_am={'zhou': dict(at='door', face=0, base='stand', arms='cup')},
    phones={'lin': (0, -50, -5), 'zhou': (1.0, 1.0, 1.95)},
    beats={
-    's07_01': {'lin': Wk(pos=(-8, -2.6, 0), face=90), 'zhou': Wk(pos=(-8, -3.4, 0), face=90, arms='pocket')},
-    's07_02': {'lin': Wk(pos=(-6, -2.6, 0), face=90), 'zhou': Wk(pos=(-6, -3.4, 0), face=90, arms='pocket')},
+    's07_01': {'lin': Wk(pos=(-8, -2.6, 0), face=90), 'zhou': Wk(pos=(-8, -3.4, 0), face=90, arms='pockets')},
+    's07_02': {'lin': Wk(pos=(-6, -2.6, 0), face=90), 'zhou': Wk(pos=(-6, -3.4, 0), face=90, arms='pockets')},
     's07_04': {'zhou': S(face=180, arms='gesture'), 'lin': S(face=0)},
     's07_10': {'zhou': S(at='other2_bed', face=180, base='sit_bed', arms='phone2')},
     's07_12': {'zhou': S(arms='down')},
     's07_14': {'zhou': S(arms='gesture')},
     's07_17': {'zhou': S(arms='pat', reach=(-6.0, -2.75, 1.45))},
-    's07_18': {'zhou': S(arms='pocket', reach=None)},
-    's07_19': {'zhou': Wk(pos=(-3.5, -3.4, 0), face=-90, arms='pocket')},
+    's07_18': {'zhou': S(arms='pockets', reach=None)},
+    's07_19': {'zhou': Wk(pos=(-3.5, -3.4, 0), face=-90, arms='pockets')},
    }),
  # ---------------- 第四幕 · 茶话会 ----------------
  's08': dict(side=-1,
    # 围坐没有桌子：每人按性格/心境用不同坐姿，手都有落点（林晓拘谨并腿、陈瑶双手交握、周明远前倾倾听、同学甲后靠、同学乙端坐）
    init={'wang': dict(pos=(0, -0.3, 0), face=0, base='stand', arms='gesture'),
-         'lin': dict(at='lin_seat', base='sit_tight', arms='thighs'), 'chen': dict(at='chen_seat', base='sit', arms='lap'),
-         'zhou': dict(at='zhou_seat', base='sit_lean', arms='elbows_knees'), 'classA': dict(at='classA_seat', base='sit_back', arms='thighs'),
-         'classB': dict(at='classB_seat', base='sit_tight', arms='lap')},
+         'lin': dict(at='lin_seat', base='sit_tight', arms='thighs'), 'chen': dict(at='chen_seat', base='sit_cross', arms='lap'),
+         'zhou': dict(at='zhou_seat', base='sit_lean', arms='elbows_knees'), 'classA': dict(at='classA_seat', base='sit_wide', arms='thighs'),
+         'classB': dict(at='classB_seat', base='sit_ankles', arms='lap')},
    extras={'class': ['林晓', '陈瑶', '周明远', '王老师', '同学甲', '同学乙']},
    phones={},
    beats={
     's08_02': {'lin': S(arms='lap')},                                   # 低头搓手
     's08_03': {'wang': Wk(at='wang_seat', base='sit', arms='thighs')},
-    's08_04': {'wang': Bl(1.0, base='sit_lean', arms='gesture')},       # 后半句身体前倾、变得认真
+    's08_04': {'wang': Bl(1.0, base='sit_lean', arms='open_palms')},       # 后半句身体前倾、变得认真
     's08_12': {'lin': S(arms='lap')},                                   # 攥紧衣角
     's08_06': {'classA': S(base='sit_lean', arms='gesture')},
     's08_07': {'classA': S(base='sit_lean', arms='elbows_knees'), 'classB': S(arms='cover_face'), 'wang': S(arms='thighs')},
@@ -153,7 +153,7 @@ SCN = {
  's10': dict(side=1,
    init={'lin': dict(pos=(0, 0, 0), face=0, base='stand', arms='selfie'),
          'chen': dict(pos=(-0.9, 0.3, 0), face=20, base='stand', arms='down'),
-         'zhou': dict(pos=(1.0, 0.4, 0), face=-20, base='stand', arms='pocket')},
+         'zhou': dict(pos=(1.0, 0.4, 0), face=-20, base='stand', arms='pockets')},
    phones={},
    beats={
     's10_02': {'chen': S(pos=(-0.55, 0.1, 0), face=60, arms='pat', reach=(-0.1, -0.35, 1.35))},

@@ -80,7 +80,7 @@ def walk(path, tgt, dst_start, p0, p1):
 def _world_rest(arm, pb):
     return arm.matrix_world @ pb.bone.matrix_local
 
-def retarget(src, tgt, f0, f1, dst_start=1, action_name='clip', root_offset=(0, 0, 0), root_yaw=0.0, hscale=1.0):
+def retarget(src, tgt, f0, f1, dst_start=1, action_name='clip', root_offset=(0, 0, 0), root_yaw=0.0, hscale=1.0, k=None, root_z0=None):
     """把 src 第 f0..f1 帧烘焙到 tgt 的 dst_start 起。root_offset/root_yaw：把动作整体搬到场景里的位置与朝向；hscale：水平位移微调（让走路正好停在终点）。"""
     sc = bpy.context.scene
     spb, tpb = src.pose.bones, tgt.pose.bones
@@ -99,7 +99,8 @@ def retarget(src, tgt, f0, f1, dst_start=1, action_name='clip', root_offset=(0, 
     se = SrcEval(src)
     start_hips = se.world(f0)['Hips'].translation.copy()
     sh = start_hips                                    # BVH 静止姿态的根骨在地面，用首帧实际髋高
-    k = th.z / max(sh.z, 1e-3)                         # 髋高比例
+    if k is None: k = th.z / max(sh.z, 1e-3)           # 髋高比例（首帧是站着的片段）；从坐姿开始的片段由调用方给出
+    z0 = th.z if root_z0 is None else root_z0          # 首帧时目标根骨的高度（站着=静止髋高；坐着=当前坐姿髋高）
     if not tgt.animation_data: tgt.animation_data_create()
     if action_name or tgt.animation_data.action is None:   # action_name=None：写进骨架现有动画（与姿态、口型同一条时间轴）
         tgt.animation_data.action = bpy.data.actions.new(action_name or 'clip')
@@ -124,7 +125,7 @@ def retarget(src, tgt, f0, f1, dst_start=1, action_name='clip', root_offset=(0, 
             if b.name == 'root':
                 hp = S[sname].translation
                 r_ = hp - start_hips; r_ = Vector((r_.x * k * hscale, r_.y * k * hscale, 0))
-                head = off + (yaw @ r_) + Vector((0, 0, th.z + (hp.z - sh.z) * k))
+                head = off + (yaw @ r_) + Vector((0, 0, z0 + (hp.z - sh.z) * k))
             else:
                 head = wb.translation
             basis = base.inverted() @ (MWi @ Matrix.LocRotScale(head, new_rot, wb.to_scale()))

@@ -38,6 +38,19 @@ def add_idle(rig, seed):
             m = fc.modifiers.new('FNGENERATOR'); m.function_type = 'SIN'; m.use_additive = True
             m.amplitude = amp; m.phase_multiplier = 2 * math.pi / period; m.phase_offset = rnd.uniform(0, 6.28)
 
+def inertia(rig):
+    """惯性：手臂、头颈的每段过渡用「回弹」缓动——到位时略冲过头再回来（幅度与动作大小成正比，静止段不受影响）。
+    逐帧的动捕走路关键帧每段只有 1 帧，整数帧上取值不变，不会抖。"""
+    act = rig.animation_data.action
+    for fc in act.fcurves:
+        if not fc.data_path.endswith('rotation_quaternion'): continue
+        bn = fc.data_path.split('"')[1]
+        if any(k in bn for k in ('arm', 'clavicle', 'shoulder')): back = 1.4
+        elif bn in ('head', 'neck01', 'neck02', 'neck03'): back = 0.9
+        else: continue
+        for kp in fc.keyframe_points:
+            kp.interpolation = 'BACK'; kp.easing = 'EASE_OUT'; kp.back = back
+
 def _key_rot(pb, frame, euler):
     pb.rotation_mode = 'XYZ'; pb.rotation_euler = euler; pb.keyframe_insert('rotation_euler', frame=frame, group=pb.name)
 
