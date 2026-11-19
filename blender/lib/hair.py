@@ -72,9 +72,10 @@ def _hairline_fn(eyes, brow_z, rnd, front=0.045, temple=0.016, ear=-0.012, behin
         return B + (N - B) * _smooth(130, 170, a)
     return lambda az: base(abs(az)) + 0.004 * math.sin(math.radians(az) * 7 + s1) + 0.0022 * math.sin(math.radians(az) * 17 + s2)
 
-def _scalp(bv, bp, H, hairline_z, soft=0.016):
-    """发际线以上、朝外的头皮面 → 发根三角形（主区 + 发际线过渡带，过渡带越往外越稀）与发帽面"""
-    main, ring = [], []
+def _scalp(bv, bp, H, hairline_z, soft=0.016, front_boost=1.0):
+    """发际线以上、朝外的头皮面 → 发根三角形（主区 + 发际线过渡带，过渡带越往外越稀）与发帽面。
+    front_boost：前额发际线后 3cm 内发根加密倍数（梳背头时这圈最容易透出头皮）"""
+    main, ring, boost = [], [], {}
     for fi, p in enumerate(bp):
         if len(p) < 3: continue
         c = sum((bv[i] for i in p), Vector()) / len(p); rel = c - H
@@ -82,16 +83,16 @@ def _scalp(bv, bp, H, hairline_z, soft=0.016):
         n = ((bv[p[1]] - bv[p[0]]).cross(bv[p[2]] - bv[p[0]])).normalized()
         if n.dot(rel) < 0: n = -n
         if n.dot(rel.normalized()) < 0.2: continue
-        hz = hairline_z(math.degrees(math.atan2(rel.x, -rel.y)))
+        az = math.degrees(math.atan2(rel.x, -rel.y)); hz = hairline_z(az)
         if c.z < hz - soft: continue
         if c.z < hz: ring.append((fi, (c.z - (hz - soft)) / soft))
-        else: main.append(fi)
+        else: main.append(fi); boost[fi] = front_boost if abs(az) < 70 and c.z < hz + 0.03 else 1.0
     tris = []
     def add(fi, w):
         p = bp[fi]; a, b_, c = bv[p[0]], bv[p[1]], bv[p[2]]
         tris.append((a, b_, c, ((b_ - a).cross(c - a)).length / 2 * w))
         if len(p) == 4: d4 = bv[p[3]]; tris.append((a, c, d4, ((c - a).cross(d4 - a)).length / 2 * w))
-    for fi in main: add(fi, 1.0)
+    for fi in main: add(fi, boost[fi])
     n_main = len(tris)
     for fi, w in ring: add(fi, 0.4 * w * w)
     return tris, n_main, main
@@ -170,8 +171,8 @@ def build_short(cid, rig, body, shell, seed=1):
         front = brow_z + 0.045          # 前额发际线：眉上约 4.5cm
         temple = brow_z + 0.016         # 太阳穴略后收
         ear = eyes.z - 0.012            # 两鬓：绕过耳朵上缘，带一点鬓角
-        behind = eyes.z - 0.035         # 耳后
-        nape = eyes.z - 0.098           # 后颈发际线
+        behind = eyes.z - 0.030         # 耳后
+        nape = eyes.z - 0.062           # 后颈发际线（原 -0.098：后颈推短后，下面那截深色发帽露出来像一块黑胶布）
         if a < 35: return front
         if a < 65: return front + (temple - front) * _smooth(35, 65, a)
         if a < 100: return temple + (ear - temple) * _smooth(65, 95, a)
@@ -358,7 +359,7 @@ def build_long(cid, rig, body, shell, seed=1):
     up = Vector((0, 0, 1))
     tris, n_main, cap_faces = _scalp(bv, bp, H, _hairline_fn(eyes, brow_z, rnd, front=S['front'], temple=S['temple'],
                                                                       ear=S.get('ear', -0.012), behind=S.get('behind', -0.035)),
-                                     soft=0.007)   # 过渡带收窄：梳起来的头发会露出整条发际线，宽的稀疏带看着像秃了一圈
+                                     soft=0.007, front_boost=2.5 if S['style'] == 'ponytail' else 1.0)   # 过渡带收窄：梳起来的头发会露出整条发际线，宽的稀疏带看着像秃了一圈
     if not tris: return None
     sample = _sampler(tris, rnd)
 
@@ -417,7 +418,9 @@ def build_long(cid, rig, body, shell, seed=1):
                     R = 0.007 + S['tail_r'] * _smooth(0.0, 0.07, t) - S['tail_r'] * 0.55 * _smooth(0.12, S['tail'], t)
                     q = c + (u_ * math.cos(th) + v_ * math.sin(th)) * rho * R + lk * 0.006 * _smooth(0.05, 0.25, t) \
                         + Vector((math.sin(t * 18 + ph), 0, 0)) * 0.0015
-                    pts.append(clamp_off(q, 0.006, 9.0))
+                    loc, _, _, _ = bb.find_nearest(q)                         # 靠到后背时只往后让开（原先沿径向推开，马尾在背上分成两股）
+                    if loc is not None and q.y < loc.y + 0.006 and abs(q.z - loc.z) < 0.03: q.y = loc.y + 0.006
+                    pts.append(q)
             strands.append(pts); soft_flag.append(soft)
         tie = (T, axis0)
     else:   # bob

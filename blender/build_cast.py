@@ -357,17 +357,21 @@ def hide_under(under, over, margin=None):
     under.modifiers.move(len(under.modifiers) - 1, i + 1)
     print('HIDE', under.name, 'under', over.name, len(hid), 'verts', 'lower-outer' if over_is_lower else 'upper-outer', flush=True)
 
-def hide_body_under(body, garment, reach=0.03):
-    """衣服盖住的皮肤隐藏：从皮肤顶点沿法线两个方向 3cm 内碰到这件衣服 = 被盖住。
-    素材自带的删除区域常漏掉膝盖、手肘，坐下弯腿时膝盖会从裤子里顶出来"""
+def hide_body_under(body, garment, reach=0.025):
+    """裤子盖住的腿部皮肤隐藏：从皮肤顶点沿法线向外 2.5cm 内碰到裤子 = 被盖住。
+    素材自带的删除区域常漏掉膝盖，坐下弯腿时膝盖会从裤子里顶出来。
+    只用于下装、只处理胯部到脚踝之间：上衣会误伤下巴（领口）、袖口处会露出窟窿（实测）"""
     from mathutils.bvhtree import BVHTree
     bpy.context.view_layer.update(); dg = bpy.context.evaluated_depsgraph_get()
     ev = garment.evaluated_get(dg); me = ev.to_mesh()
     tree = BVHTree.FromPolygons([garment.matrix_world @ v.co for v in me.vertices], [tuple(p.vertices) for p in me.polygons]); ev.to_mesh_clear()
     M = body.matrix_world; N = M.to_3x3().inverted().transposed(); hid = []
+    gz = [garment.matrix_world @ v.co for v in garment.data.vertices]
+    z_lo, z_hi = min(v.z for v in gz) + 0.10, max(v.z for v in gz) - 0.06       # 离开裤脚、裤腰各一段：边口处藏了皮肤会透空
     for v in body.data.vertices:
-        p = M @ v.co; n = (N @ v.normal).normalized()
-        if tree.ray_cast(p, n, reach)[0] is not None or tree.ray_cast(p, -n, reach)[0] is not None: hid.append(v.index)
+        p = M @ v.co
+        if not (z_lo < p.z < z_hi): continue
+        if tree.ray_cast(p, (N @ v.normal).normalized(), reach)[0] is not None: hid.append(v.index)
     name = 'v11_under_' + garment.name[-20:]
     vg = body.vertex_groups.new(name=name); vg.add(hid, 1.0, 'REPLACE')
     m = body.modifiers.new(name, 'MASK'); m.vertex_group = name; m.invert_vertex_group = True
@@ -435,7 +439,7 @@ def hood(rig, rgb):
 # 成品发型素材（MakeHuman 社区高精度发型，CC-BY，作者署名见 THIRD_PARTY_LICENSES.md）；其余角色用代码生成的发丝
 HAIR_ASSET = {}   # 成品雕刻发型实测像塑料假发、款式复古，不直接使用（2026-11-14）
 # 发型轮廓素材：只用来定义发型外形，真实发丝沿着它生成（林母的微卷短发）
-HAIR_SHAPE = {'mom': r'mh_community\hair02\hair\elvs_wavy_bob\elvs_wavy_bob.mhclo'}
+HAIR_SHAPE = {'mom': 'mh_community/hair02/hair/elvs_wavy_bob/elvs_wavy_bob.mhclo'}   # 用正斜杠：Windows、Linux（云端）都认
 HAIR_COLOR = {'mom': (0.030, 0.027, 0.026)}   # 林母：黑发里带一点灰；其余为自然黑发
 
 def recolor_asset_hair(obj, rgb=(0.014, 0.011, 0.009)):
@@ -498,8 +502,8 @@ def build(cid):
         layers = [parts.get('community:' + rel) for rel, _ in OUTFIT[cid]]
         for under in layers[1:]:
             if layers[0] is not None and under is not None: hide_under(under, layers[0])
-        for g_ in layers:
-            if g_ is not None and 'skirt' not in g_.name: hide_body_under(body, g_)   # 裙子下面是黑丝腿，不藏
+        for g_ in layers:   # 只处理长裤（裙子下面是黑丝腿，不藏）
+            if g_ is not None and any(k in g_.name for k in ('pants', 'trouser', 'jeans')): hide_body_under(body, g_)
     shell = parts.get('hair/%s/%s.mhclo' % (hair_name, hair_name))   # 真实发丝：以发片为发型轮廓生长
     if cid in HAIR_ASSET:   # 成品发型：替换系统发片，不生成发丝
         if shell is not None: bpy.data.objects.remove(shell, do_unlink=True); shell = None
@@ -556,4 +560,4 @@ if __name__ == '__main__':
     argv = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
     for cid in (argv or list(CAST)):
         build(cid)
-    lineup()
+    if os.environ.get('V11_NO_LINEUP') != '1': lineup()   # 云端多进程并行建人时跳过合影图

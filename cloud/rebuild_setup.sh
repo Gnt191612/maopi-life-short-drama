@@ -19,6 +19,11 @@ fi
 # 3) 素材与代码
 [ -f $UP/blender_user.tgz ] && tar -xzf $UP/blender_user.tgz -C $ROOT/.tools && rm $UP/blender_user.tgz
 [ -f $UP/mh_hair.tgz ] && tar -xzf $UP/mh_hair.tgz -C $ROOT/.tools && rm $UP/mh_hair.tgz
+cd $UP   # 服装包：云端直接从 MakeHuman 社区下载（比从本地上传快得多）
+for f in shirts01/shirts01_cc0.zip shirts02/shirts02_ccby.zip pants01/pants01_cc0.zip pants02/pants02_ccby.zip skirts02/skirts02_cc-by.zip shoes01/shoes01_cc0.zip; do
+  n=${f%%/*}; [ -d /root/v11_assets/mh_community/$n/clothes ] && continue; [ -f $(basename $f) ] && continue
+  for H in files.makehumancommunity.org files2.makehumancommunity.org; do curl -fsL --retry 3 --connect-timeout 30 -o $(basename $f) https://$H/asset_packs/$f && break; done
+done
 for z in $UP/*.zip; do
   [ -f "$z" ] || continue
   n=$(basename "$z" | sed -E 's/_(cc0|ccby|cc-by)\.zip$//'); mkdir -p /root/v11_assets/mh_community/$n
