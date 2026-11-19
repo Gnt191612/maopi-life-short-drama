@@ -64,6 +64,8 @@ if (-not (Test-Path "$T\ffmpeg\ffmpeg.exe")) {
     Get-ChildItem "$dl\ff" -Recurse -Include ffmpeg.exe, ffprobe.exe | Copy-Item -Destination "$T\ffmpeg"
 }
 
+Write-Host '[5b] 环境光 HDRI（Poly Haven CC0）与配乐古典录音（维基共享资源 CC0/公有领域）'
+python (Join-Path $Root 'setup\get_hdri.py'); python (Join-Path $Root 'setup\get_music.py')
 Write-Host '[6/7] 开源字体 Noto Sans SC（SIL OFL）'
 New-Item -ItemType Directory -Force "$T\fonts" | Out-Null
 Get-File @('https://github.com/google/fonts/raw/main/ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf') "$T\fonts\NotoSansSC-Regular.ttf"

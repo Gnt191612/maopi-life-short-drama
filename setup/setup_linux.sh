@@ -53,6 +53,8 @@ echo "[5/7] ffmpeg（静态版）"
 get "$DL/ffmpeg-static.tar.xz" "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
 [ -x "$T/ffmpeg/ffmpeg" ] || { mkdir -p "$T/ffmpeg" "$DL/ff"; tar -xJf "$DL/ffmpeg-static.tar.xz" -C "$DL/ff"; cp "$DL"/ff/*/ffmpeg "$DL"/ff/*/ffprobe "$T/ffmpeg/"; }
 
+echo "[5b] 环境光 HDRI（CC0）与配乐古典录音（CC0/公有领域）"
+python3 "$ROOT/setup/get_hdri.py"; python3 "$ROOT/setup/get_music.py"
 echo "[6/7] 开源字体 Noto Sans SC（SIL OFL）"
 mkdir -p "$T/fonts"; get "$T/fonts/NotoSansSC-Regular.ttf" "https://github.com/google/fonts/raw/main/ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf"
 # 手机屏幕界面要用静态字重（Blender 读可变字体只会用最细的字重）

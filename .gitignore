@@ -27,3 +27,5 @@ voice_tools/voices_v2/*.wav
 
 # 配乐（AI 原创 + 古典录音）随资产包走 Release
 assets/music/
+assets/hdri/
+assets/lookdev/

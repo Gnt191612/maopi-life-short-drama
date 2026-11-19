@@ -8,7 +8,7 @@ import bpy
 from mathutils import Vector, Matrix
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))   # 仓库根目录
 import config
-import poses, face, retarget, sets, life, nav, phone_ui
+import poses, face, retarget, sets, life, nav, phone_ui, realism
 import blocking
 
 VIS = config.VISEMES; MOCAP = config.MOCAP
@@ -34,6 +34,7 @@ def append_cast(cid):
     for o in dst.objects: bpy.context.scene.collection.objects.link(o)
     rig = bpy.data.objects[cid + '_rig']
     rig.animation_data_create(); rig.animation_data.action = bpy.data.actions.new(cid + '_act')
+    realism.enhance_character(rig)                    # 皮肤毛孔、眼睛湿润高光、衣服褶皱
     return rig
 
 make_phone = phone_ui.make_phone   # 每个角色一部手机：机身 + 屏幕面（prop_screen_<cid>）+ 屏幕界面
@@ -183,6 +184,22 @@ def shot_ok(cam, rigs, watch, subj, f0, f1):
                 t = (loc - cpos).length + 0.01
     return ok
 
+FIXED_ID = {'lin': 1, 'chen': 2, 'zhou': 3, 'wang': 4, 'mom': 5, 'classA': 6, 'classB': 7}   # 每个角色在全片里的固定遮罩编号
+
+def assign_ids():
+    """物体编号（遮罩用）：主角 1~7 固定；路人 10 起；手机 15；场景 0。返回 {编号: 名字}"""
+    ids, nxt = {}, 10
+    for rig in sorted((o for o in bpy.data.objects if o.type == 'ARMATURE' and o.name.endswith('_rig')), key=lambda o: o.name):
+        cid = rig.name[:-4]; k = FIXED_ID.get(cid)
+        if k is None: k = nxt; nxt += 1
+        for c in rig.children_recursive:
+            if c.type in ('MESH', 'CURVES'): c.pass_index = k
+        ids[k] = NAME.get(cid, cid)
+    for o in bpy.data.objects:
+        if o.name.startswith(('prop_phonebody_', 'prop_screen_')): o.pass_index = 15
+    ids[15] = '手机'
+    return ids
+
 def add_walkers(walkers, f_end, clip):
     """外景背景里来往的路人学生：按设定时刻出发、动捕走路；片段结束前走不完就走到哪算哪（只烘焙需要的帧）"""
     for cid, p0, p1, t0 in walkers:
@@ -233,6 +250,7 @@ def build_segment(seg_id, scene, set_name, beats):
     bpy.ops.wm.read_factory_settings(use_empty=True)
     sets._cube = None; sets._MATS.clear(); sets._PROTO.clear()
     info = sets.build(set_name); marks = info['marks']; bounds = info.get('bounds')
+    realism.apply_hdri(set_name)                       # 真实全景光照与反射（替代纯色/渐变天空）
     sc = bpy.context.scene; sc.render.fps = FPS; sc['v11_set'] = set_name
     B = blocking.get(scene['id'])
     chars = sorted({c for bt in beats for c in bt['chars']} | set(B.get('extras', {}).get(set_name, [])))
@@ -482,6 +500,8 @@ def build_segment(seg_id, scene, set_name, beats):
                 life.hands(rig, fr + 4, gr, gl); last = (gr, gl)
         if last is None: life.hands(rig, 1)
     add_walkers(info.get('walkers', []), f - 1, WALK)
+    ids = assign_ids()
+    json.dump(ids, open(os.path.join(config.SHOTS, seg_id + '_ids.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     sc.frame_start, sc.frame_end = 1, f - 1
     sc.camera =sc.timeline_markers[0].camera if sc.timeline_markers else None
     sc['v11_timeline'] = json.dumps(timeline, ensure_ascii=False)
@@ -509,11 +529,27 @@ def setup_render(out_dir, w=960, h=540):
     sc.render.image_settings.file_format = 'PNG'
     sc.render.filepath = os.path.join(out_dir, 'beauty_')
     vl = sc.view_layers[0]; vl.use_pass_z = True; vl.use_pass_normal = True
-    # 合成器：深度归一化后另存一路 PNG（控制图层）
+    full = sc.render.engine == 'CYCLES'               # 正式渲染（Cycles）额外输出物体编号与 Cryptomatte 遮罩；EEVEE 预览不支持
+    if full: vl.use_pass_object_index = True; vl.use_pass_cryptomatte_object = True
+    # 合成器：控制图层（给云端 AI 写实化当「施工图纸」）
     sc.use_nodes = True; nt = sc.node_tree; nt.nodes.clear()
     rl = nt.nodes.new('CompositorNodeRLayers'); comp = nt.nodes.new('CompositorNodeComposite')
     nt.links.new(rl.outputs['Image'], comp.inputs['Image'])
-    norm = nt.nodes.new('CompositorNodeNormalize'); inv = nt.nodes.new('CompositorNodeInvert')
+    # 深度：固定 0.1~40 米映射（近白远黑），每帧同一标尺——原先逐帧归一化，标尺随画面跳变会闪
+    mr = nt.nodes.new('CompositorNodeMapRange'); mr.inputs['From Min'].default_value = 0.1; mr.inputs['From Max'].default_value = 40.0
+    mr.inputs['To Min'].default_value = 1.0; mr.inputs['To Max'].default_value = 0.0; mr.use_clamp = True
     fo = nt.nodes.new('CompositorNodeOutputFile'); fo.base_path = out_dir
     fo.file_slots[0].path = 'depth_'; fo.format.file_format = 'PNG'; fo.format.color_mode = 'BW'; fo.format.color_depth = '16'
-    nt.links.new(rl.outputs['Depth'], norm.inputs[0]); nt.links.new(norm.outputs[0], inv.inputs['Color']); nt.links.new(inv.outputs[0], fo.inputs[0])
+    nt.links.new(rl.outputs['Depth'], mr.inputs['Value']); nt.links.new(mr.outputs['Value'], fo.inputs[0])
+    if full:   # 原始数据另存多层 EXR：真实深度（米）、世界空间法线、物体编号（每个角色固定编号，见 shots/<seg>_ids.json）、Cryptomatte
+        ex = nt.nodes.new('CompositorNodeOutputFile'); ex.base_path = os.path.join(out_dir, 'ctrl_')
+        ex.format.file_format = 'OPEN_EXR_MULTILAYER'; ex.format.color_depth = '32'; ex.format.exr_codec = 'ZIP'
+        ex.layer_slots.clear()
+        for name in ('Depth', 'Normal', 'IndexOB'):
+            ex.layer_slots.new(name); nt.links.new(rl.outputs[name], ex.inputs[name])
+        for o in rl.outputs:
+            if o.name.startswith('CryptoObject'): ex.layer_slots.new(o.name); nt.links.new(o, ex.inputs[o.name])
+        mk = nt.nodes.new('CompositorNodeMath'); mk.operation = 'DIVIDE'; mk.inputs[1].default_value = 20.0   # 遮罩 PNG：编号/20 → 灰度
+        fm = nt.nodes.new('CompositorNodeOutputFile'); fm.base_path = out_dir
+        fm.file_slots[0].path = 'mask_'; fm.format.file_format = 'PNG'; fm.format.color_mode = 'BW'; fm.format.color_depth = '8'
+        nt.links.new(rl.outputs['IndexOB'], mk.inputs[0]); nt.links.new(mk.outputs[0], fm.inputs[0])

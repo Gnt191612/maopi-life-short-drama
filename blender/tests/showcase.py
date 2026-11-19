@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 import config
 import bpy
 from mathutils import Vector
-import poses
+import poses, realism
 
 IDS = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv and sys.argv[-1] != '--' else ['lin', 'chen', 'zhou', 'wang', 'mom', 'classA', 'classB']
 OUT = os.path.join(config.RENDERS, 'showcase'); os.makedirs(OUT, exist_ok=True)
@@ -46,6 +46,7 @@ for cid in IDS:
         b = m.node_tree.nodes.get('Principled BSDF') if m.use_nodes and m.node_tree else None
         if b and b.inputs['Subsurface Weight'].default_value > 0: b.inputs['Subsurface Scale'].default_value = 0.004
     rig = bpy.data.objects[cid + '_rig']
+    if os.environ.get('V11_REAL', '1') == '1': realism.enhance_character(rig)   # 皮肤毛孔、眼睛湿润、衣服褶皱
     poses.apply_state(rig, dict(pos=(0, 0, 0), yaw=0, base='stand', arms='down'))
     bpy.context.view_layer.update()
     head = poses.head_pos(rig); face = head + Vector((0, -0.08, 0.04))

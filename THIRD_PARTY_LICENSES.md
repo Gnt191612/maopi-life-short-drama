@@ -18,6 +18,11 @@
 | MakeHuman 社区发型包 hair02 / hair03 | 发型轮廓参考（林母） | CC-BY（作者署名见包内说明） | http://www.makehumancommunity.org |
 | ACE-Step v1 3.5B（代码与模型权重） | 原创配乐生成（纯音乐） | Apache-2.0（生成的音乐可自由使用） | https://github.com/ace-step/ACE-Step |
 | 古典录音 5 首（萨蒂、德彪西、肖邦、巴赫） | 配乐 | 公有领域 / CC0（逐首来源见 assets/music/LICENSES.txt） | https://commons.wikimedia.org |
+| Poly Haven HDRI 5 张 | 环境光照与反射 | CC0（逐张来源见 assets/hdri/LICENSES.txt） | https://polyhaven.com |
+| RealVisXL V5.0 | 角色写实定妆照 | CreativeML OpenRAIL++-M | https://huggingface.co/SG161222/RealVisXL_V5.0 |
+| ControlNet Depth SDXL | 定妆照深度控制 | OpenRAIL++ | https://huggingface.co/diffusers/controlnet-depth-sdxl-1.0 |
+| IP-Adapter Plus Face SDXL | 定妆照长相一致 | Apache-2.0 | https://huggingface.co/h94/IP-Adapter |
+| SDXL VAE fp16 fix | 定妆照解码 | MIT | https://huggingface.co/madebyollin/sdxl-vae-fp16-fix |
 | Whisper | 配音字错率自动校验 | MIT | https://github.com/openai/whisper |
 | Remotion | 最终合成 | Remotion License（个人及 3 人以下团队免费，其他需购买公司许可） | https://www.remotion.dev/license |
 | three.js | 网页预演查看器 | MIT | https://threejs.org |
