@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) 
 import config
 import hair
 import hair_cards
+import jk_sailor
 from mathutils import Vector
 # 鞋子：保留原资产贴图（皮革、网面、磨旧感），按人物身份选鞋型
 SHOES = {'lin': 'shoes02', 'chen': 'shoes05', 'zhou': 'shoes02', 'wang': 'shoes04', 'mom': 'shoes01', 'classA': 'shoes06', 'classB': 'shoes05',
@@ -89,15 +90,19 @@ SKIN_TINT = {'lin': (1.03, 1.0, 0.98), 'chen': (1.04, 1.01, 1.0), 'zhou': (0.94,
 
 STOCKINGS = {'classB': (0.012, 0.011, 0.013)}
 # 身材（2026-11-21 用户：同学乙胸部丰满一点、人物苗条一点、腿细一点）。只用身体部位的形态目标，不动头部（宏参数「体重」会连脸一起变，脸型拟合就对不上了）
-CUP = {'classB': 0.78}; FIRM = {'classB': 0.75}
+CUP = {'classB': 0.62}; FIRM = {'classB': 0.55}   # 第 4 轮（用户：身材比例失调）：胸回到自然大小与形状
 # 第 2 轮（用户：胳膊、大腿、腰腹还是太粗）：腰腹、大腿、手臂加大收细
-BODY = {'classB': {'stomach-pregnant-decr': 1.0, 'stomach-tone-incr': 0.8, 'measure-waist-circ-decr': 1.0, 'measure-underbust-circ-decr': 0.4,
-                   'torso-scale-horiz-decr': 0.35, 'torso-scale-depth-decr': 0.5, 'measure-hips-circ-decr': 0.3,
-                   'measure-thigh-circ-decr': 0.6, 'measure-calf-circ-decr': 0.5, 'measure-knee-circ-decr': 0.9, **LR('leg-valgus-decr', 0.5),   # 第 3 轮（用户：大腿腿型奇怪）：大腿收得比膝盖多，膝盖像疙瘩、腿往里并（X 型）
-                   'measure-neck-circ-decr': 0.5, 'neck-scale-vert-incr': 0.35, 'measure-shoulder-dist-decr': 0.5, **LR('upperarm-shoulder-muscle-decr', 0.6), 'torso-muscle-dorsi-decr': 0.4,   # 脖子细长一点、肩膀窄一点（用户：脖子比例不对）
-                   **LR('upperleg-fat-decr', 0.8), **LR('upperleg-scale-depth-decr', 0.15), **LR('lowerleg-fat-decr', 0.5),
-                   **LR('upperarm-fat-decr', 1.0), **LR('upperarm-scale-horiz-decr', 0.4), **LR('upperarm-scale-depth-decr', 0.4),
-                   **LR('lowerarm-fat-decr', 0.6), **LR('lowerarm-scale-horiz-decr', 0.25)}}
+# 第 4 轮（用户：身材比例失调）：前几轮单项收得太狠——腰比胯细太多（夸张沙漏）、大腿根太细腿缝大、膝盖往里并、臀太翘。
+# 各项回到适度：腰、胯、大腿协调收细，整体是苗条的普通女大学生
+BODY = {'classB': {'stomach-pregnant-decr': 0.8, 'stomach-tone-incr': 0.5, 'measure-waist-circ-decr': 0.35, 'measure-underbust-circ-decr': 0.2,
+                   'torso-scale-horiz-decr': 0.2, 'torso-scale-depth-decr': 0.3, 'measure-hips-circ-decr': 0.55, 'hip-scale-horiz-decr': 0.25,
+                   'buttocks-volume-decr': 0.35,
+                   'upperlegs-height-incr': 0.55, 'lowerlegs-height-incr': 0.45,   # 第 5 轮（用户给参考图：腿长、头身比小）：腿拉长（脚沉到地下的问题由 ground_body 解决），总身高仍按 1.63m 缩放 → 头相对变小
+                   'measure-thigh-circ-decr': 0.25, 'measure-calf-circ-decr': 0.35, 'measure-knee-circ-decr': 0.45, **LR('leg-valgus-decr', 0.15),
+                   'measure-neck-circ-decr': 0.3, 'neck-scale-vert-decr': 0.7, 'measure-neck-height-decr': 0.6, 'measure-shoulder-dist-decr': 0.5, **LR('upperarm-shoulder-muscle-decr', 1.0), 'torso-scale-horiz-decr': 0.15, 'torso-muscle-dorsi-decr': 0.3, **LR('upperarm-scale-depth-decr', 0.2),   # 第 8 轮（用户：肩头太粗）：三角肌收薄   # 第 6 轮（用户：肩颈奇怪、脖子偏长）：脖子缩短、肩膀不再往下溜
+                   **LR('upperleg-fat-decr', 0.35), **LR('lowerleg-fat-decr', 0.35),
+                   **LR('upperarm-fat-decr', 0.9), **LR('upperarm-scale-horiz-decr', 0.4),
+                   **LR('lowerarm-fat-decr', 0.4), **LR('lowerarm-scale-horiz-decr', 0.15)}}
 IRIS = {'classB': dict(scale=0.9, rgb=(0.20, 0.075, 0.030))}   # 2026-11-21 调成照片里的中深棕（原来太暗，渲染出来发灰）   # 深棕眼仁（同学乙，照标准照；纯黑像瞪眼）；原放大 22% 像娃娃，写实化时每次被「纠正」得不一样
 LIP_TINT = {'mom': (1.10, 0.76, 0.76)}   # 唇色：红润（乘在唇部材质上）；已投影标准照的角色（同学乙）唇色来自照片，不再单染
 
@@ -151,12 +156,13 @@ OUTFIT = {
  'classA': [(C('shirts01', 'elvs_crude_t-shirt_male'), (0.10, 0.14, 0.36)),         # 宽松深蓝 T 恤
             (C('pants02', 'punkduck_male_classic_jeans'), None)],                    # 牛仔裤
  # 同学乙 JK 制服（2026-11-21 用户要求）：衬衫扎进裙子，裙子是外层；颜色用 'JK_*' 表示改贴图（见 jk_retex）
- 'classB': [(C('skirts02', 'mtknife_pleated_mini_skirt'), 'JK_SKIRT'),              # 藏青格纹百褶短裙
-            (C('shirts02', 'elvs_male_shirt_tie_tucked1'), 'JK_SHIRT')],             # 白衬衫 + 领带
+ # 2026-11-21 用户嫌男款衬衫丑：改女式衬衫（泡泡袖、V 领荷叶边，穿在裙子外面）+ 程序生成的红色蝴蝶结（BOW）
+ # 2026-11-21 用户给了水手服参考图：白色贴身长袖上衣 + 黑色水手领（白边）+ 蓝领巾 + 黑色百褶短裙 + 黑丝。上衣、领子、领巾由 lib/jk_sailor.py 生成
+ 'classB': [(C('skirts02', 'mtknife_pleated_mini_skirt'), 'JK_SKIRT_BLACK')],        # 黑色百褶短裙
 }
 SHOES.update({'classB': C('shoes01', 'cortu_t-bar')})                                # 黑色玛丽珍鞋（配黑丝）
 SHOE_TINT = {'classB': (0.03, 0.028, 0.03)}
-DRAPE = {'classB'}   # 上衣不贴肉（drape_top）+ 补上衣与裙腰之间的空隙（fill_gap）
+DRAPE = set()   # （男款衬衫时用 {'classB'}） 上衣不贴肉（drape_top）+ 补上衣与裙腰之间的空隙（fill_gap）
 
 def _hull_eq(P):
     """二维凸包（单调链），返回每条边的 (nx, ny, d)，外法线，点在内部时 n·p + d < 0（Blender 自带 Python 没有 scipy）"""
@@ -222,17 +228,298 @@ def drape_top(obj, z_lo, z_hi):
 def fill_gap(top, bottom):
     """上衣下摆和裙腰之间露腰：把下装的腰口往上提到上衣下摆以上 1.5cm（腰口提得最多，往下渐变，裙摆不动）"""
     import numpy as np
-    def zs(o, torso=False):
-        M = o.matrix_world; P = np.array([(M @ v.co)[:] for v in o.data.vertices])
-        if torso: P = P[np.abs(P[:, 0] - np.median(P[:, 0])) < 0.10]
-        return P[:, 2]
-    hem = float(np.percentile(zs(top, True), 1)); zb = zs(bottom); top_b, zmin = float(zb.max()), float(zb.min())
-    if top_b > hem + 0.015: print('GAP none', round(top_b - hem, 3), flush=True); return
-    lift = hem + 0.015 - top_b; sz = bottom.matrix_world.to_scale().z
+    import math as _m
+    def pts(o): M = o.matrix_world; return np.array([(M @ v.co)[:] for v in o.data.vertices])
+    T = pts(top); B = pts(bottom)
+    gi = {g.index: g.name for g in top.vertex_groups}                   # 袖子不算（垂在身侧，比下摆低）
+    arm = np.array([sum(g.weight for g in v.groups if any(k in gi.get(g.group, '') for k in ('arm', 'shoulder', 'clavicle', 'hand'))) > 0.3 for v in top.data.vertices])
+    T = T[~arm]; cx, cy = np.median(B[:, 0]), np.median(B[:, 1])
+    top_b, zmin = float(B[:, 2].max()), float(B[:, 2].min())
+    sec = lambda P: ((np.arctan2(P[:, 1] - cy, P[:, 0] - cx) + _m.pi) / (2 * _m.pi) * 24).astype(int) % 24
+    st, sb = sec(T), sec(B); lift = 0.0
+    for s_ in range(24):   # 每个方位：上衣下摆最低点 vs 裙腰最高点（原来只量正中，腰两侧还露一截）
+        if (st == s_).any() and (sb == s_).any(): lift = max(lift, T[st == s_, 2].min() + 0.015 - B[sb == s_, 2].max())
+    if lift <= 0: print('GAP none', flush=True); return
+    sz = bottom.matrix_world.to_scale().z
     for v in bottom.data.vertices:
         t = ((bottom.matrix_world @ v.co).z - zmin) / max(top_b - zmin, 1e-6)
         v.co.z += lift * max(0.0, t) ** 1.5 / sz
     bottom.data.update(); print('GAP lifted waist %.3f' % lift, flush=True)
+
+# 衣服改合身（2026-11-21 用户：身材协调但穿上衣服变丑——男款衬衫肩宽袖粗领高、上身被撑成筒、裙子提高后张成伞）
+# off 离皮肤距离；keep 超出部分保留比例（0 = 贴身，1 = 不变）；bust 胸部之间撑平的最大量；collar 领子高度压缩比例
+FIT_CLOTH = {'_classB_maleshirt': dict(top_off=0.006, top_keep=0.18, arm_off=0.006, arm_keep=0.25, bust=0.012, collar=0.5,
+                            skirt_keep=0.62, hem_drop=0.03)}
+
+def fit_cloth(top, bottom, body, rig, P):
+    import numpy as np
+    from mathutils.bvhtree import BVHTree
+    masks = [m for m in body.modifiers if m.type == 'MASK' and m.show_viewport]   # 被衣服遮住的身体部分也要参与（遮罩会删掉它们）
+    for m in masks: m.show_viewport = False
+    bpy.context.view_layer.update(); dg = bpy.context.evaluated_depsgraph_get()
+    ev = body.evaluated_get(dg); me = ev.to_mesh()
+    bvh = BVHTree.FromPolygons([body.matrix_world @ v.co for v in me.vertices], [tuple(p.vertices) for p in me.polygons]); ev.to_mesh_clear()
+    for m in masks: m.show_viewport = True
+    MW = rig.matrix_world; z_neck = (MW @ rig.pose.bones['neck01'].head).z; zc = (MW @ rig.pose.bones['head'].head).z
+    def pull(obj, keep_fn, off_fn, sel_fn=lambda p, i: True):
+        Mi = obj.matrix_world.inverted(); n_moved = 0
+        for i, v in enumerate(obj.data.vertices):
+            p = obj.matrix_world @ v.co
+            if not sel_fn(p, i): continue
+            loc, nn, _, d = bvh.find_nearest(p)
+            if loc is None: continue
+            out = p - loc
+            if out.dot(nn) < 0: nn = -nn
+            off = off_fn(p, i); k = keep_fn(p, i)
+            if d > off and out.dot(nn) > 0: v.co = Mi @ (loc + nn * (off + (d - off) * k)); n_moved += 1
+        obj.data.update(); return n_moved
+    # 1) 衬衫：躯干、袖子收到贴身（保留一点松量）；领子单独处理
+    gi = {g.index: g.name for g in top.vertex_groups}
+    arm = [sum(g.weight for g in v.groups if any(k in gi.get(g.group, '') for k in ('arm', 'hand', 'wrist', 'finger', 'thumb'))) > 0.4 for v in top.data.vertices]   # 袖口挂在 wrist 骨骼上，原来没算进袖子
+    n1 = pull(top, lambda p, i: P['arm_keep'] if arm[i] else P['top_keep'], lambda p, i: P['arm_off'] if arm[i] else P['top_off'],
+              lambda p, i: p.z < z_neck - 0.01)
+    # 领子：脖子根以上的部分往下压（高度乘 collar）并收向脖子
+    Mi = top.matrix_world.inverted(); zb = z_neck - 0.01
+    for v in top.data.vertices:
+        p = top.matrix_world @ v.co
+        if p.z <= zb: continue
+        p.z = zb + (p.z - zb) * P['collar']
+        loc, nn, _, d = bvh.find_nearest(p)
+        if loc is not None:
+            if (p - loc).dot(nn) < 0: nn = -nn
+            if d > 0.006: p = loc + nn * (0.006 + (d - 0.006) * 0.5)
+        v.co = Mi @ p
+    top.data.update()
+    # 2) 胸部之间轻微撑平（不勒出乳沟）：只在胸部高度用凸包，最多撑 bust
+    z_bust = (MW @ rig.pose.bones['spine01'].head).z
+    X = np.array([(top.matrix_world @ v.co)[:] for v in top.data.vertices]); cx = float(np.median(X[:, 0]))
+    sel = (np.abs(X[:, 2] - z_bust) < 0.09) & (np.abs(X[:, 0] - cx) < 0.16) & ~np.array(arm) & (X[:, 1] < np.median(X[:, 1]))
+    for z in np.arange(z_bust - 0.09, z_bust + 0.09, 0.008):
+        band = np.nonzero(sel & (np.abs(X[:, 2] - z) < 0.006))[0]
+        if len(band) < 6: continue
+        # 正面：每个 x 的 y 不比左右两侧连线更往里（一维「下凸包」，把两胸之间填平）
+        order = band[np.argsort(X[band, 0])]; xs, ys = X[order, 0], X[order, 1]
+        hull = []
+        for j in range(len(order)):
+            while len(hull) >= 2:
+                a, b = hull[-2], hull[-1]
+                if (xs[b] - xs[a]) * (ys[j] - ys[a]) - (ys[b] - ys[a]) * (xs[j] - xs[a]) <= 0: hull.pop()
+                else: break
+            hull.append(j)
+        hy = np.interp(xs, xs[hull], ys[hull])
+        X[order, 1] = np.maximum(hy, ys - P['bust'])   # y 越小越靠前：往前补，最多 bust
+    for v, p in zip(top.data.vertices, X): v.co = top.matrix_world.inverted() @ __import__('mathutils').Vector(p)
+    top.data.update()
+    # 3) 裙子：腰口贴着腰，往下张开的幅度收小（不再提高裙腰）
+    zt = max((bottom.matrix_world @ v.co).z for v in bottom.data.vertices)
+    n3 = pull(bottom, lambda p, i: P['skirt_keep'] + (1 - P['skirt_keep']) * 0, lambda p, i: 0.008)
+    # 4) 衬衫下摆往下延长到裙腰以下（露腰的地方用衣服盖住，原来是把裙子整体往上提）
+    # 按 24 个方位分别比较：该方位衬衫下摆最低点要比裙腰低 hem_drop，不够就把这一方位下摆附近的点往下拉
+    import math as _m
+    B = np.array([(bottom.matrix_world @ v.co)[:] for v in bottom.data.vertices]); cxb, cyb = np.median(B[:, 0]), np.median(B[:, 1])
+    Tm = np.array([(top.matrix_world @ v.co)[:] for v in top.data.vertices]); A = np.array(arm)
+    sec = lambda Q: ((np.arctan2(Q[:, 1] - cyb, Q[:, 0] - cxb) + _m.pi) / (2 * _m.pi) * 24).astype(int) % 24
+    sb, st = sec(B), sec(Tm); need = np.zeros(24)
+    for s_ in range(24):
+        mt = (st == s_) & ~A & (np.abs(Tm[:, 0] - cxb) < 0.16)
+        if mt.any() and (sb == s_).any(): need[s_] = max(0.0, Tm[mt, 2].min() - (B[sb == s_, 2].max() - P['hem_drop']))   # 下摆要低于裙腰 hem_drop：差多少往下拉多少
+    print('HEM DBG', [(s_, round(float(Tm[(st == s_) & ~A & (np.abs(Tm[:, 0] - cxb) < 0.16), 2].min()), 3) if ((st == s_) & ~A & (np.abs(Tm[:, 0] - cxb) < 0.16)).any() else None, round(float(B[sb == s_, 2].max()), 3) if (sb == s_).any() else None) for s_ in range(0, 24, 2)], flush=True)
+    need = np.maximum(need, np.maximum(np.roll(need, 1), np.roll(need, -1)) * 0.7)   # 相邻方位平滑，不留锯齿
+    Mi = top.matrix_world.inverted()
+    for i, v in enumerate(top.data.vertices):
+        if A[i] or need[st[i]] <= 0: continue
+        hem_s = Tm[(st == st[i]) & ~A, 2].min()
+        w = max(0.0, 1 - (Tm[i, 2] - hem_s) / 0.10)
+        if w > 0: p = __import__('mathutils').Vector(Tm[i]); p.z -= need[st[i]] * w; v.co = Mi @ p
+    top.data.update()
+    print('FIT CLOTH shirt', n1, 'skirt', n3, 'hem extended max %.3f' % need.max(), flush=True)
+
+BOW = {'_classB_blouse': dict(rgb=(0.11, 0.004, 0.008), span=0.125, drop=0.075)}   # JK 胸前蝴蝶结：酒红；span 两边环的总宽，drop 下垂飘带长（米，未缩放）
+
+def ground_body(body):
+    """所有形态键混合后，脚底若低于 z=0，就加一个整体上移的形态键（只在绑骨之前调用）"""
+    import numpy as np
+    me = body.data; n = len(me.vertices)
+    for m in body.modifiers: m.show_viewport = False                    # 遮罩会删掉辅助点，序号对不上
+    tmp = body.shape_key_add(name='tmp_mix', from_mix=True)
+    X = np.empty(n * 3, np.float32); tmp.data.foreach_get('co', X); X = X.reshape(-1, 3); body.shape_key_remove(tmp)
+    for m in body.modifiers: m.show_viewport = True
+    gi = {g.index: g.name for g in body.vertex_groups}
+    real = np.array([not any(('helper' in gi.get(g.group, '') or 'joint' in gi.get(g.group, '')) and g.weight > 0.5 for g in v.groups) for v in me.vertices])
+    zmin = float(X[real, 2].min())
+    if zmin >= -1e-4: return
+    basis = np.empty(n * 3, np.float32); me.shape_keys.key_blocks['Basis'].data.foreach_get('co', basis)
+    kb = body.shape_key_add(name='adj_ground', from_mix=False); B = basis.reshape(-1, 3).copy(); B[:, 2] += -zmin
+    kb.data.foreach_set('co', B.ravel()); kb.value = 1.0; body['v11_ground'] = -zmin   # 照片投影类的绝对坐标（发际线）要加上这个偏移
+    print('GROUND lifted %.4f' % -zmin, flush=True)
+
+def skirt_fit(skirt, body, waist_off=0.008, keep=0.55, rig=None, navel_dz=0.0):
+    """百褶裙合身：裙腰贴住腰（离身体 8mm），往下张开的幅度收到 keep（参考图里裙子是 A 字微张，不是伞）"""
+    from mathutils.bvhtree import BVHTree
+    masks = [m for m in body.modifiers if m.type == 'MASK' and m.show_viewport and m.name != 'Hide helpers']
+    for m in masks: m.show_viewport = False
+    bpy.context.view_layer.update(); dg = bpy.context.evaluated_depsgraph_get(); ev = body.evaluated_get(dg); me = ev.to_mesh()
+    bvh = BVHTree.FromPolygons([body.matrix_world @ v.co for v in me.vertices], [tuple(p.vertices) for p in me.polygons]); ev.to_mesh_clear()
+    for m in masks: m.show_viewport = True
+    zt = max((skirt.matrix_world @ v.co).z for v in skirt.data.vertices); Mi = skirt.matrix_world.inverted(); n = 0
+    if rig is not None:   # 裙腰提到肚脐高度（用户：裙子往上穿，大致在肚脐）：整条裙子上移，再贴合腰身
+        target = (rig.matrix_world @ rig.pose.bones['spine03'].head).z + navel_dz
+        lift = target - zt; sz = skirt.matrix_world.to_scale().z
+        for v in skirt.data.vertices: v.co.z += lift / sz
+        skirt.data.update(); zt = target; print('SKIRT LIFT %.3f' % lift, flush=True)
+    for v in skirt.data.vertices:
+        p = skirt.matrix_world @ v.co
+        loc, nn, _, d = bvh.find_nearest(p)
+        if loc is None: continue
+        if (p - loc).dot(nn) < 0: nn = -nn
+        k = keep + (0.0 - keep) * max(0.0, min(1.0, (p.z - (zt - 0.07)) / 0.05))   # 腰口完全贴、往下过渡到 keep
+        if d > waist_off: v.co = Mi @ (loc + nn * (waist_off + (d - waist_off) * k)); n += 1
+    skirt.data.update(); print('SKIRT FIT', n, flush=True)
+
+def tuck_top(top, skirt, body):
+    """宽松上衣扎进裙子：裙腰以上 6cm 到下摆，上衣收到贴身（越往下越贴），不从裙腰里戳出来"""
+    from mathutils.bvhtree import BVHTree
+    masks = [m for m in body.modifiers if m.type == 'MASK' and m.show_viewport and m.name != 'Hide helpers']
+    for m in masks: m.show_viewport = False
+    bpy.context.view_layer.update(); dg = bpy.context.evaluated_depsgraph_get(); ev = body.evaluated_get(dg); me = ev.to_mesh()
+    bvh = BVHTree.FromPolygons([body.matrix_world @ v.co for v in me.vertices], [tuple(p.vertices) for p in me.polygons]); ev.to_mesh_clear()
+    for m in masks: m.show_viewport = True
+    zt = max((skirt.matrix_world @ v.co).z for v in skirt.data.vertices); Mi = top.matrix_world.inverted(); n = 0
+    gi = {g.index: g.name for g in top.vertex_groups}
+    zb = zt + 0.20                                                      # 腰腹到胸下：收成合身（用户：腰腹、胳膊显粗）
+    for v in top.data.vertices:
+        p = top.matrix_world @ v.co
+        is_arm = sum(g.weight for g in v.groups if any(k in gi.get(g.group, '') for k in ('arm', 'hand', 'wrist', 'finger'))) > 0.4
+        if is_arm:   # 泡泡袖收细：保留 35% 的松量，袖口荷叶边不动
+            if any(k in gi.get(g.group, '') for g in v.groups for k in ('hand', 'finger')): continue
+            loc, nn, _, d = bvh.find_nearest(p)
+            if loc is None: continue
+            if (p - loc).dot(nn) < 0: nn = -nn
+            if d > 0.007: v.co = Mi @ (loc + nn * (0.007 + (d - 0.007) * 0.35)); n += 1
+            continue
+        if p.z > zb: continue
+        if p.z > zt + 0.06:   # 裙腰以上 6cm 到胸下：保留 30% 松量（胸部以上不动）
+            loc, nn, _, d = bvh.find_nearest(p)
+            if loc is None: continue
+            if (p - loc).dot(nn) < 0: nn = -nn
+            k = 0.30 + 0.70 * max(0.0, (p.z - (zb - 0.04)) / 0.04)
+            if d > 0.006: v.co = Mi @ (loc + nn * (0.006 + (d - 0.006) * min(1.0, k))); n += 1
+            continue
+        w = min(1.0, (zt + 0.06 - p.z) / 0.06)                          # 裙腰处完全贴身，往上 6cm 过渡回原样
+        loc, nn, _, d = bvh.find_nearest(p)
+        if loc is None: continue
+        if (p - loc).dot(nn) < 0: nn = -nn
+        tgt = loc + nn * 0.004
+        if d > 0.004: v.co = Mi @ (p + (tgt - p) * w); n += 1
+    top.data.update()
+    ns = 0; Mis = skirt.matrix_world.inverted()   # 裙腰收贴（宽裙腰让腰腹显粗）：腰口 7cm 内收到离身体 9mm，往下过渡回原样
+    for v in skirt.data.vertices:
+        p = skirt.matrix_world @ v.co
+        if p.z < zt - 0.07: continue
+        loc, nn, _, d = bvh.find_nearest(p)
+        if loc is None: continue
+        if (p - loc).dot(nn) < 0: nn = -nn
+        w = min(1.0, (p.z - (zt - 0.07)) / 0.04)
+        if d > 0.009: v.co = Mis @ (p + (loc + nn * 0.009 - p) * w); ns += 1
+    skirt.data.update(); print('TUCK', top.name, n, 'skirt waist', ns, flush=True)
+
+def make_bow(cid, rig, body, blouse):
+    """程序生成 JK 蝴蝶结：中间结 + 左右两个扁环 + 两条下垂飘带（带厚度），贴在衬衫领口前方，挂在胸椎骨骼上随身体动"""
+    import bmesh as _bm, math as _m
+    from mathutils import Vector as V, Matrix as Mx
+    from mathutils.bvhtree import BVHTree
+    S = BOW[cid]; MW = rig.matrix_world
+    zn = (MW @ rig.pose.bones['neck01'].head).z; cx = (MW @ rig.pose.bones['neck01'].head).x
+    masks = [m for m in body.modifiers if m.type == 'MASK' and m.show_viewport and m.name != 'Hide helpers']   # 衣服下面被删掉的身体也要用
+    for m in masks: m.show_viewport = False
+    bpy.context.view_layer.update()
+    dg = bpy.context.evaluated_depsgraph_get(); ev = blouse.evaluated_get(dg); me = ev.to_mesh()
+    tree = BVHTree.FromPolygons([blouse.matrix_world @ v.co for v in me.vertices], [tuple(p.vertices) for p in me.polygons]); ev.to_mesh_clear()
+    ev2 = body.evaluated_get(dg); me2 = ev2.to_mesh()
+    tb = BVHTree.FromPolygons([body.matrix_world @ v.co for v in me2.vertices], [tuple(p.vertices) for p in me2.polygons]); ev2.to_mesh_clear()
+    # V 领底部：从脖子根往下，正中线第一次打到衬衫（且衬衫在身体外面）的高度
+    zv = None
+    for k in range(60):
+        z = zn - 0.01 - k * 0.004
+        hs = tree.ray_cast(V((cx, -0.5, z)), V((0, 1, 0)), 1.0)[0]; hb = tb.ray_cast(V((cx, -0.5, z)), V((0, 1, 0)), 1.0)[0]
+        if hs is not None and (hb is None or hs.y <= hb.y + 0.002): zv = z; break
+    if zv is None: zv = zn - 0.12
+    # 胸挡：V 领里露出的胸口补一块白布（水手服/JK 衬衫领口是合上的）——取这一段身体表面往外 3mm
+    gi = None; ev3 = body.evaluated_get(dg); m3 = ev3.to_mesh(); MWb = body.matrix_world
+    P3 = [MWb @ v.co for v in m3.vertices]
+    faces = [tuple(p.vertices) for p in m3.polygons
+             if all(abs(P3[i].x - cx) < 0.075 and zv - 0.01 < P3[i].z < zn - 0.042 and P3[i].y < P3[0].y + 1 for i in p.vertices)
+             and sum((P3[i] for i in p.vertices), V()).y / len(p.vertices) < (MW @ rig.pose.bones['neck01'].head).y - 0.02]
+    if faces:
+        used = sorted({i for f in faces for i in f}); rm = {o: k for k, o in enumerate(used)}
+        pm = bpy.data.meshes.new(cid + '_dickey'); pm.from_pydata([P3[i] for i in used], [], [[rm[i] for i in f] for f in faces]); pm.update()
+        pbm = _bm.new(); pbm.from_mesh(pm); pbm.normal_update()
+        for v in pbm.verts:
+            nn_ = v.normal if v.normal.y < 0 else -v.normal
+            v.co += nn_ * (0.0018 if v.is_boundary else 0.003)
+        pbm.to_mesh(pm); pbm.free()
+        for p in pm.polygons: p.use_smooth = True
+        dm = bpy.data.materials.new(cid + '_dickey'); dm.use_nodes = True
+        dm.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (0.70, 0.70, 0.69, 1); dm.node_tree.nodes['Principled BSDF'].inputs['Roughness'].default_value = 0.8
+        pm.materials.append(dm); dob = bpy.data.objects.new(cid + '_dickey', pm); bpy.context.scene.collection.objects.link(dob)
+        pbn = rig.pose.bones['spine01']; dob.parent = rig; dob.parent_type = 'BONE'; dob.parent_bone = 'spine01'
+        dob.matrix_parent_inverse = (MW @ pbn.matrix @ Mx.Translation((0, pbn.length, 0))).inverted()
+    m3 = None; ev3.to_mesh_clear()
+    for m in masks: m.show_viewport = True
+    zc = max(zv + 0.012, zn - 0.05)                                    # 蝴蝶结系在领口下方（V 领太深时不跟到底，荷叶边会挡住）
+    hits = [h for h in (tree.ray_cast(V((cx, -0.5, zc)), V((0, 1, 0)), 1.0)[0], tb.ray_cast(V((cx, -0.5, zc)), V((0, 1, 0)), 1.0)[0]) if h is not None]
+    if not hits: print('BOW skip', flush=True); return
+    c = min(hits, key=lambda h: h.y) + V((0, -0.008, 0))
+    bm = _bm.new()
+    def ribbon(path, widths, wdir, closed=False, thick=0.0018):
+        """沿 path 的缎带：宽度方向 wdir(i)（单位向量，每点可不同），宽 widths[i]，厚 thick；closed=首尾相接成环"""
+        rows = []; n = len(path)
+        for i, p in enumerate(path):
+            t = (path[(i + 1) % n if closed else min(i + 1, n - 1)] - path[(i - 1) % n if closed else max(i - 1, 0)]).normalized()
+            s = wdir(i); s = (s - t * s.dot(t)).normalized() * widths[i] / 2
+            th = t.cross(s).normalized() * thick / 2
+            rows.append([bm.verts.new(p + s + th), bm.verts.new(p - s + th), bm.verts.new(p - s - th), bm.verts.new(p + s - th)])
+        pairs = list(zip(rows, rows[1:] + ([rows[0]] if closed else [])))
+        for a, b in pairs:
+            for k in range(4): bm.faces.new((a[k], a[(k + 1) % 4], b[(k + 1) % 4], b[k]))
+        if not closed: bm.faces.new(rows[0][::-1]); bm.faces.new(rows[-1])
+    w = S['span'] / 2; up = V((0, 0, 1))
+    # 两个环：缎带宽度朝上下（正面看是一片），从结往外绕一个水平的扁圈再回到结——正面看是经典的蝴蝶结轮廓，靠近结处被捏窄
+    N = 28
+    for sx in (-1, 1):
+        path, wid = [], []
+        for k in range(N):
+            a = 2 * _m.pi * k / N
+            x = sx * w * 0.5 * (1 - _m.cos(a)); y = -0.006 * _m.sin(a) * (1 if sx > 0 else -1)   # 环前后各一层，中间留出厚度
+            path.append(c + V((x, y, 0.002 * _m.sin(2 * a))))
+            r = abs(x) / w                                                       # 0（结处）→ 1（最外端）
+            wid.append(0.010 + 0.022 * (r ** 0.7))                               # 结处窄、外端宽
+        ribbon(path, wid, lambda i: up, closed=True)
+    # 飘带：从结往下、略向外，宽度朝左右，末端斜剪（用一侧更短表示）
+    for sx in (-1, 1):
+        tail = []
+        for f in [i / 10 for i in range(11)]:   # 贴着衬衫/胸挡表面往下垂（原来直着往下，扎进胸口里只露出一小截）
+            q = c + V((sx * (0.003 + 0.014 * f), 0, -0.006 - S['drop'] * f))
+            hs = [h for h in (tree.ray_cast(V((q.x, -0.5, q.z)), V((0, 1, 0)), 1.0)[0], tb.ray_cast(V((q.x, -0.5, q.z)), V((0, 1, 0)), 1.0)[0]) if h is not None]
+            q.y = min(min(h.y for h in hs) - 0.005, c.y - 0.002 * f) if hs else c.y - 0.004
+            tail.append(q)
+        ribbon(tail, [0.016 + 0.003 * (i / 10) for i in range(11)], lambda i: V((1, 0, 0)))
+    # 结：一小段缎带横着裹住中心
+    knot = [c + V((0.006 * _m.cos(a), -0.009 + 0.004 * (1 - _m.sin(a)) * 0, 0.0)) for a in []]
+    ring = [c + V((0.0075 * _m.cos(2 * _m.pi * k / 16), -0.003 + 0.0075 * _m.sin(2 * _m.pi * k / 16), 0)) for k in range(16)]
+    ribbon(ring, [0.014] * 16, lambda i: up, closed=True, thick=0.002)
+    m_ = bpy.data.meshes.new(cid + '_bow'); bm.to_mesh(m_); bm.free()
+    for p in m_.polygons: p.use_smooth = True
+    mat_ = bpy.data.materials.new(cid + '_bow'); mat_.use_nodes = True
+    bs = mat_.node_tree.nodes['Principled BSDF']; bs.inputs['Base Color'].default_value = (*S['rgb'], 1); bs.inputs['Roughness'].default_value = 0.45
+    if 'Sheen Weight' in bs.inputs: bs.inputs['Sheen Weight'].default_value = 0.08   # 缎带微光（太强在 EEVEE 下发粉）
+    m_.materials.append(mat_)
+    ob = bpy.data.objects.new(cid + '_bow', m_); bpy.context.scene.collection.objects.link(ob)
+    sd = ob.modifiers.new('subdiv', 'SUBSURF'); sd.levels = 1; sd.render_levels = 2
+    pb = rig.pose.bones['spine01']
+    ob.parent = rig; ob.parent_type = 'BONE'; ob.parent_bone = 'spine01'
+    ob.matrix_parent_inverse = (MW @ pb.matrix @ Mx.Translation((0, pb.length, 0))).inverted()
+    print('BOW OK', cid, tuple(round(x, 3) for x in c), flush=True)
 
 def jk_retex(obj, kind):
     """JK 制服改贴图（保留原贴图的明暗、织纹）：
@@ -246,7 +533,11 @@ def jk_retex(obj, kind):
         img = tex.image; w, h = img.size
         px = np.empty(w * h * 4, np.float32); img.pixels.foreach_get(px); px = px.reshape(h, w, 4)
         rgb = px[..., :3]
-        if kind == 'JK_SKIRT':
+        if kind == 'JK_BLOUSE':   # 女式衬衫：白色；黑色系带染成白色（JK 衬衫前襟是干净的）
+            lum = rgb.mean(2, keepdims=True); out = np.where(lum < 0.45, np.array([0.86, 0.86, 0.85]) * (0.85 + 0.15 * lum), rgb)
+        elif kind == 'JK_SKIRT_BLACK':   # 黑色百褶裙：只留贴图明暗（褶子、格纹的深浅压到很淡）
+            lum = rgb.mean(2, keepdims=True); out = np.array([0.018, 0.018, 0.022]) * (0.8 + 0.4 * lum)
+        elif kind == 'JK_SKIRT':
             wht = rgb.min(2, keepdims=True); red = np.clip(rgb[..., :1] - rgb[..., 1:].max(2, keepdims=True), 0, 1)
             out = wht * np.array([0.80, 0.80, 0.83]) + red * np.array([0.06, 0.09, 0.24])
             out = np.where(rgb.max(2, keepdims=True) < 0.12, rgb * 0.6, out)       # 黑线
@@ -391,6 +682,25 @@ def fit_crown(body, cid):
     kb.data.foreach_set('co', (basis.reshape(-1, 3) + (Y - X)).astype(np.float32).ravel()); kb.value = 1.0
     print('FIT CROWN', cid, 'top lowered %.4f m' % float((X[:, 2] - Y[:, 2]).max()), flush=True)
 
+FIT_SHOULDER = {'classB': dict(dx=0.012, dz=0.012, x0=0.06, x1=0.115)}   # dz：肩头抬起（用户：参考图肩头细而不塌）   # 肩头收窄（用户：肩头显粗；形态目标已到头）：整条手臂和肩头往里平移 dx，躯干不动
+
+def fit_shoulder(body, cid):
+    S = FIT_SHOULDER.get(cid)
+    if not S: return
+    import numpy as np
+    me = body.data; n = len(me.vertices)
+    for m in body.modifiers: m.show_viewport = False
+    tmp = body.shape_key_add(name='tmp_mix', from_mix=True)
+    X = np.empty(n * 3, np.float32); tmp.data.foreach_get('co', X); X = X.reshape(-1, 3).astype(np.float64); body.shape_key_remove(tmp)
+    for m in body.modifiers: m.show_viewport = True
+    cx = float(np.median(X[:, 0])); ax = np.abs(X[:, 0] - cx)
+    t = np.clip((ax - S['x0']) / (S['x1'] - S['x0']), 0, 1); w = t * t * (3 - 2 * t)
+    zs = X[:, 2]; ztop = np.percentile(zs, 99.5); wz = np.clip((zs - (ztop * 0.45)) / (ztop * 0.1), 0, 1)   # 腿部不动（腿在身体下半段）
+    Y = X.copy(); Y[:, 0] -= np.sign(X[:, 0] - cx) * S['dx'] * w * wz; Y[:, 2] += S.get('dz', 0.0) * w * wz   # 整条手臂连肩头一起微微上抬：肩线变平，不溜肩
+    basis = np.empty(n * 3, np.float32); me.shape_keys.key_blocks['Basis'].data.foreach_get('co', basis)
+    kb = body.shape_key_add(name='adj_shoulder', from_mix=False); kb.data.foreach_set('co', (basis.reshape(-1, 3) + (Y - X)).astype(np.float32).ravel()); kb.value = 1.0
+    print('FIT SHOULDER', cid, flush=True)
+
 LIP_SEAL = {'classB'}   # 唇缝封口（MakeHuman 默认嘴唇微张，唇缝露出口腔暗色；形态参数合拢会把唇形扯方）
 
 def fit_lipseal(body, cid):
@@ -474,7 +784,7 @@ def apply_face(body, cid):
             TargetService.load_target(body, TargetService.target_full_path(name), weight=v, name=name)
         for name, v in FIT_ADJUST.get(cid, {}).items():
             TargetService.load_target(body, TargetService.target_full_path(name), weight=v, name='adj_' + name)
-        fit_smooth(body, cid); fit_crown(body, cid); fit_lipseal(body, cid)
+        fit_smooth(body, cid); fit_crown(body, cid); fit_lipseal(body, cid); fit_shoulder(body, cid)
         keep = {n: v for n, v in FACE.get(cid, {}).items() if any((n[2:] if n[:2] in ('l-', 'r-') else n).startswith(k) for k in PROFILE_KEEP)}
     else: keep = FACE.get(cid, {})
     for name, v in keep.items():
@@ -747,10 +1057,20 @@ def build(cid):
     bpy.data.objects.remove(probe, do_unlink=True)
     body = HumanService.create_human(macro_detail_dict=macro)
     body.name = cid + '_body'
+    def _vz(i):   # 当前所有形态键混合后，第 i 个顶点的高度
+        k_ = body.shape_key_add(name='tmp_z', from_mix=True); z_ = k_.data[i].co.z; body.shape_key_remove(k_); return z_
+    _fit = face_fit(cid); _nv = None
+    if _fit is not None:
+        import json as _js
+        _nv = _js.load(open(os.path.join(config.ROOT, 'assets', 'identity', cid + '_face_fit.json'), encoding='utf-8'))['landmark_verts']['nose']
+        _z0 = _vz(_nv)
     for tn, v in BODY.get(cid, {}).items():
         try: TargetService.load_target(body, TargetService.target_full_path(tn.split('/')[-1]), weight=v, name='body_' + tn.split('/')[-1])
         except Exception as e: print('BODY WARN', cid, tn, e, flush=True)
+    _dz_body = (_vz(_nv) - _z0) if _nv is not None else 0.0   # 只算身体形态（不含脸型拟合本身对鼻尖位置的影响）
     apply_face(body, cid)   # 先定脸型，再绑骨、穿戴（配件按最终脸型贴合）
+    ground_body(body)       # 腿长目标会让脚沉到地面以下：绑骨前整体抬回地面（骨骼按抬高后的网格生成）
+    if _nv is not None: body['v11_head_dz'] = _dz_body + float(body.get('v11_ground', 0.0))   # 身体形态（腿长、脖子）+ 抬回地面后，头相对照片拟合时上下移了多少（照片发际线投影要补）
     rig = HumanService.add_builtin_rig(body, 'default'); rig.name = cid + '_rig'
     skin = SKINS[cid]   # MakeHuman 写实皮肤（含纹理、次表面散射）
     HumanService.set_character_skin(os.path.join(ASSET, 'skins', skin, skin + '.mhmat'), body, skin_type='ENHANCED_SSS')
@@ -781,17 +1101,24 @@ def build(cid):
         elif rel in color_of:        # 分件服装：按件染色（None = 保留原配色）
             if isinstance(color_of[rel], str): jk_retex(o, color_of[rel])
             elif color_of[rel] is not None: recolor(o, color_of[rel], asset=asset)
-            cloth_volume(o, 0.003); o['v11_cloth'] = True
+            cloth_volume(o, 0.0015 if cid in FIT_CLOTH else 0.003); o['v11_cloth'] = True
         else: recolor(o, top, bottom, asset=asset); cloth_volume(o)
         o.name = '%s_%s' % (cid, asset)
     if cid in OUTFIT:   # 第一件是外层，其余收进去
         layers = [parts.get('community:' + rel) for rel, _ in OUTFIT[cid]]
-        if cid in DRAPE and len(layers) > 1 and None not in layers[:2]:
+        if cid in FIT_CLOTH and len(layers) > 1 and None not in layers[:2]:   # 把男款衬衫、张开的裙子改合身（见 fit_cloth）
+            fit_cloth(layers[1], layers[0], body, rig, FIT_CLOTH[cid])
+        elif cid in DRAPE and len(layers) > 1 and None not in layers[:2]:
             fill_gap(layers[1], layers[0])
             z_lo = max((layers[0].matrix_world @ v.co).z for v in layers[0].data.vertices) - 0.04
             drape_top(layers[1], z_lo, (rig.matrix_world @ rig.pose.bones['neck01'].head).z - 0.05)
+        if cid in BOW and len(layers) > 1 and None not in layers[:2]: tuck_top(layers[1], layers[0], body)
         for under in layers[1:]:
             if layers[0] is not None and under is not None: hide_under(under, layers[0])
+        if cid in BOW and len(layers) > 1 and layers[1] is not None: make_bow(cid, rig, body, layers[1])
+        if cid in jk_sailor.SAILOR:
+            skirt_fit(layers[0], body, rig=rig)
+            jk_sailor.build(cid, rig, body, layers[0])
         for g_ in layers:   # 只处理长裤（裙子下面是黑丝腿，不藏）
             if g_ is not None and any(k in g_.name for k in ('pants', 'trouser', 'jeans')): hide_body_under(body, g_)
     shell = parts.get('hair/%s/%s.mhclo' % (hair_name, hair_name))   # 真实发丝：以发片为发型轮廓生长

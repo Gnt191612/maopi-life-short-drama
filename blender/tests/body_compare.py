@@ -17,6 +17,13 @@ for o in d.objects: sc.collection.objects.link(o)
 rig = bpy.data.objects[cid + '_rig']; realism.enhance_character(rig)
 poses.SUPPORT_ON = False; poses.apply_state(rig, dict(pos=(0, 0, 0), yaw=0, base='stand', arms='down')); life.hands(rig, None)
 bpy.context.view_layer.update()
+if os.environ.get('V11_NOCLOTH'):   # 只看身体：衣服、鞋隐藏，身体上被衣服遮住的部分重新显示
+    body = bpy.data.objects[cid + '_body']
+    for o in list(sc.objects):
+        if o.type == 'MESH' and o is not body and o.parent is not None and not any(k in o.name for k in ('eye', 'Eye', 'lash', 'teeth', 'hair', 'pony', 'scalp', 'headband', 'tail', 'brow')):
+            o.hide_render = True
+    for m in body.modifiers:
+        if m.type == 'MASK' and m.name != 'Hide helpers': m.show_render = False
 bpy.ops.mesh.primitive_plane_add(size=8); floor = bpy.context.active_object
 fm = bpy.data.materials.new('floor'); fm.use_nodes = True; fm.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (0.35, 0.35, 0.36, 1); floor.data.materials.append(fm)
 H = 1.63; c = Vector((0, 0, H * 0.5))

@@ -28,11 +28,15 @@ def _photo_hairline(cid, bb, eyes, H):
     fit = json.load(open(fp, encoding='utf-8')); lm = json.load(open(lp, encoding='utf-8'))
     if 'hairline' not in lm or 'photo_to_model' not in fit: return None
     T = fit['photo_to_model']; s, R2, t2 = T['s'], T['R'], T['t']
+    # 头相对照片拟合时上下移了多少（腿加长后抬回地面、脖子缩短都会移动头）：用两眼中心对齐。
+    # 照片瞳孔点映射到模型平面后比眼球骨骼中心高约 2.4cm（未动身体时以抬地高度为准标定），减掉这个固定差
+    ex = ((lm['eye_R'][0] + lm['eye_L'][0]) / 2, (lm['eye_R'][1] + lm['eye_L'][1]) / 2)
+    lift = eyes.z - (s * (R2[1][0] * ex[0] + R2[1][1] * -ex[1]) + t2[1]) - 0.024
     Rm = Matrix.Rotation(math.radians(fit['pitch_deg']), 3, 'X') @ Matrix.Rotation(math.radians(fit['yaw_deg']), 3, 'Z'); Rt = Rm.transposed()
     out = []
     for x, y in lm['hairline']:
         u = s * (R2[0][0] * x + R2[0][1] * -y) + t2[0]; v = s * (R2[1][0] * x + R2[1][1] * -y) + t2[1]
-        o = Rt @ Vector((u, -1.0, v)); d = Rt @ Vector((0, 1, 0))
+        o = Rt @ Vector((u, -1.0, v)) + Vector((0, 0, lift)); d = Rt @ Vector((0, 1, 0))
         hit = bb.ray_cast(o, d, 3.0)[0]
         if hit is None: continue
         rel = hit - H; out.append((math.degrees(math.atan2(rel.x, -rel.y)), hit.z, hit))

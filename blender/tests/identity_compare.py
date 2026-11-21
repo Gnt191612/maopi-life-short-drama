@@ -19,7 +19,7 @@ for o in d.objects: sc.collection.objects.link(o)
 rig = bpy.data.objects[cid + '_rig']; realism.enhance_character(rig)
 poses.SUPPORT_ON = False; poses.apply_state(rig, dict(pos=(0, 0, 0), yaw=0, base='stand', arms='down')); life.hands(rig, None)
 bpy.context.view_layer.update()
-head = poses.head_pos(rig) + Vector((0, 0.0, 0.035))
+head = poses.head_pos(rig) + Vector((0, 0.0, 0.035 + float(os.environ.get('V11_CAM_DZ', 0))))   # V11_CAM_DZ：镜头上下移（看胸前蝴蝶结等）
 # 柔和的正面主光 + 侧补光（接近定妆照的影棚光）
 for name, loc, e, sz in (('key', (0.5, -1.4, 0.45), 55, 0.7), ('fill', (-0.9, -0.9, 0.2), 28, 1.5), ('top', (0.0, -0.3, 1.0), 15, 1.0)):
     l = bpy.data.objects.new(name, bpy.data.lights.new(name, 'AREA')); l.data.shape = 'DISK'; l.data.energy = e; l.data.size = sz;   # 圆形灯（方灯在头发隆起处反出方形高光）
