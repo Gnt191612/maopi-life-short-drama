@@ -87,7 +87,17 @@ SKIN_TINT = {'lin': (1.03, 1.0, 0.98), 'chen': (1.04, 1.01, 1.0), 'zhou': (0.94,
              'extM1': (0.95, 0.92, 0.9), 'extM2': (1.0, 0.97, 0.95), 'extM3': (0.9, 0.85, 0.8), 'extF1': (1.04, 1.0, 0.98),
              'extF2': (0.98, 0.95, 0.92), 'extF3': (1.05, 1.02, 1.0)}
 
-STOCKINGS = {'classB': (0.012, 0.011, 0.013)}   # 黑丝（同学乙）
+STOCKINGS = {'classB': (0.012, 0.011, 0.013)}
+# 身材（2026-11-21 用户：同学乙胸部丰满一点、人物苗条一点、腿细一点）。只用身体部位的形态目标，不动头部（宏参数「体重」会连脸一起变，脸型拟合就对不上了）
+CUP = {'classB': 0.78}; FIRM = {'classB': 0.75}
+# 第 2 轮（用户：胳膊、大腿、腰腹还是太粗）：腰腹、大腿、手臂加大收细
+BODY = {'classB': {'stomach-pregnant-decr': 1.0, 'stomach-tone-incr': 0.8, 'measure-waist-circ-decr': 1.0, 'measure-underbust-circ-decr': 0.4,
+                   'torso-scale-horiz-decr': 0.35, 'torso-scale-depth-decr': 0.5, 'measure-hips-circ-decr': 0.3,
+                   'measure-thigh-circ-decr': 0.6, 'measure-calf-circ-decr': 0.5, 'measure-knee-circ-decr': 0.9, **LR('leg-valgus-decr', 0.5),   # 第 3 轮（用户：大腿腿型奇怪）：大腿收得比膝盖多，膝盖像疙瘩、腿往里并（X 型）
+                   'measure-neck-circ-decr': 0.5, 'neck-scale-vert-incr': 0.35, 'measure-shoulder-dist-decr': 0.5, **LR('upperarm-shoulder-muscle-decr', 0.6), 'torso-muscle-dorsi-decr': 0.4,   # 脖子细长一点、肩膀窄一点（用户：脖子比例不对）
+                   **LR('upperleg-fat-decr', 0.8), **LR('upperleg-scale-depth-decr', 0.15), **LR('lowerleg-fat-decr', 0.5),
+                   **LR('upperarm-fat-decr', 1.0), **LR('upperarm-scale-horiz-decr', 0.4), **LR('upperarm-scale-depth-decr', 0.4),
+                   **LR('lowerarm-fat-decr', 0.6), **LR('lowerarm-scale-horiz-decr', 0.25)}}
 IRIS = {'classB': dict(scale=0.9, rgb=(0.20, 0.075, 0.030))}   # 2026-11-21 调成照片里的中深棕（原来太暗，渲染出来发灰）   # 深棕眼仁（同学乙，照标准照；纯黑像瞪眼）；原放大 22% 像娃娃，写实化时每次被「纠正」得不一样
 LIP_TINT = {'mom': (1.10, 0.76, 0.76)}   # 唇色：红润（乘在唇部材质上）；已投影标准照的角色（同学乙）唇色来自照片，不再单染
 
@@ -140,10 +150,120 @@ OUTFIT = {
             (C('pants01', 'toigo_wool_pants'), (0.30, 0.27, 0.25))],                 # 深褐宽松羊毛长裤（原来那条像紧身打底裤）
  'classA': [(C('shirts01', 'elvs_crude_t-shirt_male'), (0.10, 0.14, 0.36)),         # 宽松深蓝 T 恤
             (C('pants02', 'punkduck_male_classic_jeans'), None)],                    # 牛仔裤
- 'classB': [(C('shirts02', 'mindfront_knitted_sweater_02'), (0.85, 0.80, 0.70)),    # 米色针织毛衣
-            (C('skirts02', 'elvs_pleated_plaid_mini_skirt'), None)],                 # 百褶格纹短裙
+ # 同学乙 JK 制服（2026-11-21 用户要求）：衬衫扎进裙子，裙子是外层；颜色用 'JK_*' 表示改贴图（见 jk_retex）
+ 'classB': [(C('skirts02', 'mtknife_pleated_mini_skirt'), 'JK_SKIRT'),              # 藏青格纹百褶短裙
+            (C('shirts02', 'elvs_male_shirt_tie_tucked1'), 'JK_SHIRT')],             # 白衬衫 + 领带
 }
-SHOES.update({'classB': C('shoes01', 'toigo_ballet_flats')})                         # 配黑丝的平底鞋
+SHOES.update({'classB': C('shoes01', 'cortu_t-bar')})                                # 黑色玛丽珍鞋（配黑丝）
+SHOE_TINT = {'classB': (0.03, 0.028, 0.03)}
+DRAPE = {'classB'}   # 上衣不贴肉（drape_top）+ 补上衣与裙腰之间的空隙（fill_gap）
+
+def _hull_eq(P):
+    """二维凸包（单调链），返回每条边的 (nx, ny, d)，外法线，点在内部时 n·p + d < 0（Blender 自带 Python 没有 scipy）"""
+    import numpy as np
+    pts = sorted(map(tuple, P))
+    if len(pts) < 3: return None
+    cr = lambda o, a, b: (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+    lo, up = [], []
+    for p in pts:
+        while len(lo) >= 2 and cr(lo[-2], lo[-1], p) <= 0: lo.pop()
+        lo.append(p)
+    for p in reversed(pts):
+        while len(up) >= 2 and cr(up[-2], up[-1], p) <= 0: up.pop()
+        up.append(p)
+    H = np.array(lo[:-1] + up[:-1])
+    if len(H) < 3: return None
+    E = np.roll(H, -1, 0) - H; n = np.c_[E[:, 1], -E[:, 0]]; n /= np.linalg.norm(n, axis=1, keepdims=True) + 1e-12   # 逆时针：右手法线朝外
+    return np.c_[n, -(n * H).sum(1)]
+
+def drape_top(obj, z_lo, z_hi):
+    """上衣不贴肉（男款衬衫套在女性身上像紧身衣，乳沟、胸下都勒出来）：
+    1) 每个高度的横截面往凸包外推（两胸之间、腋下的凹陷被布料撑平）；
+    2) 正面从胸部最高点往下自然垂落：低于胸高处的正面布料不比上方最靠前处往里收太多（胸下不勒进去）"""
+    import numpy as np
+    M = np.array(obj.matrix_world); me = obj.data
+    X = np.array([v.co[:] for v in me.vertices]) @ M[:3, :3].T + M[:3, 3]
+    Y = X.copy(); cx = float(np.median(X[:, 0]))
+    gi = {g.index: g.name for g in obj.vertex_groups}   # 袖子（手臂、肩部骨骼权重为主的点）不参与：原来把袖子算进凸包，整件衬衫被撑成一个大圆筒
+    arm = np.array([sum(g.weight for g in v.groups if any(k in gi.get(g.group, '') for k in ('arm', 'shoulder', 'clavicle', 'hand'))) > 0.3 for v in me.vertices])
+    sel = (X[:, 2] > z_lo) & (X[:, 2] < z_hi) & (np.abs(X[:, 0] - cx) < 0.20) & ~arm
+    zs = np.arange(z_lo, z_hi, 0.008)
+    for z in zs:
+        band = np.nonzero(sel & (np.abs(X[:, 2] - z) < 0.006))[0]
+        if len(band) < 8: continue
+        P = X[band][:, :2]; c = P.mean(0)
+        eq = _hull_eq(P)
+        if eq is None: continue
+        for i, p in zip(band, P):
+            dvec = p - c; L = np.linalg.norm(dvec)
+            if L < 1e-6: continue
+            dvec = dvec / L; den = eq[:, :2] @ dvec
+            t = np.min(np.where(den > 1e-9, -(eq[:, :2] @ c + eq[:, 2]) / np.where(den > 1e-9, den, 1), np.inf))
+            if np.isfinite(t) and t > L: Y[i, :2] = c + dvec * (L + min(t - L, 0.025) * 0.85)   # 最多撑出 2.5cm
+    ymin = {}
+    for z in zs:
+        band = np.nonzero(sel & (np.abs(Y[:, 2] - z) < 0.006) & (np.abs(Y[:, 0] - cx) < 0.06))[0]
+        if len(band): ymin[z] = (Y[band, 1].min(), Y[band, 1].mean())
+    kz = np.array(sorted(ymin)); kv = np.array([ymin[k][0] for k in kz]); kc = np.array([ymin[k][1] for k in kz])
+    if len(kz) > 3:
+        for i in np.nonzero(sel)[0]:
+            z = Y[i, 2]
+            if Y[i, 1] > np.interp(z, kz, kc) + 0.02: continue                 # 背面不动
+            up = (kz >= z) & (kz <= z + 0.12)
+            if not up.any(): continue
+            lim = (kv[up] + (kz[up] - z) * 0.18).min()                         # 布料从高处往下、略往里收
+            wx = max(0.0, 1 - abs(Y[i, 0] - cx) / 0.14)                         # 越靠近正中越明显，两侧过渡
+            if Y[i, 1] > lim: Y[i, 1] += max(lim - Y[i, 1], -0.035) * wx      # 最多往前 3.5cm
+    Minv = np.linalg.inv(M)
+    for v, p in zip(me.vertices, Y): v.co = (Minv @ np.r_[p, 1])[:3]
+    me.update()
+    print('DRAPE', obj.name, 'moved max %.3f' % float(np.abs(Y - X).max()), flush=True)
+
+def fill_gap(top, bottom):
+    """上衣下摆和裙腰之间露腰：把下装的腰口往上提到上衣下摆以上 1.5cm（腰口提得最多，往下渐变，裙摆不动）"""
+    import numpy as np
+    def zs(o, torso=False):
+        M = o.matrix_world; P = np.array([(M @ v.co)[:] for v in o.data.vertices])
+        if torso: P = P[np.abs(P[:, 0] - np.median(P[:, 0])) < 0.10]
+        return P[:, 2]
+    hem = float(np.percentile(zs(top, True), 1)); zb = zs(bottom); top_b, zmin = float(zb.max()), float(zb.min())
+    if top_b > hem + 0.015: print('GAP none', round(top_b - hem, 3), flush=True); return
+    lift = hem + 0.015 - top_b; sz = bottom.matrix_world.to_scale().z
+    for v in bottom.data.vertices:
+        t = ((bottom.matrix_world @ v.co).z - zmin) / max(top_b - zmin, 1e-6)
+        v.co.z += lift * max(0.0, t) ** 1.5 / sz
+    bottom.data.update(); print('GAP lifted waist %.3f' % lift, flush=True)
+
+def jk_retex(obj, kind):
+    """JK 制服改贴图（保留原贴图的明暗、织纹）：
+    JK_SKIRT：红色格纹 → 藏青格纹（白线保留成浅灰、黑线保留）；JK_SHIRT：衬衫整体白色、领带区域（贴图右上块）换成酒红斜纹"""
+    import numpy as np
+    for slot in obj.material_slots:
+        m = slot.material
+        if not m or not m.use_nodes: continue
+        tex = next((n for n in m.node_tree.nodes if n.type == 'TEX_IMAGE' and n.image and n.outputs['Color'].links), None)
+        if tex is None: continue
+        img = tex.image; w, h = img.size
+        px = np.empty(w * h * 4, np.float32); img.pixels.foreach_get(px); px = px.reshape(h, w, 4)
+        rgb = px[..., :3]
+        if kind == 'JK_SKIRT':
+            wht = rgb.min(2, keepdims=True); red = np.clip(rgb[..., :1] - rgb[..., 1:].max(2, keepdims=True), 0, 1)
+            out = wht * np.array([0.80, 0.80, 0.83]) + red * np.array([0.06, 0.09, 0.24])
+            out = np.where(rgb.max(2, keepdims=True) < 0.12, rgb * 0.6, out)       # 黑线
+            yy = np.arange(h)[:, None, None] / h                                  # 贴图下方 15% 是格纹，其余白底（裙腰、内衬）也染成藏青，原来是浅灰像露出一截腰
+            out = np.where(yy > 0.16, np.array([0.05, 0.07, 0.18]) * (0.75 + 0.25 * wht), out)
+        else:
+            yy, xx = np.mgrid[0:h, 0:w]; v = 1 - yy / h; u = xx / w                  # Blender 像素自下而上：v 从上往下算
+            tie = (u > 0.50) & (v < 0.28)
+            lum = rgb.mean(2, keepdims=True)
+            out = np.full_like(rgb, 0.0) + np.array([0.86, 0.86, 0.85])
+            tl = lum[tie] / max(float(lum[tie].mean()), 1e-3)
+            stripe = ((xx + yy) // max(4, w // 64) % 2)[tie][:, None]
+            out[tie] = (np.array([0.20, 0.025, 0.035]) * (0.8 + 0.3 * stripe)) * np.clip(tl, 0.6, 1.4)
+        px[..., :3] = np.clip(out, 0, 1)
+        new = bpy.data.images.new(obj.name + '_' + kind, w, h, alpha=True); new.pixels.foreach_set(px.ravel()); new.pack()
+        tex.image = new
+    print('JK RETEX', obj.name, kind, flush=True)
 
 def stockings(body, rgb):
     """丝袜：按腿部骨骼权重算出「丝袜区域」（脚到大腿上部，大腿根渐变），在皮肤材质上叠一层半透明黑色——
@@ -172,9 +292,12 @@ def stockings(body, rgb):
         lw = nt.nodes.new('ShaderNodeLayerWeight'); lw.inputs['Blend'].default_value = 0.45
         dens = nt.nodes.new('ShaderNodeMapRange'); dens.inputs['To Min'].default_value = 0.62; dens.inputs['To Max'].default_value = 0.97
         nt.links.new(lw.outputs['Facing'], dens.inputs['Value'])                 # 越侧着看越不透（丝线叠得越密），正对处微微透肤
-        fac = nt.nodes.new('ShaderNodeMath'); fac.operation = 'MULTIPLY'
-        nt.links.new(at.outputs['Fac'], fac.inputs[0]); nt.links.new(dens.outputs['Result'], fac.inputs[1])
-        mx = nt.nodes.new('ShaderNodeMix'); mx.data_type = 'RGBA'; mx.inputs[7].default_value = (*rgb, 1)
+        # 区域权重放大（大腿上的骨骼权重只有 0.2~0.4，原来大腿几乎不黑）；不再乘「侧看更黑」——EEVEE 下层权重把正面算成近乎全透明，黑丝整个没了
+        cov = nt.nodes.new('ShaderNodeMapRange'); cov.inputs['From Min'].default_value = 0.08; cov.inputs['From Max'].default_value = 0.35; cov.interpolation_type = 'SMOOTHSTEP'
+        nt.links.new(at.outputs['Fac'], cov.inputs['Value'])
+        fac = nt.nodes.new('ShaderNodeMath'); fac.operation = 'MULTIPLY'; fac.inputs[1].default_value = 0.93
+        nt.links.new(cov.outputs['Result'], fac.inputs[0])
+        mx = nt.nodes.new('ShaderNodeMix'); mx.name = 'v11_stockmix'; mx.data_type = 'RGBA'; mx.inputs[7].default_value = (*rgb, 1)   # 名字给 face_project 用（贴脸时皮肤贴图接在它前面）
         if src: nt.links.new(src, mx.inputs[6])
         else: mx.inputs[6].default_value = bc.default_value
         nt.links.new(fac.outputs[0], mx.inputs['Factor']); nt.links.new(mx.outputs[2], bc)
@@ -186,7 +309,11 @@ def stockings(body, rgb):
             else: mr.inputs['To Min'].default_value = s.default_value
             nt.links.new(at.outputs['Fac'], mr.inputs['Value']); nt.links.new(mr.outputs['Result'], s)
         sh = b.inputs.get('Sheen Weight')
-        if sh is not None and not sh.links: nt.links.new(at.outputs['Fac'], sh)   # 丝袜的柔光
+        if sh is not None and not sh.links:   # 丝袜的柔光（满强度在 EEVEE 下把黑丝照成一层灰白）
+            k_ = nt.nodes.new('ShaderNodeMath'); k_.operation = 'MULTIPLY'; k_.inputs[1].default_value = 0.25
+            nt.links.new(at.outputs['Fac'], k_.inputs[0]); nt.links.new(k_.outputs[0], sh)
+            st_ = b.inputs.get('Sheen Tint')
+            if st_ is not None: st_.default_value = (0.35, 0.35, 0.37, 1)
     print('STOCKINGS', body.name, flush=True)
 
 def _principled_tree(nt):
@@ -614,12 +741,15 @@ def build(cid):
     name, g, age, wt, mu, ht, pr, suit, hair_name, top, bottom = CAST[cid]
     bpy.ops.wm.read_factory_settings(use_empty=True)
     addon_utils.enable('bl_ext.user_default.mpfb', default_set=True)
-    macro = {'gender': g, 'age': age, 'muscle': mu, 'weight': wt, 'proportions': pr, 'height': ht, 'cupsize': 0.5, 'firmness': 0.5, 'race': ASIAN}
+    macro = {'gender': g, 'age': age, 'muscle': mu, 'weight': wt, 'proportions': pr, 'height': ht, 'cupsize': CUP.get(cid, 0.5), 'firmness': FIRM.get(cid, 0.5), 'race': ASIAN}
     probe = HumanService.create_human(macro_detail_dict=macro)          # 先量自然身高，再按比例重新生成（配件随基础网格同比例贴合）
     s = HEIGHT[cid] / probe.dimensions.z
     bpy.data.objects.remove(probe, do_unlink=True)
     body = HumanService.create_human(macro_detail_dict=macro)
     body.name = cid + '_body'
+    for tn, v in BODY.get(cid, {}).items():
+        try: TargetService.load_target(body, TargetService.target_full_path(tn.split('/')[-1]), weight=v, name='body_' + tn.split('/')[-1])
+        except Exception as e: print('BODY WARN', cid, tn, e, flush=True)
     apply_face(body, cid)   # 先定脸型，再绑骨、穿戴（配件按最终脸型贴合）
     rig = HumanService.add_builtin_rig(body, 'default'); rig.name = cid + '_rig'
     skin = SKINS[cid]   # MakeHuman 写实皮肤（含纹理、次表面散射）
@@ -646,14 +776,20 @@ def build(cid):
         elif 'teeth' in rel:   # 牙齿往后收 6 毫米：MakeHuman 默认嘴唇微张，闭嘴时唇缝里会露白牙尖（说话张嘴时照样看得见）
             for v in o.data.vertices: v.co.y += 0.006
         elif 'eyelash' in rel or 'eyes' in rel: pass   # 保留资产自带的写实材质
-        elif rel == shoe_rel: pass   # 鞋子保留原贴图
+        elif rel == shoe_rel:   # 鞋子保留原贴图（指定了颜色的按颜色染，保留皮革纹理）
+            if cid in SHOE_TINT: recolor(o, SHOE_TINT[cid])
         elif rel in color_of:        # 分件服装：按件染色（None = 保留原配色）
-            if color_of[rel] is not None: recolor(o, color_of[rel], asset=asset)
+            if isinstance(color_of[rel], str): jk_retex(o, color_of[rel])
+            elif color_of[rel] is not None: recolor(o, color_of[rel], asset=asset)
             cloth_volume(o, 0.003); o['v11_cloth'] = True
         else: recolor(o, top, bottom, asset=asset); cloth_volume(o)
         o.name = '%s_%s' % (cid, asset)
     if cid in OUTFIT:   # 第一件是外层，其余收进去
         layers = [parts.get('community:' + rel) for rel, _ in OUTFIT[cid]]
+        if cid in DRAPE and len(layers) > 1 and None not in layers[:2]:
+            fill_gap(layers[1], layers[0])
+            z_lo = max((layers[0].matrix_world @ v.co).z for v in layers[0].data.vertices) - 0.04
+            drape_top(layers[1], z_lo, (rig.matrix_world @ rig.pose.bones['neck01'].head).z - 0.05)
         for under in layers[1:]:
             if layers[0] is not None and under is not None: hide_under(under, layers[0])
         for g_ in layers:   # 只处理长裤（裙子下面是黑丝腿，不藏）

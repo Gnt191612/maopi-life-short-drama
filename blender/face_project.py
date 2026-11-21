@@ -235,6 +235,8 @@ def project(cid):
     m0 = body.material_slots[0].material
     gnode = next(n for n in m0.node_tree.nodes if n.type == 'GROUP'); gt = gnode.node_tree
     bsdf = next(n for n in gt.nodes if n.type == 'BSDF_PRINCIPLED'); chain = bsdf.inputs['Base Color'].links[0].from_socket
+    stockmix = gt.nodes.get('v11_stockmix')   # 丝袜层：烘焙时绕开（不烘进皮肤贴图），烘完把皮肤贴图接回它前面
+    if stockmix is not None and stockmix.inputs[6].links: chain = stockmix.inputs[6].links[0].from_socket
     gout = next(n for n in gt.nodes if n.type == 'GROUP_OUTPUT'); out_sock = gout.inputs[0]; orig_shader = out_sock.links[0].from_socket
     N = gt.nodes.new; Lk = gt.links.new; tmp_nodes = []
     def node(t, **kv):
@@ -317,7 +319,8 @@ def project(cid):
     for n in tmp_nodes: gt.nodes.remove(n)
     bt = gt.nodes.new('ShaderNodeTexImage'); bt.image = baked; bt.location = diff.location.copy(); bt.location.y -= 300
     uvb = gt.nodes.new('ShaderNodeUVMap'); uvb.uv_map = 'UVMap'; gt.links.new(uvb.outputs['UV'], bt.inputs['Vector'])
-    gt.links.new(bt.outputs['Color'], bsdf.inputs['Base Color'])
+    if stockmix is not None: gt.links.new(bt.outputs['Color'], stockmix.inputs[6])   # 丝袜仍叠在皮肤上（原来直接接到 BSDF，黑丝没了）
+    else: gt.links.new(bt.outputs['Color'], bsdf.inputs['Base Color'])
     if fit is not None:   # 深色处（眉毛、睫毛根、发际线）几乎不反光：皮肤的镜面反光叠在眉毛上会把它冲成灰蓝、发糊
         bw = gt.nodes.new('ShaderNodeRGBToBW'); gt.links.new(bt.outputs['Color'], bw.inputs['Color'])
         mr = gt.nodes.new('ShaderNodeMapRange'); mr.interpolation_type = 'SMOOTHSTEP'

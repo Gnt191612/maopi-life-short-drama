@@ -510,7 +510,14 @@ def build(cid, rig, body, shell, seed=1):
     # ---- 3) 马尾：渐细发束 + 外层发片 ----
     axis0 = Vector((0, 0.3, -1)).normalized(); ux = Vector((1, 0, 0)); vy = axis0.cross(ux).normalized()
     Lt = S['tail']; nseg, nring = 30, 16
-    def tail_c(t): return T + Vector((0, 0.030 * HL._smooth(0, 0.08, t) + 0.025 * t, -0.97 * t))
+    def back_y(z):   # 这个高度上后背（含毛衣约 1.4cm 厚）的最靠后位置
+        h_ = bb.ray_cast(Vector((H.x, H.y + 0.4, z)), Vector((0, -1, 0)), 0.6)[0]
+        return None if h_ is None else h_.y + 0.014
+    def tail_c(t):   # 出了发圈稍往后，随即顺着后颈、后背垂下，贴着后背（原来是直的锥体，侧面看像一根往后翘的棍子）
+        c = T + Vector((0, 0.020 * HL._smooth(0, 0.06, t) + 0.010 * t, -0.97 * t))
+        by = back_y(c.z)
+        if by is not None and t > 0.04: c.y = max(c.y, by + tail_r(t) * 0.9) * HL._smooth(0.04, 0.12, t) + c.y * (1 - HL._smooth(0.04, 0.12, t))
+        return c + Vector((0.006 * math.sin(t * 9.0) * HL._smooth(0.08, 0.3, t), 0, 0))   # 轻微 S 形
     def tail_r(t): return max(0.0025, 0.007 + S['tail_r'] * HL._smooth(0.0, 0.06, t) - S['tail_r'] * 0.6 * HL._smooth(0.10, Lt, t) - 0.004 * HL._smooth(0.8 * Lt, Lt, t))
     def keep_off_back(q):
         loc, _, _, _ = bb.find_nearest(q)
@@ -535,17 +542,32 @@ def build(cid, rig, body, shell, seed=1):
     tm.materials.append(_hair_mat(cid + '_ponytail', S['rgb'], 'mass', freq=60.0, seed=seed + 1))
     tail = _link(cid + '_ponytail', tm); ts = tail.modifiers.new('subdiv', 'SUBSURF'); ts.levels = 1; ts.render_levels = 2
     _parent(tail, rig, pinv)
-    for k in range(70):   # 马尾外层发片
+    bmt2 = bmesh.new(); uvt2 = bmt2.loops.layers.uv.new('UVMap')
+    for k in range(70):   # 马尾外层发片（单独一个物体，和马尾一起绑骨）
         a = rnd.uniform(0, 2 * math.pi); L = Lt * rnd.uniform(0.6, 1.02); pts, nrs = [], []; off = rnd.uniform(0.0, 0.004)
         for j in range(14):
             t = L * j / 13; c = tail_c(t); radial = ux * math.cos(a) + vy * math.sin(a)
             q = keep_off_back(c + radial * (tail_r(t) + 0.0015 + off) + Vector((0.003 * math.sin(t * 20 + a * 3), 0, 0)))
             pts.append(q); nrs.append(radial)
-        _ribbon(bmc, uvc, pts, nrs, rnd.uniform(0.010, 0.018), rnd.random(), rnd.random() + 1.0)
+        _ribbon(bmt2, uvt2, pts, nrs, rnd.uniform(0.010, 0.018), rnd.random(), rnd.random() + 1.0)
     cm = bpy.data.meshes.new(cid + '_haircards'); bmc.to_mesh(cm); bmc.free()
     for poly in cm.polygons: poly.use_smooth = True
     cm.materials.append(_hair_mat(cid + '_haircards', S['rgb'], 'card', freq=9.0, seed=seed + 2))
     cards = _link(cid + '_haircards', cm); _parent(cards, rig, pinv)
+    tcm = bpy.data.meshes.new(cid + '_tailcards'); bmt2.to_mesh(tcm); bmt2.free()
+    for poly in tcm.polygons: poly.use_smooth = True
+    tcm.materials.append(cm.materials[0]); tcards = _link(cid + '_tailcards', tcm)
+    # 马尾绑骨：扎发处跟头走，往下逐渐改跟脊柱走——原来整根挂在头骨上，低头/抬头时马尾像棍子一样整体翘起来
+    MW = rig.matrix_world; zN = (MW @ rig.data.bones['neck01'].head_local).z; zS = (MW @ rig.data.bones['spine01'].head_local).z
+    for ob in (tail, tcards):
+        ob.parent = None; ob.matrix_world = Matrix.Identity(4)
+        g_h, g_n, g_s = (ob.vertex_groups.new(name=n) for n in ('head', 'neck01', 'spine01'))
+        for v in ob.data.vertices:
+            z = v.co.z; a = HL._smooth(T.z - 0.06, T.z - 0.01, z); b_ = HL._smooth(zS, zN, z) * (1 - a)
+            g_h.add([v.index], a, 'REPLACE'); g_n.add([v.index], b_, 'REPLACE'); g_s.add([v.index], max(0.0, 1 - a - b_), 'REPLACE')
+        am = ob.modifiers.new('rig', 'ARMATURE'); am.object = rig
+        ob.modifiers.move(len(ob.modifiers) - 1, 0)
+        ob.parent = rig
     # ---- 4) 深色头皮底 + 发圈 + 发箍 ----
     cap_in = [fi for fi in cap_faces if hl.hd(sum((bv[i] for i in bp[fi]), Vector()) / len(bp[fi])) > 0.006]   # 深色头皮衬底只铺在发际线以内（选面时放宽过）
     HL._scalp_cap(cid, bv, bp, cap_in, H, rig, pinv)
