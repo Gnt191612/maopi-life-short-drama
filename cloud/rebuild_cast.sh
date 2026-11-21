@@ -10,6 +10,8 @@ IDS=${@:-lin chen zhou wang mom classA classB}
 [ -x /opt/v11blender/blender ] || { rm -rf /opt/v11blender; cp -rL /root/v11/.tools/blender /opt/v11blender && chmod -R u+x /opt/v11blender/blender /opt/v11blender/*/python/bin; }
 B=/opt/v11blender/blender
 mkdir -p $V11_CAST_DIR build/logs; rm -f build/logs/*.log; T0=$(date +%s)
+# 关机备份恢复后，大文件变成指向平台只读存储的链接，Blender 存不进去：要重新生成的产物先删掉链接
+find $V11_CAST_DIR build/renders build/viewer_tmp viewer/models -maxdepth 2 -type l -delete 2>/dev/null || true
 for c in $IDS; do $B -b --factory-startup -P blender/build_cast.py -- $c > build/logs/build_$c.log 2>&1 & done; wait
 grep -h -E 'CAST OK|Traceback|Error' build/logs/build_*.log | grep -v 'Error: Not freed' ; echo "BUILD $(( $(date +%s) - T0 ))s"
 T1=$(date +%s)

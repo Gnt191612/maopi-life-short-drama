@@ -129,6 +129,8 @@ def previs(seg_ids, out_mp4):
 def main():
     log('==== run_all start')
     segs = S.segments(); ok = []
+    only = [x for x in os.environ.get('V11_ONLY', '').split(',') if x]   # 只渲指定片段（试片用），如 V11_ONLY=s05_00,s05_01
+    if only: segs = [s for s in segs if s[0] in only]
     if '--previs-only' in sys.argv:   # 只重新合成预演（换了配乐/字幕时用，不重新渲染画面）
         ok = [s[0] for s in segs if os.path.exists(os.path.join(config.SHOTS, s[0] + '_timeline.json'))]
         segs = []

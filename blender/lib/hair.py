@@ -43,11 +43,12 @@ def hair_material(name, melanin=0.97):
 # part 分缝（'L' 角色左侧 / 'R' 右侧 / None）；fringe 'down' 刘海下垂 / 'up' 上翘 / 'side' 梳向一侧；n 发丝数
 SHORT = {   # 「蓬松但干净」：保留体积，减少毛躁乱翘；clump=0 不做成缕（实测显油腻），curl 卷曲半径(米)
  # vol：发层厚度（米），发丝在「贴头皮」与「头皮外 vol」之间分层分布——原先所有发丝挤在 6mm 薄壳里，又扁又像头盔
- 'lin':    dict(top=0.110, front=0.092, side=0.060, back=0.058, lift=0.42, messy=0.08, part=None, fringe='down', n=150000, clump=0, curl=0.0, vol=0.020),  # 韩式碎盖
+ # 2026-11-20 按用户挑长相的意见：三个男生发型拉开——林晓清爽侧分（不要锅盖）、周明远偏长偏厚的乱发、同学甲两侧推短头顶抓高
+ 'lin':    dict(top=0.085, front=0.075, side=0.030, back=0.032, lift=0.40, messy=0.04, part='R', fringe='side', n=150000, clump=0, curl=0.0, vol=0.018),  # 清爽侧分短发，露出部分额头
  'chen':   dict(top=0.100, front=0.096, side=0.042, back=0.042, lift=0.38, messy=0.03, part='L', fringe='side', n=145000, clump=0, curl=0.0, vol=0.018),  # 韩式偏分
- 'zhou':   dict(top=0.036, front=0.032, side=0.017, back=0.017, lift=0.50, messy=0.03, part=None, fringe='up', n=155000, clump=0, curl=0.0, vol=0.008),   # 利落板寸
+ 'zhou':   dict(top=0.115, front=0.100, side=0.068, back=0.066, lift=0.36, messy=0.10, part=None, fringe='down', n=160000, clump=0, curl=0.0, vol=0.024),  # 偏长偏厚、有点乱、盖住额头（顾不上理发的考研学长）
  'wang':   dict(top=0.066, front=0.062, side=0.024, back=0.024, lift=0.28, messy=0.02, part='R', fringe='side', n=130000, melanin=0.80, clump=0, curl=0.0, vol=0.012),  # 偏短侧分
- 'classA': dict(top=0.072, front=0.062, side=0.027, back=0.029, lift=0.46, messy=0.05, part=None, fringe='up', n=155000, clump=0, curl=0.0, vol=0.016),  # 上翘短发
+ 'classA': dict(top=0.070, front=0.060, side=0.012, back=0.014, lift=0.60, messy=0.06, part=None, fringe='up', n=150000, clump=0, curl=0.0, vol=0.020),  # 两侧推短、头顶抓高（体育生）
 }
 
 def _smooth(e0, e1, x):
@@ -346,10 +347,10 @@ def build_short(cid, rig, body, shell, seed=1):
 LONG = {
  # front/temple：前额、太阳穴发际线相对眉高（米，建模时未缩放的头：头顶在眼睛上方约 10cm，原先 4.5cm 的前额发际线几乎到头顶）
  # 参照真人马尾：头顶圆润有发量（sleek 1.4cm），扎发点在后脑勺约耳朵上缘高度（tie_up），马尾粗（tail_r）、长到背中部、顺着后背垂下
- 'classB': dict(style='ponytail', n=110000, sleek=0.014, tail=0.36, tail_r=0.034, tie_up=-0.05, front=0.018, temple=0.0, ear=-0.018, behind=-0.045, radius=0.0002,
-                headband=(0.012, 0.012, 0.014)),   # 低马尾 + 黑色发箍（照用户选定的标准长相）
+ 'classB': dict(style='ponytail', n=110000, sleek=0.012, tail=0.36, tail_r=0.034, tie_up=-0.05, front=0.010, temple=-0.006, ear=-0.018, behind=-0.045, radius=0.0002,
+                headband=(0.012, 0.012, 0.014), center_part=True),   # 中分低马尾 + 黑色发箍、发际线略低（照用户选定的标准长相）
  # 林母：及胸披发（建模时未缩放：发尾在眼睛下方 27cm ≈ 成人 30cm，到胸口）；tuck 发尾内扣程度
- 'mom':    dict(style='bob', n=95000, L=0.46, vol=0.020, hem=-0.27, tuck=0.15, part='L', wave=0.0, melanin=0.85, front=0.022, temple=0.002),   # 卷发节点会把发丝拧成扁带，先不用
+ 'mom':    dict(style='bob', n=95000, L=0.46, vol=0.012, hem=-0.27, tuck=0.15, part='L', wave=0.0, melanin=0.85, front=0.022, temple=0.002, hug=4.0),   # vol 调小、hug 往脸侧收：两侧不张成翅膀
 }
 
 def build_long(cid, rig, body, shell, seed=1):
@@ -395,11 +396,18 @@ def build_long(cid, rig, body, shell, seed=1):
             #    每一步从颅骨中心沿该方向打射线找到头皮，再往外放发层厚度——路径连续顺滑。
             #    （原先逐步贴头皮修正，在低精度头模上走成锯齿，头顶轮廓一圈毛刺、逆光发白）
             a0 = (root - H).normalized(); a1 = (T - H).normalized()
+            rel0 = root - H; amid = None
+            if S.get('center_part') and rel0.y < 0 and abs(math.degrees(math.atan2(rel0.x, -rel0.y))) < 50 and root.z > eyes.z + 0.015:
+                sx = 1.0 if rel0.x > 0 else -1.0
+                amid = Vector((sx * 0.62, -0.20, 0.76)).normalized()
             ang = math.acos(max(-1.0, min(1.0, a0.dot(a1)))); nst = max(3, int(ang / 0.06))
             pts = [root + nrm * 0.0008]
             for k in range(1, nst + 1):
                 t = k / nst
-                dvec = a0.slerp(a1, t) if ang > 1e-3 else a1
+                if amid is not None:   # 中分：前额头发先梳向两侧（经过中间方向 amid），再拢向扎发点
+                    dvec = a0.slerp(amid, t / 0.3) if t < 0.3 else amid.slerp(a1, (t - 0.3) / 0.7)
+                else:
+                    dvec = a0.slerp(a1, t) if ang > 1e-3 else a1
                 hit = bb.ray_cast(H, dvec, 0.3)[0]
                 if hit is None: break
                 crown = 0.35 + 0.65 * _smooth(eyes.z - 0.01, H.z + 0.06, hit.z)   # 发层：头顶最厚（圆润），两鬓、后颈服帖
@@ -435,7 +443,7 @@ def build_long(cid, rig, body, shell, seed=1):
             rel = root - H; az = abs(math.degrees(math.atan2(rel.x, -rel.y)))
             if part_x is not None and az < 70:                           # 分缝：前额头发梳向两侧、往后带过太阳穴（大边越过头顶），不垂到脸上
                 sx = 1.0 if root.x > part_x else -1.0
-                flow = Vector((sx, 0.55, -0.15))
+                flow = Vector((sx, 0.45, -0.35))   # 往两侧、往后、往下顺：不在太阳穴处堆成一道横棱
             else:
                 flow = root - whorl; flow.z = min(flow.z, 0.0) - 0.02
             lf = rnd.random() ** 0.6; L = S['L'] * rnd.uniform(0.85, 1.1) * (0.35 if soft else 1.0)
@@ -450,6 +458,8 @@ def build_long(cid, rig, body, shell, seed=1):
                 if on_head and nn is not None: f = (f - nn * f.dot(nn)).normalized()         # 头顶：顺着头型梳
                 g = 0.10 if on_head else 0.55                                                  # 过了颅骨最宽处：重力为主，自然垂下
                 d = (d * 0.55 + f * 0.40 * (1.0 if on_head else 0.3) - up * g + lk * 0.05).normalized()
+                if not on_head:   # 垂下后往脸侧收一点（长发贴着脸颊垂顺），原先被肩膀脖子往外推，两侧张成「翅膀」
+                    d = (d + Vector((-(p.x - H.x) * S.get('hug', 0.0), 0, 0))).normalized()
                 if p.z < shoulder_z + 0.04:   # 到了肩膀：不再往两侧走，顺着往下垂（落在肩前/肩后由下面的位置约束决定）
                     d = Vector((d.x * 0.3, d.y * 0.3, d.z - 0.6)).normalized()
                 if p.z < hem_i + 0.035:                                                         # 发尾微微内扣
@@ -457,10 +467,13 @@ def build_long(cid, rig, body, shell, seed=1):
                 q = p + d * 0.012; s += 0.012
                 vol = S['vol'] * lf * _smooth(0.0, 0.05, s)
                 q = clamp_off(q, 0.0015 + vol * 0.5, 0.002 + vol) if on_head else clamp_off(q, 0.006 + vol * 0.6, 9.0)
-                if not on_head and q.y < eyes.y + 0.05 and abs(q.x - H.x) < 0.082:   # 垂在脸颊外侧，不挡脸
-                    q.x = H.x + math.copysign(0.082, q.x - H.x)
-                elif q.z < brow_z + 0.012 and q.y < eyes.y + 0.04 and abs(q.x - H.x) < 0.068:   # 刘海不过眉：扫向两侧
-                    q.x = H.x + math.copysign(0.068, q.x - H.x)
+                # 不挡脸：脸前的发丝推到脸颊外侧 / 刘海扫向两侧。每根推到的位置不同（按发层位置 lf 错开 0~2.5cm），
+                # 原先全推到同一个 x，排成一面平墙，写实化时被画成「耳罩」一样的硬块
+                xw = 0.080 + lf * 0.025
+                if not on_head and q.y < eyes.y + 0.04 and abs(q.x - H.x) < xw:
+                    q.x = H.x + math.copysign(xw, q.x - H.x)
+                elif q.z < brow_z + 0.012 and q.y < eyes.y + 0.03 and abs(q.x - H.x) < xw - 0.012:
+                    q.x = H.x + math.copysign(xw - 0.012, q.x - H.x)
                 if q.z < shoulder_z + 0.03 and abs(q.x - H.x) < 0.24:       # 肩膀以下：明确落在肩膀后面（耳后的头发）或前面，不搭在肩头上横着支出去
                     w_ = _smooth(shoulder_z + 0.03, shoulder_z - 0.01, q.z)
                     if behind: q.y = max(q.y, q.y + (torso_y + 0.075 - q.y) * w_)

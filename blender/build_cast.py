@@ -11,6 +11,7 @@ from bl_ext.user_default.mpfb.services.humanservice import HumanService
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   # 仓库根目录
 import config
 import hair
+import hair_cards
 from mathutils import Vector
 # 鞋子：保留原资产贴图（皮革、网面、磨旧感），按人物身份选鞋型
 SHOES = {'lin': 'shoes02', 'chen': 'shoes05', 'zhou': 'shoes02', 'wang': 'shoes04', 'mom': 'shoes01', 'classA': 'shoes06', 'classB': 'shoes05',
@@ -29,12 +30,12 @@ ASIAN = {'asian': 1.0, 'caucasian': 0.0, 'african': 0.0}
 HEIGHT = {'lin': 1.72, 'chen': 1.82, 'zhou': 1.76, 'wang': 1.74, 'mom': 1.60, 'classA': 1.75, 'classB': 1.63}   # 目标身高（米）
 # id: (中文名, 性别 1男0女, 年龄, 体重, 肌肉, 身高滑块, 比例, 服装, 发型, 上衣颜色, 裤子颜色)
 CAST = {
- 'lin':    ('林晓',   1.0, 0.50, 1.00, 0.30, 0.50, 0.40, 'male_casualsuit02',   'short02',    (0.22, 0.22, 0.24), (0.15, 0.18, 0.28)),  # 深灰卫衣
+ 'lin':    ('林晓',   1.0, 0.50, 1.00, 0.18, 0.50, 0.40, 'male_casualsuit02',   'short02',    (0.22, 0.22, 0.24), (0.15, 0.18, 0.28)),  # 深灰卫衣；肌肉减少显得更胖更软
  'chen':   ('陈瑶',   1.0, 0.44, 0.30, 0.45, 0.80, 0.60, 'male_casualsuit01',   'short04',    (0.90, 0.90, 0.88), (0.12, 0.12, 0.14)),  # 白衬衫
- 'zhou':   ('周明远', 1.0, 0.47, 0.12, 0.42, 0.60, 0.55, 'male_casualsuit05',   'short01',    (0.25, 0.28, 0.18), (0.10, 0.10, 0.10)),  # 橄榄夹克
+ 'zhou':   ('周明远', 1.0, 0.47, 0.05, 0.36, 0.60, 0.55, 'male_casualsuit05',   'short01',    (0.25, 0.28, 0.18), (0.10, 0.10, 0.10)),  # 橄榄夹克；更瘦
  'wang':   ('王老师', 1.0, 0.64, 0.70, 0.40, 0.55, 0.50, 'male_casualsuit03',   'short04',    (0.62, 0.75, 0.90), (0.20, 0.20, 0.22)),  # 浅蓝衬衫
- 'mom':    ('林母',   0.0, 0.69, 0.62, 0.40, 0.40, 0.45, 'female_elegantsuit01', 'bob01',     (0.82, 0.75, 0.62), (0.35, 0.30, 0.28)),  # 米色毛衣
- 'classA': ('同学甲', 1.0, 0.43, 0.58, 0.82, 0.55, 0.50, 'male_casualsuit04',   'short01',    (0.08, 0.12, 0.35), (0.10, 0.10, 0.12)),  # 深蓝运动外套
+ 'mom':    ('林母',   0.0, 0.59, 0.50, 0.40, 0.40, 0.45, 'female_elegantsuit01', 'bob01',     (0.82, 0.75, 0.62), (0.35, 0.30, 0.28)),  # 米色毛衣；有妈妈气质但不显老（约四十出头）
+ 'classA': ('同学甲', 1.0, 0.43, 0.66, 0.95, 0.55, 0.50, 'male_casualsuit04',   'short01',    (0.08, 0.12, 0.35), (0.10, 0.10, 0.12)),  # 深蓝运动外套；更壮
  'classB': ('同学乙', 0.0, 0.43, 0.42, 0.45, 0.48, 0.55, 'female_casualsuit01', 'ponytail01', (0.85, 0.80, 0.70), (0.20, 0.22, 0.30)),  # 米色高领
 }
 # 路人学生（外景里走动、骑车的背景人物）：普通脸、不同体型/发型/穿搭；为了轻量，不长发丝，直接用发片
@@ -51,7 +52,7 @@ HEIGHT.update({'extM1': 1.76, 'extM2': 1.71, 'extM3': 1.80, 'extF1': 1.62, 'extF
 from bl_ext.user_default.mpfb.services.targetservice import TargetService
 LR = lambda name, v: {'l-' + name: v, 'r-' + name: v}
 FACE = {   # 五官个性化（MakeHuman 形态目标，0~1）：每人不同的基础头型 + 大幅度的局部特征，避免「大众脸」
- 'lin':    {'head-round': 1.0, 'head-fat-incr': 1.0, **LR('cheek-volume-incr', 1.0), 'neck-double-incr': 0.6, 'chin-height-decr': 0.5,
+ 'lin':    {'head-round': 1.0, 'head-fat-incr': 1.0, 'head-scale-horiz-incr': 0.4, **LR('cheek-volume-incr', 1.0), 'neck-double-incr': 1.0, 'chin-height-decr': 0.5,
             **LR('eye-scale-decr', 0.4), **LR('eye-height2-decr', 0.4), 'nose-scale-horiz-incr': 0.5, 'nose-point-width-incr': 0.5,
             'mouth-scale-horiz-decr': 0.2, 'mouth-lowerlip-volume-incr': 0.6, **LR('ear-flap-incr', 0.3)},
  'chen':   {'head-oval': 0.9, 'head-scale-vert-incr': 0.5, 'head-scale-horiz-decr': 0.6, **LR('cheek-volume-decr', 0.4), **LR('cheek-bones-incr', 0.4),
@@ -59,31 +60,36 @@ FACE = {   # 五官个性化（MakeHuman 形态目标，0~1）：每人不同的
             'nose-point-width-decr': 0.4, **LR('eye-height2-decr', 0.3), 'mouth-scale-horiz-decr': 0.3, 'mouth-lowerlip-volume-decr': 0.4},
  'zhou':   {'mouth-scale-horiz-decr': 0.35, **LR('eye-scale-decr', 0.35), 'nose-scale-horiz-decr': 0.4, 'head-rectangular': 0.9, 'head-fat-decr': 0.9, **LR('cheek-volume-decr', 1.0), **LR('cheek-bones-incr', 0.8), 'chin-bones-incr': 0.7,
             'chin-prominent-incr': 0.3, 'forehead-scale-vert-incr': 0.4, 'nose-hump-incr': 0.5, 'nose-scale-vert-incr': 0.3,
-            **LR('eye-bag-incr', 0.4), **LR('eye-push2-in', 0.5), 'eyebrows-angle-down': 0.4, 'mouth-scale-horiz-incr': 0.2},
+            **LR('eye-bag-incr', 0.8), **LR('eye-push2-in', 0.5), 'eyebrows-angle-down': 0.4, 'mouth-scale-horiz-incr': 0.2},   # 眼袋更重：熬夜复习的倦态
  'wang':   {'head-fat-incr': 0.7, 'head-scale-horiz-incr': 0.5, **LR('cheek-volume-incr', 0.6), 'head-square': 0.9, 'head-age-incr': 0.9, 'chin-width-incr': 0.7, 'head-scale-horiz-incr': 0.3, 'nose-scale-horiz-incr': 0.5,
             'nose-flaring-incr': 0.5, 'mouth-laugh-lines-out': 0.9, 'mouth-scale-horiz-incr': 0.3, **LR('eye-bag-incr', 0.5),
             'forehead-scale-vert-incr': 0.5, 'eyebrows-angle-up': 0.3, 'neck-double-incr': 0.7},
- 'mom':    {'head-round': 0.6, 'head-age-incr': 0.9, **LR('cheek-volume-incr', 0.5), **LR('cheek-trans-down', 0.5), 'mouth-laugh-lines-out': 1.0,
-            **LR('eye-bag-incr', 0.8), 'mouth-angles-up': 0.4, 'nose-scale-horiz-incr': 0.3, 'eyebrows-angle-up': 0.3, 'neck-double-incr': 0.3},
+ # 林母：用户要「有妈感但不显老」——年龄感、眼袋、法令纹都减轻，五官更精致（2026-11-20）
+ 'mom':    {'head-oval': 0.5, 'head-round': 0.3, 'head-age-incr': 0.25, **LR('cheek-volume-incr', 0.3), **LR('cheek-trans-down', 0.2), 'mouth-laugh-lines-out': 0.4,
+            **LR('eye-bag-incr', 0.25), **LR('eye-eyefold-up', 0.4), 'mouth-angles-up': 0.4, 'mouth-upperlip-volume-incr': 0.25, 'nose-scale-horiz-incr': 0.1,
+            'eyebrows-angle-up': 0.3, 'chin-prominent-incr': 0.2, 'neck-double-incr': 0.1},
  'classA': {'head-scale-horiz-incr': 0.6, **LR('ear-flap-incr', 0.8), 'eyebrows-trans-down': 0.35, 'mouth-scale-horiz-incr': 0.5, 'head-diamond': 0.9, 'chin-prominent-incr': 0.7, 'mouth-angles-up': 0.6, 'mouth-scale-horiz-incr': 0.4, 'nose-point-up': 0.5,
             **LR('eye-scale-decr', 0.3), **LR('eye-corner1-up', 0.5), 'eyebrows-angle-up': 0.6, **LR('ear-wing-incr', 0.7), **LR('cheek-bones-incr', 0.4)},
  # 同学乙向用户选定的标准长相（写实化第四张）靠拢：正常大小的杏眼 + 双眼皮、平直眉、窄长脸、柔和下颌（2026-11-19）
- 'classB': {'head-oval': 0.8, 'head-scale-horiz-decr': 0.35, 'head-scale-vert-incr': 0.15, **LR('eye-scale-incr', 0.45), **LR('eye-height2-incr', 0.35), **LR('eye-eyefold-up', 0.6),
-            'eyebrows-trans-up': 0.25, 'eyebrows-angle-down': 0.25, 'eyebrows-trans-backward': 0.3,   # 眉毛略上移、放平：平直眉、不压双眼皮
+ # 第二轮（对照标准照逐项调）：杏眼再小一点、眉毛下移贴近眼睛、脸和下巴收窄、两颊收、嘴唇饱满偏小
+ 'classB': {'head-oval': 0.8, 'head-scale-horiz-decr': 0.55, 'head-scale-vert-incr': 0.15, **LR('eye-scale-incr', 0.2), **LR('eye-height2-incr', 0.2), **LR('eye-eyefold-up', 0.6),
+            'eyebrows-trans-down': 0.15, 'eyebrows-angle-down': 0.25, 'eyebrows-trans-backward': 0.3,   # 平直眉、贴近眼睛
             'nose-greek-incr': 0.7, 'nose-width1-decr': 0.35, 'nose-hump-decr': 0.2,          # 鼻梁挺直、山根立起来
-            'nose-scale-horiz-decr': 0.5,
-            'nose-point-up': 0.3, 'mouth-cupidsbow-incr': 0.6, 'mouth-lowerlip-volume-incr': 0.4, 'chin-triangle': 0.35, **LR('cheek-bones-incr', 0.25)},
+            'nose-scale-horiz-decr': 0.5, 'nose-point-width-decr': 0.3,                       # 鼻头小巧
+            'nose-point-up': 0.3, 'mouth-cupidsbow-incr': 0.6, 'mouth-lowerlip-volume-incr': 0.5, 'mouth-upperlip-volume-incr': 0.35,
+            'mouth-scale-horiz-decr': 0.25, 'chin-triangle': 0.35, 'chin-width-decr': 0.35, **LR('cheek-volume-decr', 0.3), **LR('cheek-bones-incr', 0.25)},
 }
 EYEBROW = {'lin': 'eyebrow005', 'chen': 'eyebrow012', 'zhou': 'eyebrow007', 'wang': 'eyebrow001', 'mom': 'eyebrow011',
-           'classA': 'eyebrow009', 'classB': 'eyebrow008',                                                    # 每人不同眉形
+           'classA': 'eyebrow009', 'classB': 'eyebrow012',                                                    # 每人不同眉形（同学乙：平直偏浓，照标准照）
            'extM1': 'eyebrow001', 'extM2': 'eyebrow003', 'extM3': 'eyebrow006', 'extF1': 'eyebrow011', 'extF2': 'eyebrow010', 'extF3': 'eyebrow012'}
 SKIN_TINT = {'lin': (1.03, 1.0, 0.98), 'chen': (1.04, 1.01, 1.0), 'zhou': (0.94, 0.92, 0.92), 'wang': (0.93, 0.88, 0.84),
-             'mom': (1.0, 0.97, 0.95), 'classA': (0.88, 0.80, 0.72), 'classB': (1.06, 1.02, 1.0),           # 肤色差异（乘在皮肤贴图上）
+             'mom': (1.0, 0.97, 0.95), 'classA': (0.88, 0.80, 0.72), 'classB': (1.03, 0.97, 0.91),          # 肤色差异（乘在皮肤贴图上）；同学乙偏暖的浅米色
              'extM1': (0.95, 0.92, 0.9), 'extM2': (1.0, 0.97, 0.95), 'extM3': (0.9, 0.85, 0.8), 'extF1': (1.04, 1.0, 0.98),
              'extF2': (0.98, 0.95, 0.92), 'extF3': (1.05, 1.02, 1.0)}
 
 STOCKINGS = {'classB': (0.012, 0.011, 0.013)}   # 黑丝（同学乙）
-IRIS = {'classB': dict(scale=1.0, rgb=(0.045, 0.036, 0.032))}   # 黑眼仁（同学乙）；原放大 22% 像娃娃，写实化时每次被「纠正」得不一样
+IRIS = {'classB': dict(scale=0.9, rgb=(0.20, 0.075, 0.030))}   # 2026-11-21 调成照片里的中深棕（原来太暗，渲染出来发灰）   # 深棕眼仁（同学乙，照标准照；纯黑像瞪眼）；原放大 22% 像娃娃，写实化时每次被「纠正」得不一样
+LIP_TINT = {'mom': (1.10, 0.76, 0.76)}   # 唇色：红润（乘在唇部材质上）；已投影标准照的角色（同学乙）唇色来自照片，不再单染
 
 def iris_edit(eye_obj, scale, rgb):
     """改眼球贴图：虹膜按比例放大（以各自圆心做径向重映射，外圈眼白平滑过渡、不变形），颜色换成近黑的深褐（保留虹膜纹理明暗）。
@@ -112,6 +118,8 @@ def iris_edit(eye_obj, scale, rgb):
     lum = rgb1.mean(2); ref = float(lum[iris].mean())
     k = np.clip(lum / max(ref, 1e-3), 0.35, 1.8)[..., None]
     rgb1[iris] = (np.array(rgb, np.float32) * k)[iris]
+    white = ~iris & (rgb1.mean(2) > 0.55)                               # 眼白压暗、略偏暖：纯白眼白像洋娃娃
+    rgb1[white] = rgb1[white] * np.array([0.84, 0.80, 0.76], np.float32)
     new = bpy.data.images.new(eye_obj.name + '_iris', w, h, alpha=True); new.pixels.foreach_set(out.ravel()); new.pack()
     node.image = new
     print('IRIS', eye_obj.name, 'scale', scale, flush=True)
@@ -152,18 +160,13 @@ def stockings(body, rgb):
     for v in me.vertices:
         vals[v.index] = min(1.0, sum(g.weight * gid[g.group] for g in v.groups if g.group in gid))
     att.data.foreach_set('value', vals)
-    def principled_tree(nt):   # MPFB 的写实皮肤把 Principled BSDF 包在节点组里：进组里改（在外面混合着色器，EEVEE 下带次表面散射的皮肤混不上）
-        b = next((n for n in nt.nodes if n.type == 'BSDF_PRINCIPLED'), None)
-        if b: return nt, b
-        for g in (n for n in nt.nodes if n.type == 'GROUP' and n.node_tree):
-            r = principled_tree(g.node_tree)
-            if r[1]: return r
-        return nt, None
-    for slot in body.material_slots:
+    done = set()
+    for slot in body.material_slots:   # MPFB 的写实皮肤把 Principled BSDF 包在节点组里：进组里改（在外面混合着色器，EEVEE 下带次表面散射的皮肤混不上）
         m = slot.material
         if not m or not m.use_nodes: continue
-        nt, b = principled_tree(m.node_tree)
-        if b is None: continue
+        nt, b = _principled_tree(m.node_tree)
+        if b is None or nt in done: continue   # 各皮肤材质共用一个节点组：只加一次
+        done.add(nt)
         bc = b.inputs['Base Color']; src = bc.links[0].from_socket if bc.links else None
         at = nt.nodes.new('ShaderNodeAttribute'); at.attribute_name = 'v11_stocking'
         lw = nt.nodes.new('ShaderNodeLayerWeight'); lw.inputs['Blend'].default_value = 0.45
@@ -186,26 +189,173 @@ def stockings(body, rgb):
         if sh is not None and not sh.links: nt.links.new(at.outputs['Fac'], sh)   # 丝袜的柔光
     print('STOCKINGS', body.name, flush=True)
 
-def tint_skin(body, rgb):
+def _principled_tree(nt):
+    """找 Principled BSDF 所在的节点树（MPFB 写实皮肤把它包在节点组里）"""
+    b = next((n for n in nt.nodes if n.type == 'BSDF_PRINCIPLED'), None)
+    if b: return nt, b
+    for g in (n for n in nt.nodes if n.type == 'GROUP' and n.node_tree):
+        r = _principled_tree(g.node_tree)
+        if r[1]: return r
+    return nt, None
+
+def tint_skin(body, rgb, only=None, warm=True):
+    """皮肤调色：乘在皮肤贴图上。only = 只处理名字含该词的材质（如 'lips' 唇色）。
+    原先只在材质最外层找着色器，而写实皮肤的着色器在节点组里——调色从来没生效过（2026-11-20 修）"""
+    done = set()   # 7 个皮肤材质共用同一个节点组：每个节点组只调一次（否则叠乘 7 遍）
     for slot in body.material_slots:
         m = slot.material
-        if not m or not m.use_nodes: continue
-        b = next((n for n in m.node_tree.nodes if n.type == 'BSDF_PRINCIPLED'), None)
-        if not b or not b.inputs['Base Color'].links: continue
-        src = b.inputs['Base Color'].links[0].from_socket; nt = m.node_tree
+        if not m or not m.use_nodes or (only and only not in m.name.lower()): continue
+        if only:   # 只调某个部位（唇）：给它单独复制一份节点组，不影响全身
+            for g in (n for n in m.node_tree.nodes if n.type == 'GROUP' and n.node_tree): g.node_tree = g.node_tree.copy()
+        nt, b = _principled_tree(m.node_tree)
+        if not b or not b.inputs['Base Color'].links or nt in done: continue
+        done.add(nt)
+        src = b.inputs['Base Color'].links[0].from_socket
         mix = nt.nodes.new('ShaderNodeMix'); mix.data_type = 'RGBA'; mix.blend_type = 'MULTIPLY'; mix.inputs['Factor'].default_value = 1.0
-        mix.inputs[7].default_value = (*(c * w for c, w in zip(rgb, WARM)), 1); nt.links.new(src, mix.inputs[6]); nt.links.new(mix.outputs[2], b.inputs['Base Color'])
+        mix.inputs[7].default_value = (*(c * (w if warm else 1) for c, w in zip(rgb, WARM)), 1); nt.links.new(src, mix.inputs[6]); nt.links.new(mix.outputs[2], b.inputs['Base Color'])
 
-FACE_SCALE_OF = {'zhou': 0.85, 'wang': 0.85, 'classA': 0.85, 'classB': 0.8}   # 长得太像的几个人加重各自特征
+FACE_SCALE_OF = {'zhou': 0.85, 'wang': 0.85, 'classA': 0.85, 'classB': 0.8, 'lin': 0.8}   # 长得太像的几个人加重各自特征；林晓加重胖脸
 FACE_SCALE = 0.5   # 统一按 50% 生效：保留各人头型与特征组合，但回到现实中普通人的自然比例（满强度会像漫画）
 
+# 照片拟合之后的人工微调（叠加在拟合权重上，不缩放）：拟合只看正面关键点，有些地方要按对比图再修
+FIT_ADJUST = {
+ 'classB': {**LR('eye-height2-decr', 0.35), **LR('eye-height1-decr', 0.15),   # 眼睛睁得比照片大（照片里上眼睑压着瞳孔上缘，杏眼）
+            **LR('cheek-volume-incr', 0.2), **LR('cheek-inner-incr', 0.15),     # 两颊、嘴两侧略饱满（加到 0.5 用户嫌脸胖，回调）
+            'forehead-temple-decr': 0.9, **LR('cheek-bones-decr', 0.6), 'head-scale-horiz-decr': 0.15,         # 太阳穴、颧骨收窄（用户：眼边的脸型显胖，轮廓要修）
+            'mouth-upperlip-middle-down': 0.25, 'mouth-lowerlip-middle-up': 0.2,   # 闭嘴（牙齿已往后收，不用再把唇往中间挤——挤多了嘴唇往前鼓）
+            # 嘴部不前凸（用户：正脸看嘴部突出）：嘴整体往后收、唇的前后厚度减薄、抵掉共用立体度层加的唇厚，嘴角回平
+            'mouth-trans-backward': 0.45, 'mouth-scale-depth-decr': 0.35, 'mouth-lowerlip-volume-decr': 0.35,
+            'mouth-upperlip-volume-decr': 0.2, 'mouth-angles-down': 0.25, 'chin-prognathism-decr': 0.2,
+            # 山根（用户：照片里鼻梁先往上延伸一段直线、过了内眼角才以弧线连到眉骨；白模在内眼角就弯进眉骨）：
+            # 鼻根收窄、垫高（希腊鼻：鼻梁一直通到眉间），内眼角旁往里凹，鼻梁两侧的直线才立得起来
+            # 内眼角旁不再往里压（压凹和共用立体度层叠加，上眼皮到鼻侧挤出一道深褶，用户嫌丑）——反而往外抵掉一半立体度层的压凹；
+            # 鼻根收窄回调一点，鼻梁中线不起尖棱
+            'nose-width1-decr': 0.45, 'nose-greek-incr': 0.4, **LR('eye-push1-out', 0.12), 'eyebrows-trans-forward': 0.10,
+            'nose-width2-decr': 1.0, 'nose-width3-decr': 0.35},   # 鼻梁中段收窄（用户：鼻头还原，但鼻子中间略粗）
+}
+# 局部磨平（照片拟合角色）：以某关键点连线中点为中心、半径内的皮肤做拉普拉斯平滑，越靠中心越强。
+# classB：内眼角与鼻根之间的那道弧形深沟（MakeHuman 头模本身的眶缘形状，形态参数去不掉）
+FIT_SMOOTH = {
+ # 第二、三处（用户：眼睛与鼻子之间褶皱还在）：双眼皮褶线没在内眼角收住、绕过内眼角顺着鼻侧往下——在两个内眼角的内上方各磨一处；
+ # 保护只留紧贴睑缘（睫毛根）的一圈，原来按眼角点 13mm 的保护圈正好把这段褶线护住了
+ 'classB': [dict(keys=('eye_R_in', 'eye_L_in'), up=0.008, radius=0.026, strength=0.85, iters=25),
+            dict(keys=('eye_R_in',), side=-1, inward=0.005, up=0.004, radius=0.016, strength=1.0, iters=40),
+            dict(keys=('eye_L_in',), side=1, inward=0.005, up=0.004, radius=0.016, strength=1.0, iters=40)],
+}
+
+# 头顶压低（用户：头顶到眉毛的比例不对）：眉毛以上（眼睛中点上方 z0·眼距）的头骨按 k 往下压，过渡平滑，脸不动
+FIT_CROWN = {'classB': dict(z0=1.0, k=0.72)}
+
+def fit_crown(body, cid):
+    S = FIT_CROWN.get(cid)
+    if not S: return
+    import json, numpy as np
+    lv = json.load(open(os.path.join(config.ROOT, 'assets', 'identity', cid + '_face_fit.json'), encoding='utf-8'))['landmark_verts']
+    me = body.data; n = len(me.vertices)
+    tmp = body.shape_key_add(name='tmp_mix', from_mix=True)
+    X = np.empty(n * 3, np.float32); tmp.data.foreach_get('co', X); X = X.reshape(-1, 3).astype(np.float64)
+    body.shape_key_remove(tmp)
+    eR = (X[lv['eye_R_in']] + X[lv['eye_R_out']]) / 2; eL = (X[lv['eye_L_in']] + X[lv['eye_L_out']]) / 2
+    iod = np.linalg.norm(eL - eR); z0 = (eR[2] + eL[2]) / 2 + S['z0'] * iod
+    d = X[:, 2] - z0; Y = X.copy()
+    up = d > 0; dd = d[up]; Y[up, 2] = z0 + dd - (1 - S['k']) * dd * dd / (dd + 0.02)   # 斜率从 1 平滑过渡到 k
+    basis = np.empty(n * 3, np.float32); me.shape_keys.key_blocks['Basis'].data.foreach_get('co', basis)
+    kb = body.shape_key_add(name='adj_crown', from_mix=False)
+    kb.data.foreach_set('co', (basis.reshape(-1, 3) + (Y - X)).astype(np.float32).ravel()); kb.value = 1.0
+    print('FIT CROWN', cid, 'top lowered %.4f m' % float((X[:, 2] - Y[:, 2]).max()), flush=True)
+
+LIP_SEAL = {'classB'}   # 唇缝封口（MakeHuman 默认嘴唇微张，唇缝露出口腔暗色；形态参数合拢会把唇形扯方）
+
+def fit_lipseal(body, cid):
+    """找出上下唇贴合处（唇部顶点里法线朝上/朝下的内侧面），按左右位置求缝的中线高度，把缝两侧 6mm 内的唇部顶点往中线收拢"""
+    if cid not in LIP_SEAL: return
+    import numpy as np
+    me = body.data; n = len(me.vertices)
+    tmp = body.shape_key_add(name='tmp_mix', from_mix=True)
+    X = np.empty(n * 3, np.float32); tmp.data.foreach_get('co', X); X = X.reshape(-1, 3).astype(np.float64)
+    body.shape_key_remove(tmp)
+    me2 = bpy.data.meshes.new('tmp_lipseal'); me2.from_pydata(X.tolist(), [], [list(p.vertices) for p in me.polygons]); me2.update()
+    Nn = np.array([v.normal[:] for v in me2.vertices]); bpy.data.meshes.remove(me2)
+    gi = body.vertex_groups['lips'].index
+    lips = np.array([any(g.group == gi and g.weight > 0.5 for g in v.groups) for v in me.vertices])
+    L = np.nonzero(lips)[0]; xs = X[L, 0]; cx = (xs.min() + xs.max()) / 2; hw = (xs.max() - xs.min()) / 2
+    inner = L[np.abs(Nn[L, 2]) > 0.55]                                   # 上下唇贴合处的内侧面
+    bins = np.linspace(cx - hw, cx + hw, 13); zc_x, zc_z = [], []
+    for a, b in zip(bins, bins[1:]):
+        sel = inner[(X[inner, 0] >= a) & (X[inner, 0] < b)]
+        if len(sel) >= 2: zc_x.append((a + b) / 2); zc_z.append(float(np.median(X[sel, 2])))
+    if len(zc_x) < 3: print('LIP SEAL skip', flush=True); return
+    zc = np.interp(X[L, 0], zc_x, zc_z)
+    d = X[L, 2] - zc; Y = X.copy()
+    w = np.clip(1 - np.abs(d) / 0.006, 0, 1); w = w * w * (3 - 2 * w)
+    Y[L, 2] = zc + d * (1 - 0.85 * w)                                   # 缝两侧往中线收（离缝越近收得越多）
+    basis = np.empty(n * 3, np.float32); me.shape_keys.key_blocks['Basis'].data.foreach_get('co', basis)
+    kb = body.shape_key_add(name='adj_lipseal', from_mix=False)
+    kb.data.foreach_set('co', (basis.reshape(-1, 3) + (Y - X)).astype(np.float32).ravel()); kb.value = 1.0
+    print('LIP SEAL', cid, 'bins', len(zc_x), 'moved max %.4f' % float(np.abs(Y - X).max()), flush=True)
+
+def fit_smooth(body, cid):
+    """FIT_SMOOTH 的局部磨平，结果存成一个形态键（叠加在当前所有形态键的混合结果上；后面加的立体度层影响很小）"""
+    jobs = FIT_SMOOTH.get(cid)
+    if not jobs: return
+    import json, numpy as np
+    lv = json.load(open(os.path.join(config.ROOT, 'assets', 'identity', cid + '_face_fit.json'), encoding='utf-8'))['landmark_verts']
+    me = body.data; n = len(me.vertices)
+    tmp = body.shape_key_add(name='tmp_mix', from_mix=True)
+    X = np.empty(n * 3, np.float32); tmp.data.foreach_get('co', X); X = X.reshape(-1, 3).astype(np.float64)
+    body.shape_key_remove(tmp)
+    E = np.empty(len(me.edges) * 2, np.int64); me.edges.foreach_get('vertices', E); E = E.reshape(-1, 2)
+    deg = np.bincount(E.ravel(), minlength=n).astype(np.float64)
+    Y = X.copy()
+    gi = {g.name: g.index for g in body.vertex_groups}
+    def members(*names):
+        ids = {gi[nm] for nm in names if nm in gi}
+        return np.array([any(g.group in ids and g.weight > 0.5 for g in v.groups) for v in me.vertices])
+    helper = members('HelperGeometry', 'JointCubes')                 # 辅助几何（睫毛、眼球等配件按它贴合）一律不动
+    lash = X[members('helper-l-eyelashes-1', 'helper-l-eyelashes-2', 'helper-r-eyelashes-1', 'helper-r-eyelashes-2')]
+    from mathutils.kdtree import KDTree
+    kd = KDTree(len(lash))
+    for i, p in enumerate(lash): kd.insert(p, i)
+    kd.balance()
+    dl = np.array([kd.find(p)[2] for p in X])                         # 离睑缘（睫毛根）的距离
+    t_ = np.clip((dl - 0.002) / 0.003, 0, 1); protect = t_ * t_ * (3 - 2 * t_) * (~helper)   # 睑缘 2~5mm 内渐变保护：眼皮不被拉开
+    for j in jobs:
+        c = sum(X[lv[k]] for k in j['keys']) / len(j['keys']); c[2] += j['up']
+        if 'side' in j: c[0] -= j['side'] * j['inward']               # 往鼻子那侧挪（角色右 = −x）
+        d = np.linalg.norm(X - c, axis=1); w = np.clip(1 - d / j['radius'], 0, 1); w = w * w * (3 - 2 * w) * j['strength'] * protect
+        for _ in range(j['iters']):
+            S = np.zeros_like(Y); np.add.at(S, E[:, 0], Y[E[:, 1]]); np.add.at(S, E[:, 1], Y[E[:, 0]])
+            avg = S / np.maximum(deg, 1)[:, None]
+            Y = Y + (avg - Y) * (w * 0.5)[:, None]
+    basis = np.empty(n * 3, np.float32); me.shape_keys.key_blocks['Basis'].data.foreach_get('co', basis)
+    kb = body.shape_key_add(name='adj_smooth', from_mix=False)
+    kb.data.foreach_set('co', (basis.reshape(-1, 3) + (Y - X)).astype(np.float32).ravel()); kb.value = 1.0
+    print('FIT SMOOTH', cid, 'moved max %.4f m' % float(np.abs(Y - X).max()), flush=True)
+
+def face_fit(cid):
+    """按标准长相照片拟合出的五官权重（blender/face_fit_*.py 生成，assets/identity/<cid>_face_fit.json），没有则返回 None"""
+    p = os.path.join(config.ROOT, 'assets', 'identity', cid + '_face_fit.json')
+    if not os.path.exists(p): return None
+    import json
+    return json.load(open(p, encoding='utf-8'))['weights']
+
 def apply_face(body, cid):
-    for name, v in FACE.get(cid, {}).items():
+    fit = face_fit(cid)
+    if fit is not None:   # 照片拟合：正面能看出来的五官用拟合权重（已是最终值）；只影响侧面的个人特征保留手调设定
+        from face_fit_export import PROFILE_KEEP
+        for name, v in fit.items():
+            TargetService.load_target(body, TargetService.target_full_path(name), weight=v, name=name)
+        for name, v in FIT_ADJUST.get(cid, {}).items():
+            TargetService.load_target(body, TargetService.target_full_path(name), weight=v, name='adj_' + name)
+        fit_smooth(body, cid); fit_crown(body, cid); fit_lipseal(body, cid)
+        keep = {n: v for n, v in FACE.get(cid, {}).items() if any((n[2:] if n[:2] in ('l-', 'r-') else n).startswith(k) for k in PROFILE_KEEP)}
+    else: keep = FACE.get(cid, {})
+    for name, v in keep.items():
         try: TargetService.load_target(body, TargetService.target_full_path(name), weight=v * FACE_SCALE_OF.get(cid, FACE_SCALE), name=name)
         except Exception as e: print('FACE WARN', cid, name, e, flush=True)
     depth = DEPTH_M if CAST[cid][1] > 0.5 else DEPTH_F
     for name, v in depth.items():
-        if name in FACE.get(cid, {}): continue                            # 个人特征里已有的不重复叠加
+        if fit is None and name in FACE.get(cid, {}): continue            # 个人特征里已有的不重复叠加（照片拟合时立体度层照常叠加，与拟合时的基础人体一致）
         try: TargetService.load_target(body, TargetService.target_full_path(name), weight=v, name='depth_' + name)
         except Exception as e: print('DEPTH WARN', cid, name, e, flush=True)
 SKINS = {'lin': 'young_asian_male', 'chen': 'young_asian_male', 'zhou': 'young_asian_male', 'classA': 'young_asian_male',
@@ -475,6 +625,7 @@ def build(cid):
     skin = SKINS[cid]   # MakeHuman 写实皮肤（含纹理、次表面散射）
     HumanService.set_character_skin(os.path.join(ASSET, 'skins', skin, skin + '.mhmat'), body, skin_type='ENHANCED_SSS')
     tint_skin(body, SKIN_TINT[cid])
+    if cid in LIP_TINT: tint_skin(body, LIP_TINT[cid], only='lips', warm=False)
     if cid in STOCKINGS: stockings(body, STOCKINGS[cid])
     parts = {}
     shoe = SHOES.get(cid, 'shoes02')
@@ -492,7 +643,9 @@ def build(cid):
         if 'eyebrow' in rel: darken_hair(o)
         elif rel.startswith('hair/'): pass   # 头发由 hair.build 处理（发帽 + 发丝）
         elif 'eyes' in rel and cid in IRIS: iris_edit(o, **IRIS[cid])
-        elif 'eyelash' in rel or 'eyes' in rel or 'teeth' in rel: pass   # 保留资产自带的写实材质
+        elif 'teeth' in rel:   # 牙齿往后收 6 毫米：MakeHuman 默认嘴唇微张，闭嘴时唇缝里会露白牙尖（说话张嘴时照样看得见）
+            for v in o.data.vertices: v.co.y += 0.006
+        elif 'eyelash' in rel or 'eyes' in rel: pass   # 保留资产自带的写实材质
         elif rel == shoe_rel: pass   # 鞋子保留原贴图
         elif rel in color_of:        # 分件服装：按件染色（None = 保留原配色）
             if color_of[rel] is not None: recolor(o, color_of[rel], asset=asset)
@@ -514,7 +667,10 @@ def build(cid):
         if shell is not None: bpy.data.objects.remove(shell, do_unlink=True)
         shell = HumanService.add_mhclo_asset(os.path.join(config.TOOLS, HAIR_SHAPE[cid]), body, asset_type='Hair', subdiv_levels=1); shell.name = cid + '_hairshape'
         hair_name = 'wavybob'
-    if shell is not None and cid in EXTRAS:   # 路人：发片直接当头发（远景足够），染成深色
+    if cid in hair_cards.CARDS:   # 照定妆照建的发型（主体 + 发片），替换系统发片与程序发丝
+        bpy.context.view_layer.update(); hair_cards.build(cid, rig, body, shell, seed=sum(map(ord, cid)))
+        if shell is not None: bpy.data.objects.remove(shell, do_unlink=True)
+    elif shell is not None and cid in EXTRAS:   # 路人：发片直接当头发（远景足够），染成深色
         recolor_asset_hair(shell)
     elif shell is not None and os.environ.get('V11_STRANDS', '1') == '1':
         bpy.context.view_layer.update(); hair.build(cid, rig, body, shell, hair_name, seed=sum(map(ord, cid)))

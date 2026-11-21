@@ -51,7 +51,7 @@ def eyes(mat):
     if not mat or not mat.use_nodes or mat.get('v11_real'): return
     b = next((n for n in mat.node_tree.nodes if n.type == 'BSDF_PRINCIPLED'), None)
     if b is None: return
-    b.inputs['Coat Weight'].default_value = 1.0; b.inputs['Coat Roughness'].default_value = 0.02
+    b.inputs['Coat Weight'].default_value = 0.35; b.inputs['Coat Roughness'].default_value = 0.02   # 满强度清漆把整块眼仁反成灰色（2026-11-21）
     bc = b.inputs['Base Color']
     if bc.links:   # 原贴图虹膜是暗红色：只把高饱和的虹膜区域换成自然深棕（东亚人常见瞳色），眼白不动
         nt = mat.node_tree; src = bc.links[0].from_socket

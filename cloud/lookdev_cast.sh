@@ -9,6 +9,8 @@ IDS=${@:-lin chen zhou wang mom classA classB}
 [ -x /opt/v11blender/blender ] || { rm -rf /opt/v11blender; cp -rL /root/v11/.tools/blender /opt/v11blender && chmod -R u+x /opt/v11blender/blender /opt/v11blender/*/python/bin; }
 B=/opt/v11blender/blender
 mkdir -p build/logs build/lookdev; T0=$(date +%s)
+find build/lookdev -maxdepth 1 -type l -delete 2>/dev/null || true   # 关机恢复后的只读链接：删掉再重渲
 for c in $IDS; do $B -b --factory-startup -P blender/lookdev_renders.py -- $c > build/logs/lookdev_$c.log 2>&1 & done; wait
 grep -h -E 'Traceback|Error:' build/logs/lookdev_*.log | grep -v 'Not freed'; ls build/lookdev | wc -l; echo "LOOKDEV $(( $(date +%s) - T0 ))s"
+rm -f /root/v11_lookdev.tgz   # 关机恢复后旧包是只读链接，写不进去
 cd build/lookdev && tar -czf /root/v11_lookdev.tgz $(for c in $IDS; do echo ${c}_*.png; done) && echo LOOKDEV DONE

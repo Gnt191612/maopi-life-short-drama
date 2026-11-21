@@ -20,7 +20,7 @@ try {
     Write-Host '[3/3] 下载结果'
     $sel = if ($Ids) { $Ids } else { @('lin', 'chen', 'zhou', 'wang', 'mom', 'classA', 'classB') }
     New-Item -ItemType Directory -Force build\renders\outfit_check, build\renders\side_heads, assets\cast_next | Out-Null
-    & ssh.exe @Opt -p $Port $SshHost "cd /root/v11/build/renders && tar -czf /root/v11_checks.tgz outfit_check side_heads"
+    & ssh.exe @Opt -p $Port $SshHost "rm -f /root/v11_checks.tgz; cd /root/v11/build/renders && tar -czf /root/v11_checks.tgz outfit_check side_heads"
     & scp.exe @Opt -P $Port "${SshHost}:/root/v11_checks.tgz" $Tmp; & tar.exe -xzf $Tmp -C build\renders
     if (-not $NoBlend) { foreach ($c in $sel) { & scp.exe @Opt -P $Port "${SshHost}:/root/v11/assets/cast_next/$c.blend" assets\cast_next\ } }
     if ($Export) {   # 只下载 GLB（比 base64 的 .js 小 1/4），本地再包成审阅器格式

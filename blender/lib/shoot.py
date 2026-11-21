@@ -518,7 +518,8 @@ def setup_render(out_dir, w=960, h=540):
     sc.cycles.samples = int(os.environ.get('CY_SAMPLES', 64)); sc.cycles.use_denoising = True; sc.cycles.denoiser = 'OPENIMAGEDENOISE'
     sc.cycles.max_bounces = 6
     if config.PREVIEW:   # 剧情预览：EEVEE 实时引擎，640x360，单帧不到 1 秒
-        sc.render.engine = 'BLENDER_EEVEE_NEXT'; sc.render.resolution_x, sc.render.resolution_y = 640, 360
+        pw, ph = map(int, os.environ.get('V11_PREVIEW_RES', '640x360').split('x'))   # 云端写实化输入用 960x540（Cycles 渲十几万根发丝每帧 15 秒，太慢）
+        sc.render.engine = 'BLENDER_EEVEE_NEXT'; sc.render.resolution_x, sc.render.resolution_y = pw, ph
         sc.eevee.taa_render_samples = 16
     sc.view_settings.view_transform = 'AgX'; sc.view_settings.look = 'AgX - Medium High Contrast'
     night = any(k in bpy.data.filepath + sc.get('v11_set', '') for k in ('_nt', 'track', 'dusk'))
