@@ -15,6 +15,9 @@ LOGO = os.path.join(A, 'dlut_dl', 'logo_blue_big.png')
 GIRL = os.path.join(A, 'green_v', 'intro_talk2.mp4')
 VOICE = os.path.join(A, 'voice', 'claude_line_final.wav')
 REPO = 'github.com/Gnt191612/maopi-life-short-drama'
+TITLE = '毛坯人生，精装朋友圈'
+LEADER = '郭宁桐'
+MEMBERS = ['梁钧咏', '王启元', '刘洋', '蔡磊', '仝启瀚', '刘译阳']
 
 def background():
     im = cv2.imread(BG); h, w = im.shape[:2]
@@ -55,14 +58,15 @@ def card(t):
     # 板身
     body = Image.new('RGBA', (bw, bh), (28, 30, 32, 255)); d = ImageDraw.Draw(body)
     d.rectangle([0, 0, bw - 1, bh - 1], outline=(235, 235, 230, 255), width=3)
-    for y in (118, 238): d.line([(14, y), (bw - 14, y)], fill=(200, 200, 195, 255), width=2)
-    d.line([(bw // 2, 238), (bw // 2, bh - 14)], fill=(200, 200, 195, 255), width=2)
-    chalk = (242, 240, 232, 255)
-    d.text((bw // 2, 62), '代码已开源', font=F(64), fill=chalk, anchor='mm')
-    d.text((24, 132), 'GitHub', font=F(26), fill=(170, 170, 165, 255))
-    d.text((bw // 2 + 30, 200), 'github.com/Gnt191612', font=F(40), fill=chalk, anchor='mm')
-    d.text((24, 252), '片名', font=F(24), fill=(170, 170, 165, 255)); d.text((bw // 4, 306), '毛坯人生，精装朋友圈', font=F(28), fill=chalk, anchor='mm')
-    d.text((bw // 2 + 18, 252), '仓库', font=F(24), fill=(170, 170, 165, 255)); d.text((bw * 3 // 4, 306), 'maopi-life-short-drama', font=F(24), fill=chalk, anchor='mm')
+    # 用户 11-22：开源信息缩成底部小字，主体是片名 + 小组队长、队员
+    line = (200, 200, 195, 255); lab = (170, 170, 165, 255); chalk = (242, 240, 232, 255)
+    for y in (96, 176, 314): d.line([(14, y), (bw - 14, y)], fill=line, width=2)
+    d.text((22, 16), '片名', font=F(22), fill=lab); d.text((bw // 2, 58), TITLE, font=F(40), fill=chalk, anchor='mm')
+    d.text((22, 106), '队长', font=F(22), fill=lab); d.text((bw // 2, 140), LEADER, font=F(40), fill=chalk, anchor='mm')
+    d.text((22, 186), '队员', font=F(22), fill=lab)
+    for r, row in enumerate((MEMBERS[:3], MEMBERS[3:])):
+        d.text((bw // 2, 222 + r * 52), '    '.join(row), font=F(34), fill=chalk, anchor='mm')
+    d.text((bw // 2, 337), '代码已开源 · ' + REPO, font=F(19), fill=lab, anchor='mm')
     img.alpha_composite(body, (bx, by))
     img.alpha_composite(stripes(bw, sh_ - 14), (bx, by - sh_ + 14))                        # 下拍杆（固定）
     ang = 24 * (1 - float(np.clip((t - 0.45) / 0.2, 0, 1)) ** 2)                            # 上拍杆：张开 24° → 合上
