@@ -8,7 +8,7 @@
   --test 只跑第一个镜头的第一段（先看效果）；--dry 只转换工作流、打印要改的输入，不排队（验证映射表）"""
 import os, sys, json, shutil, subprocess, argparse, glob, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import comfy_run
+import comfy_run, shard
 from looks import LOOK_EN, STYLE_EN, NEG_EN
 INP = '/root/ComfyUI/input'
 OUT = '/root/v11_out/real'; KF = '/root/v11_out/kf'; TMP = '/root/v11_out/vtmp'
@@ -47,9 +47,10 @@ def run_chunk(tid, k, img, ctl, nfr, task, seed):
 
 def main():
     man = json.load(open(os.path.join(args.pack, 'manifest.json'), encoding='utf-8'))
-    only = [x for x in args.only.split(',') if x]
+    only = [x for x in args.only.split(',') if x]; my = shard.mine(args.pack)   # 多实例并行
     for tid in man['tasks']:
         if only and not any(tid.startswith(p) for p in only): continue
+        if my is not None and tid not in my: continue
         if os.path.exists(os.path.join(OUT, tid + '.mp4')): continue
         td = os.path.join(args.pack, tid); task = json.load(open(os.path.join(td, 'task.json'), encoding='utf-8'))
         kf = os.path.join(KF, tid + '.png')

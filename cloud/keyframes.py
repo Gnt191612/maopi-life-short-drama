@@ -6,7 +6,7 @@
 用法：python3 keyframes.py <cloud_pack 目录> [任务id前缀 ...]"""
 import os, sys, json, shutil, subprocess
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import comfy_run
+import comfy_run, shard
 from looks import LOOK
 INP = '/root/ComfyUI/input'
 OUTK = '/root/v11_out/kf'; os.makedirs(OUTK, exist_ok=True)
@@ -39,8 +39,10 @@ def main():
     man = json.load(open(os.path.join(pack, 'manifest.json'), encoding='utf-8'))
     for f in os.listdir(os.path.join(pack, 'refs')):   # 标准长相照片放进 ComfyUI 输入目录
         shutil.copy(os.path.join(pack, 'refs', f), os.path.join(INP, f))
+    my = shard.mine(pack)   # 多实例并行：只做分给本实例的镜头
     for tid in man['tasks']:
         if pre and not any(tid.startswith(p) for p in pre): continue
+        if my is not None and tid not in my: continue
         out = os.path.join(OUTK, tid + '.png')
         if os.path.exists(out): continue
         td = os.path.join(pack, tid); task = json.load(open(os.path.join(td, 'task.json'), encoding='utf-8'))

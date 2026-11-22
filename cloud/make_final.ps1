@@ -4,12 +4,24 @@
 #   3) 正片：run_all --previs-only --real=（写实画面 + 配音 + 字幕 + 配乐，缺的帧用白模补）
 #   4) 片头 + 正片 → build\final\毛坯人生，精装朋友圈_成片.mp4
 # 用法：powershell -ExecutionPolicy Bypass -File cloud\make_final.ps1 -Result build\cloud_out\final_<时间> [-IntroPick 1]
-param([Parameter(Mandatory = $true)][string]$Result, [int]$IntroPick = 1)
+param([Parameter(Mandatory = $true)][string[]]$Result, [int]$IntroPick = 1)
+# 多实例并行时 -Result 传多个目录（逗号隔开），先合并成一个
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path $PSScriptRoot -Parent; Push-Location $Root
 try {
     $FF = & python -c "import config; print(config.FFMPEG)"
-    $Result = (Resolve-Path $Result).Path
+    if ($Result.Count -gt 1) {   # 多台实例的结果合并（real/ 与 kf/ 按镜头互不重叠；片头在第 1 台）
+        $merged = Join-Path $Root ('build\cloud_out\final_merged_{0:MMdd_HHmm}' -f (Get-Date))
+        New-Item -ItemType Directory -Force "$merged\real", "$merged\kf" | Out-Null
+        foreach ($r in $Result) {
+            $r = (Resolve-Path $r).Path
+            if (Test-Path "$r\real") { Copy-Item "$r\real\*" "$merged\real" -Recurse -Force }
+            if (Test-Path "$r\kf") { Copy-Item "$r\kf\*" "$merged\kf" -Force }
+            Get-ChildItem $r -Filter 'intro_hd*.gif' | Copy-Item -Destination $merged -Force
+        }
+        Write-Host ("合并 {0} 台结果 → {1}（{2} 个镜头视频）" -f $Result.Count, $merged, (Get-ChildItem "$merged\real" -Filter *.mp4).Count)
+        $Result = $merged
+    } else { $Result = (Resolve-Path $Result[0]).Path }
     Write-Host '[1/4] 写实视频拆帧'
     & python cloud\mp4_frames.py "$Result\real"
     Write-Host '[2/4] 片头'

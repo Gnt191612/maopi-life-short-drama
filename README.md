@@ -76,8 +76,9 @@ powershell -ExecutionPolicy Bypass -File cloud\prep_trial.ps1 -SkipCast -Segs <�
 # 2) 控制台开机，SSH 地址在控制台「SSH」里看；本机密钥 ~/.ssh/xiangongyun_ed25519（公钥登记到平台）
 powershell -ExecutionPolicy Bypass -File cloud\session.ps1 -SshHost root@<主机> -Port <端口> -Stage probe     # 新镜像先探查节点
 powershell -ExecutionPolicy Bypass -File cloud\session.ps1 -SshHost root@<主机> -Port <端口> -Stage final -MaxHours 8
+#    或多台并行（时间按台数缩短、总花费基本不变）：cloud\run_multi.ps1 -Hosts "root@主机1:端口1","root@主机2:端口2" -Stage final
 # 3) 关机 → 本地合成成片
-powershell -ExecutionPolicy Bypass -File cloud\make_final.ps1 -Result build\cloud_out\final_<时间>
+powershell -ExecutionPolicy Bypass -File cloud\make_final.ps1 -Result build\cloud_out\final_<时间>    # 多台时传多个目录，自动合并
 ```
 成片：`build/final/毛坯人生，精装朋友圈_成片.mp4`。**云端按时计费：一个阶段跑完、下一步不是马上要跑就关机。**
 

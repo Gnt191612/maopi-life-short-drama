@@ -6,7 +6,8 @@
 #   -IdleMin 20                       日志这么久没动静就判定卡住：中止云端任务、下载已有结果、提醒关机
 param([Parameter(Mandatory = $true)][string]$SshHost, [Parameter(Mandatory = $true)][int]$Port,
       [ValidateSet('probe', 'keys', 'test', 'video', 'all', 'final')][string]$Stage = 'probe',
-      [string]$Only = '', [double]$Rate = 1.89, [int]$IdleMin = 20, [double]$MaxHours = 0)
+      [string]$Only = '', [double]$Rate = 1.89, [int]$IdleMin = 20, [double]$MaxHours = 0, [string]$Shard = '')
+# -Shard 2/3                       多实例并行：本实例只跑第 2 份（共 3 份；按时长均衡，片头只在第 1 份）
 # -MaxHours 6                      跑满这么多小时强制停（预算保护，防止欠费；0 = 不限）
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path $PSScriptRoot -Parent
@@ -21,11 +22,15 @@ try {
     Write-Host '[2/4] 上传脚本（几 KB）'
     $tgz = Join-Path $env:TEMP 'v11_scripts.tgz'
     & python -c "import sys,json; sys.path.insert(0,'cloud'); import looks; json.dump(dict(look=looks.LOOK, look_en=looks.LOOK_EN, name=looks.NAME), open('cloud/looks_gen.json','w',encoding='utf-8'), ensure_ascii=False, indent=1)"   # 人物库外貌描述 → 云端
-    & tar.exe -czf $tgz -C cloud comfy_run.py looks.py probe_comfy.py keyframes.py video_run.py video_map.json looks_gen.json session_realism.sh intro_video.py qctl.py edit_photo.py
+    & tar.exe -czf $tgz -C cloud comfy_run.py looks.py probe_comfy.py keyframes.py video_run.py shard.py video_map.json looks_gen.json session_realism.sh intro_video.py qctl.py edit_photo.py
     Rx 'mkdir -p /root/v11_upload/scripts /root/v11_out'
     & scp.exe @Opt -P $Port $tgz "${SshHost}:/root/v11_upload/scripts.tgz"
     Rx 'tar -xzf /root/v11_upload/scripts.tgz -C /root/v11_upload/scripts && sed -i "s/\r$//" /root/v11_upload/scripts/*.sh'
     $zip = Join-Path $Root 'dist\cloud_pack.zip'
+    if ($Shard -and $Stage -ne 'probe') {   # 多实例并行：只传本实例那份镜头的素材
+        $si, $sn = $Shard -split '/'; & python (Join-Path $Root 'cloud\shard_pack.py') $si $sn
+        $zip = Join-Path $Root "dist\cloud_pack_s${si}of${sn}.zip"
+    }
     if ($Stage -ne 'probe') {
         if (-not (Test-Path $zip)) { throw '没有 dist\cloud_pack.zip：先在本地跑 cloud\prep_trial.ps1' }
         $local = (Get-Item $zip).Length; $remote = (Rx "stat -c %s /root/v11_upload/cloud_pack.zip 2>/dev/null || echo 0") -as [long]
@@ -41,7 +46,7 @@ try {
     }
     Write-Host "[3/4] 云端后台运行阶段 $Stage"
     $pre = ($Only -split ',' | Where-Object { $_ }) -join ' '
-    Rx "rm -f /root/v11_out/DONE_$Stage; nohup bash /root/v11_upload/scripts/session_realism.sh $Stage $pre > /root/v11_out/session_$Stage.log 2>&1 &"
+    Rx "rm -f /root/v11_out/DONE_$Stage; V11_SHARD=$Shard nohup bash /root/v11_upload/scripts/session_realism.sh $Stage $pre > /root/v11_out/session_$Stage.log 2>&1 &"
     $last = ''; $lastChange = Get-Date
     while ($true) {
         Start-Sleep -Seconds 30
@@ -61,7 +66,8 @@ try {
         }
     }
     Write-Host '[4/4] 下载结果'
-    $dst = Join-Path $Root ("build\cloud_out\{0}_{1:MMdd_HHmm}" -f $Stage, (Get-Date)); New-Item -ItemType Directory -Force $dst | Out-Null
+    $sfx = if ($Shard) { "_s" + ($Shard -replace "/.*", "") } else { "" }
+    $dst = Join-Path $Root ("build\cloud_out\{0}_{1:MMdd_HHmm}{2}" -f $Stage, (Get-Date), $sfx); New-Item -ItemType Directory -Force $dst | Out-Null
     & scp.exe @Opt -P $Port "${SshHost}:/root/v11_result_$Stage.tgz" "$dst\result.tgz"
     & scp.exe @Opt -P $Port "${SshHost}:/root/v11_out/session_$Stage.log" "$dst\"
     & tar.exe -xzf "$dst\result.tgz" -C $dst; Remove-Item "$dst\result.tgz"
