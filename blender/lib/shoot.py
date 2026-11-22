@@ -82,7 +82,9 @@ def place_camera(name, subj_pts, facing_yaw, kind, side, bounds, frame0, frame1,
     validate(cam)->bool：按分数从高到低试候选机位，第一个通过检查（脸朝镜头、在画面里、没被人挡）的就用"""
     dist, lens = SHOT[kind]
     c = sum(subj_pts, Vector()) / len(subj_pts)
-    tgt = c + Vector((0, 0, -0.05 if kind in ('ECU', 'CU') else (-0.25 if kind == 'MCU' else -0.45)))
+    # 瞄准高度（相对头部骨骼根部≈下巴高度；头顶约在其上 0.22m）。45mm 镜头竖向半视角 ≈ 0.225×距离：
+    # 原来中近景瞄胸口（-0.25）、中景 -0.45，画面上沿切到额头（2026-11-22 试片发现林母只拍到下半张脸）；特写 +0.02（低头时脸会往下移，抬太高只拍到头顶）；超近景多是拍物件，不动
+    tgt = c + Vector((0, 0, {'ECU': -0.05, 'CU': 0.02, 'MCU': -0.05, 'MS': -0.25}.get(kind, -0.45)))
     e = (en or '').lower()
     if len(subj_pts) > 1: dist *= 1.0 + 0.35 * (len(subj_pts) - 1)
     face_dir = facing_yaw if isinstance(facing_yaw, Vector) else Vector((math.sin(math.radians(facing_yaw)), -math.cos(math.radians(facing_yaw)), 0))
