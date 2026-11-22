@@ -26,7 +26,9 @@ if os.environ.get('V11_NOCLOTH'):   # 只看身体：衣服、鞋隐藏，身体
         if m.type == 'MASK' and m.name != 'Hide helpers': m.show_render = False
 bpy.ops.mesh.primitive_plane_add(size=8); floor = bpy.context.active_object
 fm = bpy.data.materials.new('floor'); fm.use_nodes = True; fm.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (0.35, 0.35, 0.36, 1); floor.data.materials.append(fm)
-H = 1.63; c = Vector((0, 0, H * 0.5))
+import importlib.util as _u
+_bo = next(o for o in sc.objects if o.name.endswith('_body')); _ev = _bo.evaluated_get(bpy.context.evaluated_depsgraph_get()); _m = _ev.to_mesh()
+H = max((_bo.matrix_world @ v.co).z for v in _m.vertices); _ev.to_mesh_clear(); c = Vector((0, 0, H * 0.5))   # 实际身高（评估后的网格）
 for name, loc, e, sz in (('key', (1.6, -3.0, 2.6), 900, 2.5), ('fill', (-2.4, -2.0, 1.6), 400, 3.0), ('rim', (0.5, 2.8, 2.4), 500, 2.0)):
     l = bpy.data.objects.new(name, bpy.data.lights.new(name, 'AREA')); l.data.shape = 'DISK'; l.data.energy = e; l.data.size = sz; l.location = loc
     l.rotation_euler = (c - l.location).to_track_quat('-Z', 'Y').to_euler(); sc.collection.objects.link(l)
@@ -36,7 +38,7 @@ sc.render.resolution_x, sc.render.resolution_y = 640, 1100; sc.view_settings.vie
 VIEWS = (('front', 0), ('34', 35), ('side', 90), ('back', 180))
 def shoot(tag):
     for view, ang in VIEWS:
-        r = math.radians(ang); cam.location = c + Vector((4.2 * math.sin(r), -4.2 * math.cos(r), 0.0))
+        r = math.radians(ang); cam.location = c + Vector((4.2 * H / 1.63 * math.sin(r), -4.2 * H / 1.63 * math.cos(r), 0.0))
         cam.rotation_euler = (c - cam.location).to_track_quat('-Z', 'Y').to_euler()
         sc.render.filepath = os.path.join(out, '%s_%s_%s.png' % (cid, tag, view)); bpy.ops.render.render(write_still=True)
 shoot('skin')

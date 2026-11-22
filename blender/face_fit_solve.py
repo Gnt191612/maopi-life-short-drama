@@ -42,7 +42,7 @@ class Model:
         zone = mid & (X[:, 2] < c[2] - i * 0.2) & (X[:, 2] > c[2] - i * 1.3)
         s.nose = np.nonzero(zone)[0][np.argmin(X[zone, 1])]
         # 鼻底：鼻尖下方、法线朝下的鼻小柱底面，取最靠后的那个点（与上唇交界）
-        below = mid & (X[:, 2] < X[s.nose, 2]) & (X[:, 2] > X[s.nose, 2] - i * 0.6) & (s.N[:, 2] < -0.4) & (X[:, 1] < X[s.nose, 1] + i * 0.5)
+        below = mid & (X[:, 2] < X[s.nose, 2]) & (X[:, 2] > X[s.nose, 2] - i * 0.42) & (s.N[:, 2] < -0.4) & (X[:, 1] < X[s.nose, 1] + i * 0.35)   # 范围收紧：原来会选到上唇
         s.subnasal = np.nonzero(below)[0][np.argmax(X[below, 1])] if below.any() else s.nose
         lipz = X[s.lips, 2].min()
         # 下巴：先找唇下最突出的点（颏前点），再在它附近（排除更靠后的脖子）取最低点
@@ -51,7 +51,7 @@ class Model:
         ch2 = mid & (X[:, 2] < X[pog, 2]) & (X[:, 1] < X[pog, 1] + i * 0.45)
         s.chin = np.nonzero(ch2)[0][np.argmin(X[ch2, 2])]
         s.cand = ~s.ears & ~s.scalp & ~s.lips & (X[:, 2] > X[s.chin, 2] - i * 0.05) & (X[:, 1] < X[s.chin, 1] + i * 1.6)
-        nz = (X[:, 2] < X[s.nose, 2] + i * 0.05) & (X[:, 2] > X[s.subnasal, 2] - i * 0.02) & (np.abs(X[:, 0] - c[0]) < i * 0.5) & (X[:, 1] < X[s.nose, 1] + i * 0.30)
+        nz = (X[:, 2] < X[s.nose, 2] + i * 0.05) & (X[:, 2] > max(X[s.subnasal, 2], X[s.nose, 2] - i * 0.40) - i * 0.02) & (np.abs(X[:, 0] - c[0]) < i * 0.42) & (X[:, 1] < X[s.nose, 1] + i * 0.30) & ~s.lips   # 鼻翼只在鼻尖以下 0.4 眼距内找（原来会落到脸颊、嘴角附近）
         s.alazone = nz
     def shape(s, u): return s.X0 + np.tensordot(u, s.G, 1)
 
@@ -100,7 +100,8 @@ def weight_of(k):
            W['mouth'] if k.startswith(('mouth', 'lip')) else W['chin'] if k == 'chin' else W['contour']
 
 def photo_points(lm):
-    pts = {k: np.array(v, float) for k, v in lm.items() if not k.startswith(('_', 'contour', 'skull_R', 'skull_L', 'hairline')) and k not in ('eye_R', 'eye_L')}
+    pts = {k: np.array(v, float) for k, v in lm.items() if not k.startswith(('_', 'contour', 'skull_R', 'skull_L', 'hairline', 'skin_top')) and k not in ('eye_R', 'eye_L')
+           and isinstance(v, list) and len(v) == 2 and all(isinstance(x, (int, float)) for x in v)}   # 只要单个点（skin_top、keep_brow3d 等不是关键点）
     for name in ('contour', 'skull'):
         for side in ('R', 'L'):
             for k, (y, x) in enumerate(lm.get('%s_%s' % (name, side), [])): pts['%s_%s_%d' % (name, side, k)] = np.array([x, y], float)
