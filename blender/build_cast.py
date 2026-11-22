@@ -13,6 +13,7 @@ import config
 import hair
 import hair_cards
 import jk_sailor
+import accessories
 from mathutils import Vector
 # 鞋子：保留原资产贴图（皮革、网面、磨旧感），按人物身份选鞋型
 SHOES = {'lin': 'shoes02', 'chen': 'shoes05', 'zhou': 'shoes02', 'wang': 'shoes04', 'mom': 'shoes01', 'classA': 'shoes06', 'classB': 'shoes05',
@@ -108,7 +109,8 @@ BODY.update({'lin':    {'upperlegs-height-incr': 0.20, 'lowerlegs-height-incr': 
              'chen':   {'upperlegs-height-incr': 0.35, 'lowerlegs-height-incr': 0.30, 'measure-waist-circ-decr': 0.2},
              'zhou':   {'upperlegs-height-incr': 0.35, 'lowerlegs-height-incr': 0.30},
              'wang':   {'upperlegs-height-incr': 0.15, 'lowerlegs-height-incr': 0.10, 'stomach-pregnant-incr': 0.25},
-             'classA': {'upperlegs-height-incr': 0.30, 'lowerlegs-height-incr': 0.25}})
+             'classA': {'upperlegs-height-incr': 0.30, 'lowerlegs-height-incr': 0.25},
+             'mom':    {'stomach-pregnant-decr': 0.5, 'measure-waist-circ-decr': 0.15, 'upperlegs-height-incr': 0.15, 'lowerlegs-height-incr': 0.10}})   # 林母（11-22）：侧面肚子前凸像怀孕 → 收平；腿略长
 IRIS = {'classB': dict(scale=0.9, rgb=(0.20, 0.075, 0.030))}   # 2026-11-21 调成照片里的中深棕（原来太暗，渲染出来发灰）   # 深棕眼仁（同学乙，照标准照；纯黑像瞪眼）；原放大 22% 像娃娃，写实化时每次被「纠正」得不一样
 LIP_TINT = {}   # 唇色：红润（乘在唇部材质上）；已投影标准照的角色（同学乙）唇色来自照片，不再单染
 
@@ -158,8 +160,7 @@ OUTFIT = {
             (C('pants01', 'cortu_cargo_pants'), (0.20, 0.19, 0.16))],                # 工装裤
  'wang':   [(C('pants02', 'elvs_male_trouser'), (0.22, 0.22, 0.24)),                # 灰色西裤（衬衫扎在裤子里，裤子是外层）
             (C('shirts02', 'elvs_male_shirt_tie_tucked1'), 'SHIRT_BLUE_TIE')],       # 浅蓝衬衫 + 深蓝领带（照定妆照）
- 'mom':    [(C('shirts02', 'janexx_old_female_sweater'), (0.78, 0.70, 0.58)),       # 米色毛衣
-            (C('pants01', 'toigo_wool_pants'), (0.30, 0.27, 0.25))],                 # 深褐宽松羊毛长裤（原来那条像紧身打底裤）
+ 'mom':    [(C('pants01', 'toigo_wool_pants'), 'PANTS_BROWN')],                    # 暖棕长裤；上衣 = jk_sailor.VTOP 程序生成的黑色 V 领垂坠长袖（用户 11-22：服装参考他给的图片）                 # 深褐宽松羊毛长裤（原来那条像紧身打底裤）
  'classA': [(C('shirts01', 'elvs_crude_t-shirt_male'), (0.035, 0.045, 0.11)),        # 深藏青 T 恤（照定妆照；原来渲染成亮蓝）
             (C('pants02', 'punkduck_male_classic_jeans'), None)],                    # 牛仔裤
  # 同学乙 JK 制服（2026-11-21 用户要求）：衬衫扎进裙子，裙子是外层；颜色用 'JK_*' 表示改贴图（见 jk_retex）
@@ -565,6 +566,9 @@ def jk_retex(obj, kind):
                 yy, xx = np.mgrid[0:h, 0:w]; v = 1 - yy / h; u = xx / w; tie = (u > 0.50) & (v < 0.28)
                 stripe = ((xx + yy) // max(4, w // 64) % 2)[tie][:, None]
                 out[tie] = np.array([0.025, 0.035, 0.10]) * (0.85 + 0.3 * stripe)
+        elif kind in ('KNIT_BEIGE', 'PANTS_BROWN'):   # 林母：米色针织毛衣（织纹明暗保留得多一点）、暖棕长裤
+            lum = rgb.mean(2, keepdims=True); k_ = lum / max(float(lum.mean()), 1e-3)
+            out = (np.array([0.80, 0.70, 0.56]) * np.clip(0.75 + 0.25 * k_, 0.55, 1.15)) if kind == 'KNIT_BEIGE' else (np.array([0.20, 0.155, 0.12]) * np.clip(0.85 + 0.15 * k_, 0.7, 1.1))
         elif kind == 'JK_BLOUSE':   # 女式衬衫：白色；黑色系带染成白色（JK 衬衫前襟是干净的）
             lum = rgb.mean(2, keepdims=True); out = np.where(lum < 0.45, np.array([0.86, 0.86, 0.85]) * (0.85 + 0.15 * lum), rgb)
         elif kind == 'JK_SKIRT_BLACK':   # 黑色百褶裙：只留贴图明暗（褶子、格纹的深浅压到很淡）
@@ -1083,7 +1087,8 @@ def hood(rig, rgb):
 HAIR_ASSET = {}   # 成品雕刻发型实测像塑料假发、款式复古，不直接使用（2026-11-14）
 # 发型轮廓素材：只用来定义发型外形，真实发丝沿着它生成（林母的微卷短发）
 HAIR_SHAPE = {'mom': 'mh_community/hair02/hair/elvs_wavy_bob/elvs_wavy_bob.mhclo'}   # 用正斜杠：Windows、Linux（云端）都认
-HAIR_COLOR = {'mom': (0.030, 0.027, 0.026)}   # 林母：黑发里带一点灰；其余为自然黑发
+HAIR_COLOR = {'mom': (0.030, 0.027, 0.026)}
+KEEP_SHELL = {'mom'}   # 林母：黑发里带一点灰；其余为自然黑发
 
 def recolor_asset_hair(obj, rgb=(0.014, 0.011, 0.009)):
     """成品发型改成自然黑发：保留贴图的明暗与发丝细节（转灰度），只替换颜色"""
@@ -1176,6 +1181,11 @@ def build(cid):
         for under in layers[1:]:
             if layers[0] is not None and under is not None and not (cid == 'lin' and 't-shirt' in under.name): hide_under(under, layers[0], margin=0.15 if cid == 'lin' else None)   # 林晓：卫衣下摆起伏大，按最低点藏裤腰会露出一圈肚皮   # 林晓：卫衣开襟，里面 T 恤要露出来
         if cid in BOW and len(layers) > 1 and layers[1] is not None: make_bow(cid, rig, body, layers[1])
+        if cid in jk_sailor.VTOP:
+            vt_ = jk_sailor.build_vtop(cid, rig, body, layers[0] if layers else None)
+            if layers and layers[0] is not None:
+                if jk_sailor.VTOP[cid].get('tuck'): hide_under(vt_, layers[0])   # 扎进裤子：裤腰以下的上衣藏起来（同王老师衬衫）
+                else: hide_under(layers[0], vt_)                                 # 罩在外面：裤腰藏在上衣里
         if cid in jk_sailor.SAILOR:
             skirt_fit(layers[0], body, rig=rig)
             jk_sailor.build(cid, rig, body, layers[0])
@@ -1193,12 +1203,16 @@ def build(cid):
     if cid in hair_cards.CARDS:   # 照定妆照建的发型（主体 + 发片），替换系统发片与程序发丝
         bpy.context.view_layer.update(); hair_cards.build(cid, rig, body, shell, seed=sum(map(ord, cid)))
         if shell is not None: bpy.data.objects.remove(shell, do_unlink=True)
+    elif shell is not None and cid in KEEP_SHELL:   # 林母：用户认可的就是发型轮廓本身的样子（11-22），不再沿它生长发丝
+        pass
     elif shell is not None and cid in EXTRAS:   # 路人：发片直接当头发（远景足够），染成深色
         recolor_asset_hair(shell)
     elif shell is not None and os.environ.get('V11_STRANDS', '1') == '1':
         bpy.context.view_layer.update(); hair.build(cid, rig, body, shell, hair_name, seed=sum(map(ord, cid)))
     sd = body.modifiers.new('subdiv', 'SUBSURF'); sd.levels = 0; sd.render_levels = 2   # 渲染时细分，去掉多边形棱角
     if cid == 'chen': glasses(rig)
+    if cid in accessories.EARRING:   # 金色扇形耳环，只戴在露出来的那只耳朵上
+        bpy.context.view_layer.update(); accessories.earring(cid, rig, body, [o for o in bpy.data.objects if o.name.startswith(cid + '_hair')])
     # 程序拼的帽子（圆环）看起来很假，已停用
 
     # 按实际头顶高度（含修改器后的网格）缩放整个骨架对象：子物体随父级同比例，动画只用旋转与对象位移，不受影响

@@ -15,6 +15,178 @@ from mathutils.bvhtree import BVHTree
 SAILOR = {'classB': dict(shirt=(0.86, 0.86, 0.85), collar=(0.012, 0.012, 0.016), stripe=(0.85, 0.85, 0.84), scarf=(0.010, 0.055, 0.42),
                          off=0.0035, v_depth=0.16, back_len=0.17, cuff=0.045)}
 
+# V 领长袖上衣（林母，用户 11-22 给的参考图：黑色 V 领、垂坠、干练）：同样从身体表面长出来；穿在裤子外面，下摆盖过裤腰 hem
+VTOP = {'mom': dict(rgb=(0.006, 0.006, 0.007), rough=0.58, off=0.007, v_depth=0.12, v_half=0.100, hem=0.032, tuck=False, ext=0.045, loose=0.009, arm_loose=0.005, slope=0.12, drape_max=0.045)}   # 第 2 轮（用户：再宽松一点）   # 第 1 版太亮像皮衣、太紧：哑光、离身体远一点；扎进高腰裤（下摆再低就到裆部以下，两腿之间没有皮肤可长）
+
+def build_vtop(cid, rig, body, bottom):
+    S = VTOP[cid]; MW = rig.matrix_world
+    nk = MW @ rig.pose.bones['neck01'].head; zn, ncx, ncy = nk.z, nk.x, nk.y
+    zt = max((bottom.matrix_world @ v.co).z for v in bottom.data.vertices) if bottom else zn - 0.45   # 裤腰
+    z_hem = zt - S['hem']
+    mods = [(m, m.show_viewport) for m in body.modifiers if m.type in ('MASK', 'SUBSURF')]
+    for m, _ in mods: m.show_viewport = False
+    bpy.context.view_layer.update(); dg = bpy.context.evaluated_depsgraph_get()
+    ev = body.evaluated_get(dg); me = ev.to_mesh(); M = body.matrix_world
+    P = [M @ v.co for v in me.vertices]; Nn = [(M.to_3x3() @ v.normal).normalized() for v in me.vertices]
+    polys = [tuple(p.vertices) for p in me.polygons]; ev.to_mesh_clear()
+    for m, s in mods: m.show_viewport = s
+    gi = {g.index: g.name for g in body.vertex_groups}
+    def w_of(v, keys): return sum(g.weight for g in v.groups if any(k in gi.get(g.group, '') for k in keys))
+    hand = [w_of(v, ('wrist', 'hand', 'finger', 'metacarpal', 'thumb')) > 0.25 for v in body.data.vertices]
+    helper = [w_of(v, ('helper', 'joint', 'HelperGeometry', 'JointCubes')) > 0.5 for v in body.data.vertices]
+    def neck_line(p):
+        neck_z = zn - 0.004 - 0.016 * max(0.0, min(1.0, (ncy - p.y) / 0.06))
+        if p.y < ncy: neck_z = min(neck_z, zn - 0.004 - S['v_depth'] * max(0.0, 1 - abs(p.x - ncx) / S['v_half']))
+        return neck_z
+    def inside(i):
+        p = P[i]
+        neck_z = zn - 0.004 - 0.016 * max(0.0, min(1.0, (ncy - p.y) / 0.06))
+        if p.y < ncy:   # 正面 V 领：中线最低（v_depth），往两侧 v_half 线性升回领口
+            neck_z = min(neck_z, zn - 0.004 - S['v_depth'] * max(0.0, 1 - abs(p.x - ncx) / S['v_half']))
+        return (not hand[i]) and (not helper[i]) and z_hem < p.z < neck_z
+    vin = [inside(i) for i in range(len(P))]
+    faces = [f for f in polys if all(vin[i] for i in f)]
+    used = sorted({i for f in faces for i in f}); rm = {o: k for k, o in enumerate(used)}
+    armv = np.array([w_of(body.data.vertices[i], ('arm', 'shoulder', 'clavicle')) > 0.3 for i in used])
+    zc_ = (MW @ rig.pose.bones['spine01'].head).z
+    def off_of(k, i):   # 领口附近贴身（V 领边落在皮肤上），越往下越松；袖子整体略松
+        if armv[k]: return S['off'] + S.get('arm_loose', 0.0)
+        return S['off'] + S.get('loose', 0.0) * max(0.0, min(1.0, (zn - 0.08 - P[i].z) / 0.14))
+    TPs = np.array([(P[i] + Nn[i] * off_of(k, i))[:] for k, i in enumerate(used)])
+    # 胸前撑平（两胸之间不勒进去）
+    selc = (~armv) & (np.abs(TPs[:, 2] - zc_) < 0.10) & (np.abs(TPs[:, 0] - ncx) < 0.15) & (TPs[:, 1] < ncy)
+    for z in np.arange(zc_ - 0.10, zc_ + 0.10, 0.006):
+        band_ = np.nonzero(selc & (np.abs(TPs[:, 2] - z) < 0.005))[0]
+        if len(band_) < 5: continue
+        order = band_[np.argsort(TPs[band_, 0])]; xs, ys = TPs[order, 0], TPs[order, 1]; hull = []
+        for j in range(len(order)):
+            while len(hull) >= 2 and (xs[hull[-1]] - xs[hull[-2]]) * (ys[j] - ys[hull[-2]]) - (ys[hull[-1]] - ys[hull[-2]]) * (xs[j] - xs[hull[-2]]) <= 0: hull.pop()
+            hull.append(j)
+        hy = np.interp(xs, xs[hull], ys[hull]); TPs[order, 1] = np.maximum(hy, ys - 0.04)
+    # 胸部以下垂坠：从胸部最高点往下只略往里收（不贴肚子），下摆不收（穿在裤子外面）
+    zsD = np.arange(z_hem, zc_ + 0.10, 0.006); ymin = []
+    for z in zsD:
+        bd = np.nonzero((~armv) & (np.abs(TPs[:, 2] - z) < 0.004) & (np.abs(TPs[:, 0] - ncx) < 0.12) & (TPs[:, 1] < ncy))[0]
+        ymin.append(TPs[bd, 1].min() if len(bd) else np.nan)
+    ymin = np.array(ymin); ok_ = ~np.isnan(ymin)
+    front = (~armv) & (TPs[:, 2] < zc_ + 0.06) & (np.abs(TPs[:, 0] - ncx) < 0.20) & (TPs[:, 1] < ncy + 0.02)
+    for i in np.nonzero(front)[0]:
+        z = TPs[i, 2]; up = ok_ & (zsD >= z) & (zsD <= z + 0.16)
+        if not up.any(): continue
+        lim = (ymin[up] + (zsD[up] - z) * S.get('slope', 0.25)).min()
+        dxa = max(0.0, abs(TPs[i, 0] - ncx) - 0.04) / 0.20; wx = max(0.0, 1 - dxa) ** 2
+        if TPs[i, 1] > lim: TPs[i, 1] += max(lim - TPs[i, 1], -S.get('drape_max', 0.03)) * wx
+    # 背后同理：从肩胛往下垂，不贴腰
+    ymax = []
+    for z in zsD:
+        bd = np.nonzero((~armv) & (np.abs(TPs[:, 2] - z) < 0.004) & (np.abs(TPs[:, 0] - ncx) < 0.12) & (TPs[:, 1] > ncy))[0]
+        ymax.append(TPs[bd, 1].max() if len(bd) else np.nan)
+    ymax = np.array(ymax); okb = ~np.isnan(ymax)
+    back = (~armv) & (TPs[:, 2] < zc_ + 0.04) & (np.abs(TPs[:, 0] - ncx) < 0.20) & (TPs[:, 1] > ncy - 0.02)
+    for i in np.nonzero(back)[0]:
+        z = TPs[i, 2]; up = okb & (zsD >= z) & (zsD <= z + 0.16)
+        if not up.any(): continue
+        lim = (ymax[up] - (zsD[up] - z) * S.get('slope', 0.25)).max()
+        dxa = max(0.0, abs(TPs[i, 0] - ncx) - 0.04) / 0.20; wx = max(0.0, 1 - dxa) ** 2
+        if TPs[i, 1] < lim: TPs[i, 1] += min(lim - TPs[i, 1], S.get('drape_max', 0.03) * 0.6) * wx
+    # 裤腰以下的部分罩在裤子外面（否则裤腰从衣服里顶出来）
+    # 扎进裤子时：裤腰处上衣往外撑到贴着裤腰内侧（否则裤腰和上衣之间露一道皮肤缝）
+    if bottom is not None:
+        dgb = bpy.context.evaluated_depsgraph_get(); eb = bottom.evaluated_get(dgb); mb = eb.to_mesh()
+        bvh = BVHTree.FromPolygons([bottom.matrix_world @ v.co for v in mb.vertices], [tuple(p.vertices) for p in mb.polygons]); eb.to_mesh_clear()
+        disp = np.zeros_like(TPs)
+        for k in range(len(TPs)):
+            if armv[k]: continue
+            if S.get('tuck'):
+                if not (z_hem - 0.01 < TPs[k, 2] < zt + 0.005): continue
+                q = V(TPs[k]); loc, nrm, _, d = bvh.find_nearest(q)
+                if loc is None or d > 0.05: continue
+                if (q - loc).dot(nrm) < 0 and d > 0.003: disp[k] = np.array((loc - nrm * 0.003)[:]) - TPs[k]
+                continue
+            if TPs[k, 2] > z_hem + 0.06: continue                              # 更高处的裤腰已藏在上衣里（hide_under），只管下摆附近
+            q = V(TPs[k]); loc, nrm, _, d = bvh.find_nearest(q)
+            if loc is None or d > 0.06: continue
+            if (q - loc).dot(nrm) < 0 or d < 0.006: disp[k] = np.array((loc + nrm * 0.008)[:]) - TPs[k]
+        # 外推量往周围渐变（只推一部分点会在裤腰上方留下一道波浪折痕）：邻点取「自己」与「邻居均值 ×0.85」中较大的
+        nbr = [set() for _ in range(len(TPs))]
+        for f in faces:
+            ids = [rm[i] for i in f]
+            for a in ids: nbr[a].update(ids)
+        for _ in range(10):
+            avg = np.array([disp[list(n)].mean(0) if n else disp[k] for k, n in enumerate(nbr)])
+            take = (np.linalg.norm(avg, axis=1) * 0.85 > np.linalg.norm(disp, axis=1)) & ~armv
+            disp[take] = avg[take] * 0.85
+        TPs += disp
+    # 领口边缘：网格台阶 → 边界点挪到 V 字线上再贴回身体表面（原来锯齿状）
+    from collections import Counter
+    ec = Counter(tuple(sorted((rm[f[j]], rm[f[(j + 1) % len(f)]]))) for f in faces for j in range(len(f)))
+    bnd = {k for e, c in ec.items() if c == 1 for k in e}
+    bvb = BVHTree.FromPolygons(P, polys)
+    for k in bnd:
+        q = V(TPs[k])
+        if q.z > zc_ + 0.02: q.z = neck_line(q)                           # 领口（含肩部）
+        elif q.z < zt and not armv[k]: TPs[k, 2] = z_hem; continue         # 下摆：同一高度（袖口不动；只改高度，保留罩在裤子外的外推）
+        else: continue
+        loc, nrm, _, _ = bvb.find_nearest(q)
+        if loc is not None: TPs[k] = (loc + nrm * S['off'])[:]
+    verts = [V(p) for p in TPs]; tfaces = [[rm[i] for i in f] for f in faces]; src_of = list(used)   # 每个上衣顶点抄哪个身体顶点的权重
+    # 下摆往下续一圈布（ext）：皮肤长出来的上衣到不了裆部以下，而林母裤腰前面比裆部还低，正面总留一条缝。
+    # 下摆是一整圈环，往下续不需要两腿之间有皮肤；续的部分罩在身体和裤子外面，略往外张
+    if S.get('ext', 0) > 0 and not S.get('tuck'):
+        hem_e = [e for e, c in ec.items() if c == 1 and all(abs(TPs[k, 2] - z_hem) < 1e-6 and not armv[k] for k in e)]
+        hk = sorted({k for e in hem_e for k in e})
+        bvp = None
+        if bottom is not None:
+            eb = bottom.evaluated_get(bpy.context.evaluated_depsgraph_get()); mb = eb.to_mesh()
+            bvp = BVHTree.FromPolygons([bottom.matrix_world @ v.co for v in mb.vertices], [tuple(p.vertices) for p in mb.polygons]); eb.to_mesh_clear()
+        cx_ = float(TPs[hk, 0].mean()) if hk else ncx; cy_ = float(TPs[hk, 1].mean()) if hk else ncy
+        nv = {}; nseg = 3
+        for k in hk:
+            prev = k
+            for s_ in range(1, nseg + 1):
+                f_ = s_ / nseg; q = V(TPs[k]) + V((0, 0, -S['ext'] * f_))
+                rad = V((q.x - cx_, q.y - cy_, 0)); rad = rad.normalized() if rad.length > 1e-6 else V((0, -1, 0))
+                q += rad * 0.006 * f_                                              # 略往外张
+                for t in [bvb] + ([bvp] if bvp else []):                          # 罩在身体、裤子外面
+                    loc, nrm, _, d = t.find_nearest(q)
+                    if loc is None: continue
+                    if (q - loc).dot(nrm) < 0 or d < 0.007: q = loc + nrm * 0.008
+                verts.append(q); src_of.append(used[k]); nv[(k, s_)] = len(verts) - 1
+        for a, b_ in hem_e:
+            for s_ in range(1, nseg + 1):
+                pa = a if s_ == 1 else nv[(a, s_ - 1)]; pb = b_ if s_ == 1 else nv[(b_, s_ - 1)]
+                tfaces.append([pa, pb, nv[(b_, s_)], nv[(a, s_)]])
+        print('VTOP ext', len(hk), 'hem verts', flush=True)
+    sm = bpy.data.meshes.new(cid + '_vtop'); sm.from_pydata(verts, [], tfaces); sm.update()
+    bm_n = bmesh.new(); bm_n.from_mesh(sm); bmesh.ops.recalc_face_normals(bm_n, faces=bm_n.faces[:]); bm_n.to_mesh(sm); bm_n.free()
+    for p in sm.polygons: p.use_smooth = True
+    top = bpy.data.objects.new(cid + '_vtop', sm); bpy.context.scene.collection.objects.link(top)
+    src = body.data.vertices
+    for g in body.vertex_groups:
+        if any(k in g.name for k in ('helper', 'joint', 'Delete', 'v11_')): continue
+        ng = top.vertex_groups.new(name=g.name); gidx = g.index
+        for k, i in enumerate(src_of):
+            for e in src[i].groups:
+                if e.group == gidx and e.weight > 1e-4: ng.add([k], e.weight, 'REPLACE')
+    m = _mat(cid + '_vtop', S['rgb'], S['rough'])
+    b = m.node_tree.nodes['Principled BSDF']
+    if 'Sheen Weight' in b.inputs: b.inputs['Sheen Weight'].default_value = 0.15; b.inputs['Sheen Roughness'].default_value = 0.5   # 垂坠面料的柔光
+    sm.materials.append(m)
+    am = top.modifiers.new('rig', 'ARMATURE'); am.object = rig
+    so = top.modifiers.new('thick', 'SOLIDIFY'); so.thickness = 0.0015; so.offset = 1.0
+    sd = top.modifiers.new('subdiv', 'SUBSURF'); sd.levels = 1; sd.render_levels = 2
+    top.parent = rig; top['v11_cloth'] = True
+    bm_ = bmesh.new(); bm_.from_mesh(sm); boundary = {v.index for v in bm_.verts if v.is_boundary}; bm_.free()
+    ring = set(boundary)
+    for _ in range(2):
+        ring |= {j for f in faces for j in (rm[i] for i in f) if any(rm[i] in ring for i in f)}
+    hid = [used[k] for k in range(len(used)) if k not in ring or (S.get('tuck') and not armv[k] and TPs[k, 2] < zt + 0.012)]   # 扎进裤子：下摆边那两圈被裤子盖着，也藏（原来在裤腰处露一道皮肤缝）
+    vg = body.vertex_groups.new(name='v11_vtop_covered'); vg.add(hid, 1.0, 'REPLACE')
+    mk = body.modifiers.new('v11_vtop_covered', 'MASK'); mk.vertex_group = vg.name; mk.invert_vertex_group = True
+    ia = next((k for k, m_ in enumerate(body.modifiers) if m_.type == 'ARMATURE'), -1); body.modifiers.move(len(body.modifiers) - 1, ia + 1)
+    print('VTOP OK', cid, 'faces', len(faces), 'hem', round(z_hem, 3), 'hidden', len(hid), flush=True)
+    return top
+
 def _mat(name, rgb, rough=0.75, cloth=True):
     m = bpy.data.materials.new(name); m.use_nodes = True
     b = m.node_tree.nodes['Principled BSDF']; b.inputs['Base Color'].default_value = (*rgb, 1); b.inputs['Roughness'].default_value = rough
