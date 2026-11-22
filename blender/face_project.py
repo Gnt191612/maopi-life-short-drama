@@ -219,7 +219,7 @@ def project(cid):
         sc_ = np.linalg.norm(np.array(dstd['eye_L_out'], float) - np.array(dstd['eye_R_out'], float))
         # 相邻点之间顺序颠倒也会折叠：同一竖线上的 鼻尖-鼻底-上唇-下唇-下巴 必须保持上下顺序
         order_ = [k for k in ('nose', 'subnasal', 'lip_top', 'lip_bot', 'chin') if k in keys]
-        bad = {k for k, r in zip(keys, res_) if r > 0.10 * sc_}
+        bad = {k for k, r in zip(keys, res_) if r > 0.10 * sc_ and k not in ('ala_R', 'ala_L', 'nose', 'eye_R_in', 'eye_L_in', 'eye_R_out', 'eye_L_out')}   # 鼻翼、眼角不剔除：去掉鼻翼后照片的鼻孔会落到上唇（周明远）
         for a_, b_ in zip(order_, order_[1:]):
             ia, ib = keys.index(a_), keys.index(b_)
             if not (src[ia][1] < src[ib][1]): bad.add(b_)

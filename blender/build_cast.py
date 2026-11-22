@@ -653,6 +653,7 @@ FIT_ADJUST = {
 }
 FIT_ADJUST['lin'] = {'head-fat-incr': 0.45, **LR('cheek-volume-incr', 0.5), **LR('cheek-inner-incr', 0.25), 'neck-double-incr': 0.8, 'head-round': 0.25,   # 用户：林晓胖的特征被埋没（照片拟合只看正面轮廓，脸颊的肉、双下巴、圆脸都是深度上的，拟合不出来）
                      'chin-width-incr': 0.2, 'chin-height-decr': 0.15, 'mouth-lowerlip-volume-incr': 0.3, **LR('eye-bag-incr', 0.3)}   # 第一版满强度脸胀得太大，减半
+FIT_ADJUST['zhou'] = {'nose-trans-down': 0.4, 'nose-point-width-incr': 0.2, 'mouth-trans-down': 0.6, 'nose-flaring-incr': 0.3}   # 鼻底、上唇拟合误差大（0.18 眼距）：鼻子往下、嘴往下，人中拉开   # 周明远：模型鼻子比照片短，照片的鼻孔落到上唇上
 # 局部磨平（照片拟合角色）：以某关键点连线中点为中心、半径内的皮肤做拉普拉斯平滑，越靠中心越强。
 # classB：内眼角与鼻根之间的那道弧形深沟（MakeHuman 头模本身的眶缘形状，形态参数去不掉）
 FIT_SMOOTH = {
