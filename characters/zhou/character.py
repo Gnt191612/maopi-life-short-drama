@@ -56,4 +56,5 @@ CHAR = {'cast': ('周明远', 1.0, 0.47, 0.05, 0.36, 0.6, 0.55, 'male_casualsuit
  'look': '一位22岁清瘦的中国男研究生，长方脸，高颧骨，轻微眼袋，黑色偏长蓬松微卷的短发、厚刘海，穿橄榄绿针织毛衣、工装裤，温和踏实',
  'look_en': 'a lean 22-year-old Chinese male graduate student with a long face, high cheekbones, slight eye bags, fluffy slightly curly black hair '
             'with thick bangs, olive green knit sweater, cargo pants',
- 'voice': '周明远_6.wav'}
+ 'voice': 'voice.wav',
+ 'voice_design': {'engine': 'Spark-TTS 0.5B', 'gender': 'male', 'pitch': 'low', 'speed': 'low', 'text': '那段时间我谁也不想见，后来才慢慢明白，朋友其实一直都在。', 'source': '周明远_6'}}

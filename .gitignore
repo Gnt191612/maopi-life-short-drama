@@ -57,5 +57,9 @@ assets/intro/intro_first.png
 assets/intro/voice/claude_line_[0-9].wav
 assets/intro/voice/claude_line_all.wav
 assets/intro/voice/claude_line_6_slow.wav
-!voice_tools/voices_v2/Claude娘_6.wav
+
 cloud/looks_gen.json
+
+assets/intro/green_v/
+assets/intro/voice/
+mascot/claude_girl/voice/candidates/

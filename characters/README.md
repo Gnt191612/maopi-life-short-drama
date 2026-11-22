@@ -13,6 +13,7 @@ characters/
     ├── <cid>_landmarks_full.json   照片关键点标注
     ├── <cid>_face_fit.json         脸型拟合结果（程序生成，不要手改）
     ├── <cid>_noglasses.png         （可选）戴眼镜角色去掉镜框的照片，贴脸用
+    ├── voice.wav          配音参考音色（IndexTTS2 克隆用；怎么设计出来的记在 character.py 的 voice_design）
     └── preview/            效果图（对比图、全身图），方便不开 Blender 就能看
 ```
 
@@ -58,7 +59,7 @@ characters/
 | `hair` | 照片发型（`blender/lib/hair_cards.py`：短发 / 马尾 / 长发，发际线、碎发、发流） |
 | `hair_shape` `hair_color` `keep_shell` | 用社区发型做轮廓；`keep_shell` = 直接用轮廓、不再长发丝 |
 | `look` `look_en` | 写实化提示词（中/英），要和白模造型一致 |
-| `voice` | 配音参考音色（`voice_tools/voices_v2/` 里的文件名） |
+| `voice` `voice_design` | 配音参考音色文件（本文件夹的 `voice.wav`）与它的 Spark-TTS 设计参数（音色丢了可按参数重新生成） |
 
 ## 提交更新
 

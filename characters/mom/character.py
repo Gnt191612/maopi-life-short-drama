@@ -58,4 +58,5 @@ CHAR = {'cast': ('林母', 0.0, 0.59, 0.5, 0.4, 0.4, 0.45, 'female_elegantsuit01
  'look': '一位四十出头的中国母亲，气质干练、不显老，黑色微卷的波浪短发，淡妆红唇，穿黑色V领垂坠长袖上衣、暖棕色长裤，右耳戴金色扇形耳环',
  'look_en': 'an elegant Chinese mother in her early forties, short wavy black bob hair, light makeup with red lips, black V-neck draped long-sleeve '
             'top, warm brown trousers, a gold fan-shaped earring',
- 'voice': '林母_1.wav'}
+ 'voice': 'voice.wav',
+ 'voice_design': {'engine': 'Spark-TTS 0.5B', 'gender': 'female', 'pitch': 'moderate', 'speed': 'moderate', 'text': '晓晓啊，最近吃得好不好？天冷了，记得多穿件衣服，别熬夜。', 'source': '林母_1'}}

@@ -84,8 +84,8 @@ powershell -ExecutionPolicy Bypass -File cloud\make_final.ps1 -Result build\clou
 ## 五、片头
 
 `blender/intro_compose.py`：背景为大连理工大学官网「校园风光」雪中雕像照（本地修补去掉行人）+ 官网校徽；
-Claude 娘（`assets/intro/claude_girl.png`）绿幕讲解视频（云端 `cloud/intro_video.py`）抠像叠加；场记板写片名、队长、队员与开源地址；
-配音 `assets/intro/voice/claude_line_final.wav`（`voice_tools/claude_voice.py` 设计音色 → `claude_line.py` 念台词）。
+Claude 娘绿幕讲解视频抠像叠加；场记板写片名、队长、队员与开源地址。
+**Claude 娘的形象和音色单独成库：[mascot/claude_girl/](mascot/claude_girl/README.md)**（立绘、绿幕视频、音色参考音、`say.py` 用她的声音念任意台词），以后的作品可以直接引用。
 
 ## 目录结构
 
@@ -95,8 +95,9 @@ Claude 娘（`assets/intro/claude_girl.png`）绿幕讲解视频（云端 `cloud
 | `blender/` | 角色/场景搭建、拍摄引擎、脸型拟合、照片贴脸、片头合成 | 是 |
 | `blender/lib/` | 姿态库、机位、发型（`hair_cards.py`）、程序服装（`jk_sailor.py`）、饰品等 | 是 |
 | `blender/tests/` | 对比图、全身检查、精修一轮脚本 `identity_round.ps1` | 是 |
-| `characters/` | **人物库**：每个角色一个文件夹（全部参数 `character.py`、标准长相照片、关键点、拟合结果、效果图）；新增/优化人物只改这里，见 [characters/README.md](characters/README.md) | 是 |
-| `assets/intro/` | 片头素材（Claude 娘立绘、绿幕视频、背景、校徽、配音） | 是 |
+| `characters/` | **人物库**：每个角色一个文件夹（全部参数 `character.py`、标准长相照片、关键点、拟合结果、音色 `voice.wav`、效果图）；新增/优化人物只改这里，见 [characters/README.md](characters/README.md) | 是 |
+| `mascot/claude_girl/` | **Claude 娘素材库**：形象、绿幕视频、音色、念台词工具 | 是 |
+| `assets/intro/` | 片头背景（大工雪景照、校徽） | 是 |
 | `assets/cast/` `sets/` `audio/` `music/` | 定稿角色、场景、配音、配乐 | Release 附件 |
 | `voice_tools/` | 音色设计、挑选、配音脚本与各角色选定的参考音 | 是 |
 | `cloud/` | 云端写实化套件（打包、会话、关键帧、视频、成片） | 是 |

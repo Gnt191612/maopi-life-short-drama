@@ -146,4 +146,5 @@ CHAR = {'cast': ('同学乙', 0.0, 0.43, 0.42, 0.45, 0.48, 0.55, 'female_casuals
  'look': '一位20岁苗条的中国女大学生，鹅蛋脸，平直眉，杏眼，乌黑长发中分梳成低马尾、戴黑色发箍，穿白色水手服（黑色水手领带白边、蓝色领巾）、黑色百褶短裙、黑色丝袜、黑色玛丽珍鞋，文静害羞',
  'look_en': 'a slim 20-year-old Chinese female college student with an oval face, straight brows, almond eyes, long black hair in a low ponytail '
             'with a black headband, white sailor-style top with black sailor collar and blue scarf, black pleated mini skirt, black stockings',
- 'voice': '同学乙_5.wav'}
+ 'voice': 'voice.wav',
+ 'voice_design': {'engine': 'Spark-TTS 0.5B', 'gender': 'female', 'pitch': 'high', 'speed': 'moderate', 'text': '其实我也经常这样，发之前要修好久的图，想想也挺累的。', 'source': '同学乙_5'}}

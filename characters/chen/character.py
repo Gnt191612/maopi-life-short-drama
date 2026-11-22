@@ -59,4 +59,5 @@ CHAR = {'cast': ('陈瑶', 1.0, 0.44, 0.3, 0.45, 0.8, 0.6, 'male_casualsuit01', 
  'look': '一位21岁高瘦的中国男大学生，鹅蛋脸，戴浅金色圆形细框眼镜，黑色中分刘海短发，穿白衬衫、黑色长裤，沉稳安静',
  'look_en': 'a tall slim 21-year-old Chinese male college student with an oval face, thin round light-gold wire glasses, short black hair with '
             'center-parted bangs, white shirt, black trousers',
- 'voice': '陈瑶_3.wav'}
+ 'voice': 'voice.wav',
+ 'voice_design': {'engine': 'Spark-TTS 0.5B', 'gender': 'male', 'pitch': 'moderate', 'speed': 'moderate', 'text': '我觉得这件事没那么复杂，你先别急，坐下来，我们慢慢说。', 'source': '陈瑶_3'}}

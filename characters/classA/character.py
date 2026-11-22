@@ -53,4 +53,5 @@ CHAR = {'cast': ('同学甲', 1.0, 0.43, 0.66, 0.95, 0.55, 0.5, 'male_casualsuit
  'look': '一位20岁健壮的中国男大学生，菱形脸，下巴突出，黑色两侧推短的短发，穿深藏青色T恤、牛仔裤，爱开玩笑',
  'look_en': 'a sturdy 20-year-old Chinese male college student with a diamond-shaped face, prominent chin, short black hair with faded sides, navy '
             'T-shirt, jeans',
- 'voice': '同学甲_5.wav'}
+ 'voice': 'voice.wav',
+ 'voice_design': {'engine': 'Spark-TTS 0.5B', 'gender': 'male', 'pitch': 'high', 'speed': 'high', 'text': '哟，这不是咱们的学霸晓哥嘛，今天又去图书馆打卡啦？', 'source': '同学甲_5'}}

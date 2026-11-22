@@ -11,7 +11,8 @@ INDEX_DIR = os.environ.get('V11_INDEXTTS_DIR') or os.path.join(config.TOOLS, 'in
 sys.path.insert(0, INDEX_DIR)
 HERE = os.path.dirname(os.path.abspath(__file__))
 import torch, torchaudio
-from lines import LINES   # 台词表唯一来源：story/lines.py
+from lines import LINES
+from segments import CID as CIDMAP   # 中文名 → 人物库代号   # 台词表唯一来源：story/lines.py
 
 def cer(ref, hyp):
     """按无声调拼音比对字错率：同音字不算错，只惩罚读错/漏读"""
@@ -84,6 +85,8 @@ def main():
         voice = pick[spk]
         if not only and meta.get(lid, {}).get('engine') == 'indextts2' and meta[lid].get('voice') == voice: continue
         ref = os.path.join(VOI, voice + '.wav')
+        lib_ref = os.path.join(os.path.dirname(HERE), 'characters', CIDMAP.get(spk, ''), 'voice.wav')   # 人物库优先
+        if os.path.exists(lib_ref): ref = lib_ref
         cands = []
         for k in range(N_CAND):
             torch.manual_seed(2000 + k * 31 + sum(map(ord, lid)))

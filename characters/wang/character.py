@@ -48,4 +48,5 @@ CHAR = {'cast': ('王老师', 1.0, 0.64, 0.7, 0.4, 0.55, 0.5, 'male_casualsuit03
  'look': '一位38岁的中国男辅导员，方脸微胖，有笑纹，黑色侧分短发，穿浅蓝色衬衫系深蓝色领带、灰色西裤，略有小肚子，真诚温暖',
  'look_en': 'a 38-year-old Chinese male counselor with a square, slightly chubby face, smile lines, side-parted short black hair, light blue shirt '
             'with a navy tie, grey trousers',
- 'voice': '王老师_30.wav'}
+ 'voice': 'voice.wav',
+ 'voice_design': {'engine': 'Spark-TTS 0.5B', 'gender': 'male', 'pitch': 'low', 'speed': 'moderate', 'text': '今天咱们不讲大道理，就随便聊聊，说说大家最近过得怎么样。', 'source': '王老师_30'}}

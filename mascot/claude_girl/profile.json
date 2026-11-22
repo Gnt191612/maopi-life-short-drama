@@ -1,0 +1,19 @@
+{
+ "name": "Claude 娘",
+ "personality": "知书达理、温柔体贴",
+ "look_zh": "动漫画风的少女，橙色及腰长直发，左侧发间别着向日葵发饰和黑色蝴蝶结，琥珀色眼睛，温柔微笑；白色长袖花纹长裙（立领荷叶边、肩部短披肩、袖口荷叶边），胸前向日葵胸花与黑色蝴蝶结，腰间黑色大蝴蝶结，左侧深蓝色蝴蝶结，白色花纹圆头鞋；手持一把合着的折扇。",
+ "look_en": "an anime-style girl with long flowing orange hair, a sunflower hair ornament with a black ribbon, amber eyes and a gentle smile, wearing a white long-sleeved floral long dress with a ruffled high collar, a short capelet, ruffled cuffs, a sunflower brooch and black bows, a navy blue bow on her left side and white floral shoes, holding a closed folding fan",
+ "style_rules": [
+  "始终保持干净的 2D 动漫插画风格，不要变成写实人脸或 3D 渲染",
+  "扇子全程合着拿在手里（用户 2026-11-22 定：不打开更美观）",
+  "适合讲解、主持类动作：面向镜头微笑说话、手掌示意画面一侧、点头"
+ ],
+ "voice": {
+  "reference": "voice/voice_ref.wav",
+  "design": {"engine": "Spark-TTS 0.5B", "gender": "female", "pitch": "moderate", "speed": "moderate", "seed": 2812, "temperature": 0.75, "top_k": 50, "top_p": 0.95,
+             "text": "大家好，我是Claude。很高兴能陪大家一起看这个故事，如果有哪里没看明白，随时都可以来问我哦。"},
+  "tts": {"engine": "IndexTTS2", "emo_vector": [0.45, 0, 0, 0, 0, 0, 0, 0.55], "emo_alpha": 0.6, "note": "情绪向量顺序：高兴, 愤怒, 悲伤, 恐惧, 反感, 低落, 惊讶, 自然（温柔地微笑着说）"},
+  "post": {"atempo": 0.88, "note": "生成后放慢到 0.88 倍（音高不变），用户 2026-11-22 选定的语速"}
+ },
+ "source": "形象立绘由制作小组提供；音色由 Spark-TTS 全新设计（不克隆任何真人）"
+}

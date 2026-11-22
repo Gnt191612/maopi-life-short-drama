@@ -35,7 +35,7 @@ try {
         } else { Write-Host '    素材包已在云端（大小一致），跳过上传' }
     }
     if ($Stage -eq 'final') {   # 片头竖屏首帧 + 上次已出且规则没变的关键帧（省时间）
-        & scp.exe @Opt -P $Port (Join-Path $Root 'assets\intro\intro_green_portrait.png') "${SshHost}:/root/ComfyUI/input/"
+        & scp.exe @Opt -P $Port (Join-Path $Root 'mascot\claude_girl\image\green_first_portrait.png') "${SshHost}:/root/ComfyUI/input/intro_green_portrait.png"
         $kfs = Get-ChildItem (Join-Path $Root 'build\cloud_out\reuse_kf') -Filter *.png -ErrorAction SilentlyContinue
         if ($kfs) { Rx 'mkdir -p /root/v11_out/kf'; & scp.exe @Opt -P $Port @($kfs.FullName) "${SshHost}:/root/v11_out/kf/" }
     }

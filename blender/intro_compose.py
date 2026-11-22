@@ -12,8 +12,9 @@ OUT = os.path.join(config.ROOT, 'build', 'intro'); os.makedirs(OUT, exist_ok=Tru
 W, H, FPS = 1920, 1080, 24
 BG = os.path.join(A, 'dlut_dl', 'snow_clean.png')
 LOGO = os.path.join(A, 'dlut_dl', 'logo_blue_big.png')
-GIRL = os.environ.get('V11_INTRO_GIRL') or os.path.join(A, 'green_v', 'intro_talk2.mp4')   # 竖屏高清版生成后由 make_final.ps1 指定
-VOICE = os.path.join(A, 'voice', 'claude_line_final.wav')
+M = os.path.join(config.ROOT, 'mascot', 'claude_girl')   # Claude 娘素材库（形象、绿幕视频、音色）
+GIRL = os.environ.get('V11_INTRO_GIRL') or os.path.join(M, 'video', 'talk_greenscreen_832x480.mp4')   # 竖屏高清版生成后由 make_final.ps1 指定
+VOICE = os.path.join(M, 'voice', 'sample_本视频由ClaudeOpus5.5领衔制作.wav')
 REPO = 'github.com/Gnt191612/maopi-life-short-drama'
 TITLE = '毛坯人生，精装朋友圈'
 LEADER = '郭宁桐'
