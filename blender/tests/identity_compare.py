@@ -31,6 +31,7 @@ sc.render.resolution_x, sc.render.resolution_y = 1024, 1280; sc.view_settings.vi
 clay = bpy.data.materials.new('clay'); clay.use_nodes = True
 b = clay.node_tree.nodes['Principled BSDF']; b.inputs['Base Color'].default_value = (0.62, 0.6, 0.58, 1); b.inputs['Roughness'].default_value = 0.6
 VIEWS = (('front', -yaw), ('34', 35), ('side', 90))
+if os.environ.get('V11_BACK'): VIEWS = (('back34', 145), ('back', 180), ('side', 90))   # 看后脑勺
 for o in sc.objects:   # 排查：V11_HIDE=名字片段,... 隐藏这些物体
     if any(k and k in o.name for k in os.environ.get('V11_HIDE', '').split(',')): o.hide_render = True
 if os.environ.get('V11_DBG'):   # 排查用：只拍正脸；NOSSS 关皮肤透光，NOTEETH 隐藏牙齿

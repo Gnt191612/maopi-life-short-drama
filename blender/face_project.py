@@ -272,11 +272,54 @@ def project(cid):
             xs_ =np.array([p[0] for p in hl_], float); ys_ = np.array([p[1] for p in hl_], float)
             h_, w_ = a.shape[:2]; yy_ = np.arange(h_)[:, None]; xx_ = np.arange(w_)[None, :]
             yh = np.interp(xx_, xs_, ys_, left=ys_[0], right=ys_[-1])
-            a[..., 3] *= np.clip((yy_ - yh) / 70.0, 0, 1)                   # 发际线往下 70 像素渐变（窄了会看到照片肤色和模型肤色的分界线）
+            a[..., 3] *= np.clip((yy_ - yh) / (70.0 if cid == 'classB' else 130.0), 0, 1)                   # 发际线往下 70 像素渐变（窄了会看到照片肤色和模型肤色的分界线）
             # 发际线两端以外（太阳穴、鬓角的头发是竖着往下的）：端点往下 80 像素以内不贴，往里 90 像素平滑过渡（硬切会留一道竖缝）
             wout = np.clip(np.maximum(xs_[0] + 60 - xx_, xx_ - (xs_[-1] - 60)) / 90.0, 0, 1)
             yend = np.where(xx_ < (xs_[0] + xs_[-1]) / 2, ys_[0], ys_[-1])
             a[..., 3] *= 1 - wout * (1 - np.clip((yy_ - yend - 80) / 40.0, 0, 1))
+            # 额头、太阳穴上散落的细发丝（林晓、王老师照片里刘海垂下来的几缕）会烘成皮肤上的黑线：投影前从照片里抹掉。
+            # 只处理眉毛以上 + 两侧太阳穴；用黑帽运算找比周围暗的细线，再修补
+        if 'hairline' in lmj and fit is not None and cid != 'classB':   # 同学乙已定稿，不动
+            eR_, eL_ = np.array(lmj['eye_R'], float), np.array(lmj['eye_L'], float); iod_ = np.linalg.norm(eL_ - eR_); cx_ = (eR_[0] + eL_[0]) / 2
+            ey_ = min(eR_[1], eL_[1])
+            g_ = a[..., :3].mean(2)
+            # 处理范围（平滑权重，硬边界会在眉毛旁留下方形缺口）：眉毛以上 0.40→0.50 眼距渐入；两侧太阳穴 1.0→1.15 眼距以外渐入
+            def _sm(e0, e1, x): t = np.clip((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t)
+            up_ = (ey_ - yy_) / iod_; ax_ = np.abs(xx_ - cx_) / iod_
+            wreg = np.maximum(_sm(0.40, 0.50, up_), _sm(1.0, 1.15, ax_) * _sm(0.05, 0.12, up_)) * (yy_ > yh - 40)
+            wreg = np.broadcast_to(wreg, g_.shape).astype(np.float32)
+            reg_ = wreg > 0.5
+            def _flt(x, r, fn):   # 方形最大/最小值滤波（可分离）
+                for ax in (0, 1):
+                    p = np.pad(x, [(r, r) if k == ax else (0, 0) for k in (0, 1)], mode='edge')
+                    x = fn(np.stack([np.take(p, range(i, i + x.shape[ax]), axis=ax) for i in range(2 * r + 1)]), axis=0)
+                return x
+            def _box(x, r):       # 盒式模糊（积分图，可分离）
+                for ax in (0, 1):
+                    c = np.cumsum(np.pad(x, [(r + 1, r) if k == ax else (0, 0) for k in range(x.ndim)], mode='edge'), axis=ax)
+                    n = x.shape[ax]; x = (np.take(c, range(2 * r + 1, 2 * r + 1 + n), axis=ax) - np.take(c, range(0, n), axis=ax)) / (2 * r + 1)
+                return x
+            bh_ = _flt(_flt(g_, 8, np.max), 8, np.min) - g_                # 黑帽：闭运算 − 原图 = 比周围暗的细线
+            ck_ = g_[int(ey_ + 0.30 * iod_):int(ey_ + 0.50 * iod_), int(eR_[0] - 0.15 * iod_):int(eR_[0] + 0.15 * iod_)]
+            sk_ = float(np.median(ck_)) if ck_.size else float(np.median(g_))
+            dk_ = (g_ < 0.70 * sk_) & (wreg > 0.01)                                  # 成片的深色头发（太阳穴垂下来的发束）：柔和透明，露出模型自己的皮肤
+            dkw = np.clip(_box(_box(dk_.astype(np.float32), 10), 10) * 2.0, 0, 1)
+            dkw *= wreg                                                     # 不渗进眉毛
+            m_ = (bh_ > 0.06) & reg_ & (dkw < 0.3)                          # 散落的细发丝（四周是皮肤）：用周围肤色补
+            m_ = _box(m_.astype(np.float32), 3) > 0.02
+            m_ |= dkw > 0.01                                               # 发束底下也换成肤色：半透明边缘处不然会混出一道暗带
+            print('STRANDS dark px', int(dk_.sum()), 'skin', round(sk_, 3), flush=True)
+            if m_.any():
+                known = (~m_ & (g_ > 0.78 * sk_)).astype(np.float32)
+                rgb = a[..., :3]; num = rgb * known[..., None]; den = known.copy()
+                for r_ in (14, 14, 14): num = np.stack([_box(num[..., k], r_) for k in range(3)], -1); den = _box(den, r_)
+                fill = np.where(den[..., None] > 1e-3, num / np.maximum(den, 1e-3)[..., None], rgb)
+                w_ = np.clip(_box(m_.astype(np.float32), 3) * 1.6, 0, 1)
+                w_ = np.maximum(w_ * wreg, np.clip(dkw * 3, 0, 1))
+                a[..., :3] = rgb * (1 - w_[..., None]) + fill * w_[..., None]
+            a[..., 3] *= 1 - dkw
+            print('STRANDS removed px', int(m_.sum()), flush=True)
+            save_rgba(a.copy(), os.path.join(tmp, cid + '_strands_removed.png'), cid + '_strands_dbg')
         return a
     ph_ = os.path.join(IDDIR, cid + '_noglasses.png')   # 照片戴眼镜的角色：用去掉眼镜框的版本（3D 眼镜另外建模）
     warped = tps_warp(photo_masked(ph_ if os.path.exists(ph_) else os.path.join(IDDIR, cid + '.png')), src, dst)
