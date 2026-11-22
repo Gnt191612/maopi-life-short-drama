@@ -37,6 +37,8 @@ case $STAGE in
   video) timeout ${V11_VIDEO_MAX:-7200} python3 video_run.py $PACK ${PRE:+--only ${PRE// /,}} ;;
   all)   timeout ${V11_KEYS_MAX:-3600} python3 keyframes.py $PACK $PRE
          timeout ${V11_VIDEO_MAX:-7200} python3 video_run.py $PACK ${PRE:+--only ${PRE// /,}} ;;
+  intro) # 只做片头：Claude 娘竖屏 720x1280 讲解版两个候选（扇子合着）
+         INTRO_STYLE=talk INTRO_TAG=intro_hd INTRO_W=720 INTRO_H=1280 timeout 3000 python3 intro_video.py intro_green_portrait.png 19 7 ;;
   final) # 一次成片（11-22 用户：下次开机连 Claude 娘带正片全部解决）：片头竖屏精修 → 全片关键帧 → 全片视频
          SIDX=${V11_SHARD:-1/1}; SIDX=${SIDX%%/*}; [ -z "$SIDX" ] && SIDX=1                      # 片头只在第 1 台（或不分片时）跑
          if [ -f /root/ComfyUI/input/intro_green_portrait.png ] && [ ! -f $OUT/intro_hd1.gif ] && [ "$SIDX" = "1" ]; then

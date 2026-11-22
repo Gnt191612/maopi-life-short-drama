@@ -5,7 +5,7 @@
 #   -Rate 1.89                        每小时价格（元），用来估算这次花了多少
 #   -IdleMin 20                       日志这么久没动静就判定卡住：中止云端任务、下载已有结果、提醒关机
 param([Parameter(Mandatory = $true)][string]$SshHost, [Parameter(Mandatory = $true)][int]$Port,
-      [ValidateSet('probe', 'keys', 'test', 'video', 'all', 'final')][string]$Stage = 'probe',
+      [ValidateSet('probe', 'keys', 'test', 'video', 'all', 'final', 'intro')][string]$Stage = 'probe',
       [string]$Only = '', [double]$Rate = 1.89, [int]$IdleMin = 20, [double]$MaxHours = 0, [string]$Shard = '')
 # -Shard 2/3                       多实例并行：本实例只跑第 2 份（共 3 份；按时长均衡，片头只在第 1 份）
 # -MaxHours 6                      跑满这么多小时强制停（预算保护，防止欠费；0 = 不限）
@@ -27,11 +27,11 @@ try {
     & scp.exe @Opt -P $Port $tgz "${SshHost}:/root/v11_upload/scripts.tgz"
     Rx 'tar -xzf /root/v11_upload/scripts.tgz -C /root/v11_upload/scripts && sed -i "s/\r$//" /root/v11_upload/scripts/*.sh'
     $zip = Join-Path $Root 'dist\cloud_pack.zip'
-    if ($Shard -and $Stage -ne 'probe') {   # 多实例并行：只传本实例那份镜头的素材
+    if ($Shard -and $Stage -notin 'probe', 'intro') {   # 多实例并行：只传本实例那份镜头的素材
         $si, $sn = $Shard -split '/'; & python (Join-Path $Root 'cloud\shard_pack.py') $si $sn
         $zip = Join-Path $Root "dist\cloud_pack_s${si}of${sn}.zip"
     }
-    if ($Stage -ne 'probe') {
+    if ($Stage -notin 'probe', 'intro') {
         if (-not (Test-Path $zip)) { throw '没有 dist\cloud_pack.zip：先在本地跑 cloud\prep_trial.ps1' }
         $local = (Get-Item $zip).Length; $remote = (Rx "stat -c %s /root/v11_upload/cloud_pack.zip 2>/dev/null || echo 0") -as [long]
         if ($local -ne $remote) {
@@ -39,10 +39,10 @@ try {
             & scp.exe @Opt -P $Port $zip "${SshHost}:/root/v11_upload/cloud_pack.zip"
         } else { Write-Host '    素材包已在云端（大小一致），跳过上传' }
     }
-    if ($Stage -eq 'final') {   # 片头竖屏首帧 + 上次已出且规则没变的关键帧（省时间）
+    if ($Stage -in 'final', 'intro') {   # 片头竖屏首帧 + 上次已出且规则没变的关键帧（省时间）
         & scp.exe @Opt -P $Port (Join-Path $Root 'mascot\claude_girl\image\green_first_portrait.png') "${SshHost}:/root/ComfyUI/input/intro_green_portrait.png"
         $kfs = Get-ChildItem (Join-Path $Root 'build\cloud_out\reuse_kf') -Filter *.png -ErrorAction SilentlyContinue
-        if ($kfs) { Rx 'mkdir -p /root/v11_out/kf'; & scp.exe @Opt -P $Port @($kfs.FullName) "${SshHost}:/root/v11_out/kf/" }
+        if ($kfs -and $Stage -eq 'final') { Rx 'mkdir -p /root/v11_out/kf'; & scp.exe @Opt -P $Port @($kfs.FullName) "${SshHost}:/root/v11_out/kf/" }
     }
     Write-Host "[3/4] 云端后台运行阶段 $Stage"
     $pre = ($Only -split ',' | Where-Object { $_ }) -join ' '
