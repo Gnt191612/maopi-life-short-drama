@@ -11,7 +11,8 @@ mascot/claude_girl/
 │   ├── green_first_portrait.png 绿幕首帧（竖屏 720×1280，生成视频用）
 │   └── green_first_landscape.png 绿幕首帧（横屏 1920×1080）
 ├── video/
-│   └── talk_greenscreen_832x480.mp4   绿幕讲解动作（5 秒：微笑讲解 → 手掌示意画面左侧；扇子合着）
+│   ├── talk_greenscreen_720x1280.mp4  绿幕讲解动作·竖屏高清（5 秒：微笑讲解 → 侧身手掌示意画面左侧；片头用这个）
+│   └── talk_greenscreen_832x480.mp4   同一动作的横屏早期版（人物较小，放大会糊）
 ├── voice/
 │   ├── voice_ref.wav            音色参考音（克隆用）
 │   └── sample_本视频由ClaudeOpus5.5领衔制作.wav   示例台词（本片片头）
