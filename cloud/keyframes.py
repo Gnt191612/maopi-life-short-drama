@@ -16,6 +16,17 @@ WF_SWAP = os.environ.get('V11_WF_SWAP', '【推荐】Qwen2.1-人物替换.json')
 SWAP = ('把图2中{who}的脸换成图1这张脸：五官、脸型、眉眼、肤色与图1一致，是同一个人。'
         '只换脸，图2的发型、发色、服装、饰品、姿势、表情、构图、景别和光影全部保持不变，其他人物和背景不变。')
 
+NOFACE = ('extreme close-up of a smartphone', 'close-up of a smartphone', 'phone screen', "hands holding the phone", 'hands set', 'hands holding',
+          'bare feet', 'feet landing', 'from behind', 'over the shoulder', 'notice taped', 'close-up of a white a4', 'close-up of the wooden')
+
+def plan(task):
+    """按镜头内容定重绘力度和要不要换脸（2026-11-22 试片：外景树仍是卡通；手机特写被贴了一张脸）"""
+    en = task.get('prompt', '').lower(); chars = task.get('characters', [])
+    start = int(os.environ.get('V11_KF_START', 3))
+    if not chars: start = int(os.environ.get('V11_KF_START_EMPTY', 1))      # 无人外景/空镜：几乎从头重画，去掉卡通树和方块楼
+    swap = [] if any(k in en for k in NOFACE) else chars                     # 看不到脸的镜头不换脸
+    return start, swap
+
 def first_frame(td, tid):
     src = os.path.join(td, 'first.png')
     dst = os.path.join(INP, 'kfsrc_%s.png' % tid)
@@ -36,10 +47,11 @@ def main():
         chars = task.get('characters', [])
         look = '；'.join(LOOK[c] for c in chars if c in LOOK)
         # 图生图：8 步采样从第 3 步开始（保留白模构图，只重绘质感）；不加人物描述——从头重画时会拉远镜头、多画出一个人（2026-11-22 试片）
-        base = comfy_run.run(WF_REAL, 'kfbase_' + tid, {'10.image': first_frame(td, tid), '21.start_at_step': int(os.environ.get('V11_KF_START', 3))})
+        start, swap = plan(task)
+        base = comfy_run.run(WF_REAL, 'kfbase_' + tid, {'10.image': first_frame(td, tid), '21.start_at_step': start})
         if not base: print('KF FAIL base', tid, flush=True); continue
         cur = base
-        for c in chars:   # 逐个角色换脸（多人镜头：用外貌描述指明换的是哪一个）
+        for c in swap:   # 逐个角色换脸（多人镜头：用外貌描述指明换的是哪一个）
             ref = 'canonface_%s.jpg' % c if os.path.exists(os.path.join(INP, 'canonface_%s.jpg' % c)) else 'canon_%s.jpg' % c
             if not os.path.exists(os.path.join(INP, ref)): continue
             shutil.copy(cur, os.path.join(INP, 'kfcur_%s.png' % tid))

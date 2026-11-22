@@ -37,9 +37,15 @@ case $STAGE in
   video) timeout ${V11_VIDEO_MAX:-7200} python3 video_run.py $PACK ${PRE:+--only ${PRE// /,}} ;;
   all)   timeout ${V11_KEYS_MAX:-3600} python3 keyframes.py $PACK $PRE
          timeout ${V11_VIDEO_MAX:-7200} python3 video_run.py $PACK ${PRE:+--only ${PRE// /,}} ;;
+  final) # 一次成片（11-22 用户：下次开机连 Claude 娘带正片全部解决）：片头竖屏精修 → 全片关键帧 → 全片视频
+         if [ -f /root/ComfyUI/input/intro_green_portrait.png ] && [ ! -f $OUT/intro_hd1.gif ]; then
+           INTRO_STYLE=talk INTRO_TAG=intro_hd INTRO_W=720 INTRO_H=1280 timeout 2400 python3 intro_video.py intro_green_portrait.png 19 7
+         fi
+         timeout ${V11_KEYS_MAX:-21600} python3 keyframes.py $PACK $PRE
+         timeout ${V11_VIDEO_MAX:-43200} python3 video_run.py $PACK ${PRE:+--only ${PRE// /,}} ;;
   *) echo "未知阶段 $STAGE" ;;
 esac
 RC=$?; [ $RC = 124 ] && echo "!! 超时被中止（防止空烧钱）"
-cd $OUT && tar -czf /root/v11_result_$STAGE.tgz --exclude=vtmp --exclude='real/*/frame_*' probe.* kf real video_progress.log comfy.log 2>/dev/null   # 逐帧 PNG 不传（本地从 mp4 还原，省下载时间）
+cd $OUT && tar -czf /root/v11_result_$STAGE.tgz --exclude=vtmp --exclude='real/*/frame_*' probe.* kf real intro_hd*.gif video_progress.log comfy.log 2>/dev/null   # 逐帧 PNG 不传（本地从 mp4 还原，省下载时间）
 echo "[$(date +%T)] 阶段 $STAGE 结束 rc=$RC，结果 /root/v11_result_$STAGE.tgz ($(du -h /root/v11_result_$STAGE.tgz | cut -f1))"
 touch $OUT/DONE_$STAGE

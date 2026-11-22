@@ -122,6 +122,8 @@ def previs(seg_ids, out_mp4):
         wf.setnchannels(1); wf.setsampwidth(2); wf.setframerate(sr); wf.writeframes((np.clip(mix, -1, 1) * 32767).astype(np.int16).tobytes())
     ap = os.path.join(tmp, 'sub.ass'); open(ap, 'w', encoding='utf-8-sig').write('\n'.join(ass) + '\n')
     vf = "fps=24,subtitles='%s':fontsdir='%s'" % (ff_path(ap), ff_path(config.FONTS_DIR))
+    if REAL_DIR:   # 写实版成片：写实帧 832×480 与补位的白模帧尺寸不同，统一缩放到 1080p 再上字幕
+        vf = "fps=24,scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1," + vf[len('fps=24,'):].replace('PlayRes', 'PlayRes')
     subprocess.run([FF, '-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', lp, '-i', wp, '-vf', vf,
                     '-c:v', 'libx264', '-crf', '20', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-shortest', out_mp4], check=True)
     log('previs OK', out_mp4, '%.1fs' % t)

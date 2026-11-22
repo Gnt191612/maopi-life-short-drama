@@ -5,8 +5,9 @@
 #   -Rate 1.89                        每小时价格（元），用来估算这次花了多少
 #   -IdleMin 20                       日志这么久没动静就判定卡住：中止云端任务、下载已有结果、提醒关机
 param([Parameter(Mandatory = $true)][string]$SshHost, [Parameter(Mandatory = $true)][int]$Port,
-      [ValidateSet('probe', 'keys', 'test', 'video', 'all')][string]$Stage = 'probe',
-      [string]$Only = '', [double]$Rate = 1.89, [int]$IdleMin = 20)
+      [ValidateSet('probe', 'keys', 'test', 'video', 'all', 'final')][string]$Stage = 'probe',
+      [string]$Only = '', [double]$Rate = 1.89, [int]$IdleMin = 20, [double]$MaxHours = 0)
+# -MaxHours 6                      跑满这么多小时强制停（预算保护，防止欠费；0 = 不限）
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path $PSScriptRoot -Parent
 $Key = Join-Path $env:USERPROFILE '.ssh\xiangongyun_ed25519'
@@ -19,7 +20,7 @@ try {
     Rx "nvidia-smi --query-gpu=name,memory.total --format=csv,noheader; df -h /root | tail -1"
     Write-Host '[2/4] 上传脚本（几 KB）'
     $tgz = Join-Path $env:TEMP 'v11_scripts.tgz'
-    & tar.exe -czf $tgz -C cloud comfy_run.py looks.py probe_comfy.py keyframes.py video_run.py video_map.json session_realism.sh
+    & tar.exe -czf $tgz -C cloud comfy_run.py looks.py probe_comfy.py keyframes.py video_run.py video_map.json session_realism.sh intro_video.py qctl.py edit_photo.py
     Rx 'mkdir -p /root/v11_upload/scripts /root/v11_out'
     & scp.exe @Opt -P $Port $tgz "${SshHost}:/root/v11_upload/scripts.tgz"
     Rx 'tar -xzf /root/v11_upload/scripts.tgz -C /root/v11_upload/scripts && sed -i "s/\r$//" /root/v11_upload/scripts/*.sh'
@@ -32,6 +33,11 @@ try {
             & scp.exe @Opt -P $Port $zip "${SshHost}:/root/v11_upload/cloud_pack.zip"
         } else { Write-Host '    素材包已在云端（大小一致），跳过上传' }
     }
+    if ($Stage -eq 'final') {   # 片头竖屏首帧 + 上次已出且规则没变的关键帧（省时间）
+        & scp.exe @Opt -P $Port (Join-Path $Root 'assets\intro\intro_green_portrait.png') "${SshHost}:/root/ComfyUI/input/"
+        $kfs = Get-ChildItem (Join-Path $Root 'build\cloud_out\reuse_kf') -Filter *.png -ErrorAction SilentlyContinue
+        if ($kfs) { Rx 'mkdir -p /root/v11_out/kf'; & scp.exe @Opt -P $Port @($kfs.FullName) "${SshHost}:/root/v11_out/kf/" }
+    }
     Write-Host "[3/4] 云端后台运行阶段 $Stage"
     $pre = ($Only -split ',' | Where-Object { $_ }) -join ' '
     Rx "rm -f /root/v11_out/DONE_$Stage; nohup bash /root/v11_upload/scripts/session_realism.sh $Stage $pre > /root/v11_out/session_$Stage.log 2>&1 &"
@@ -42,9 +48,14 @@ try {
         $txt = ($st -join "`n")
         if ($txt -ne $last) { Write-Host ("  [{0:HH:mm:ss}] " -f (Get-Date)) ($st | Select-Object -Last 3 | Out-String).Trim(); $last = $txt; $lastChange = Get-Date }
         if ($txt -match "DONE_$Stage") { break }
+        if ($MaxHours -gt 0 -and ((Get-Date) - $T0).TotalHours -gt $MaxHours) {
+            Write-Host "!! 已跑满 $MaxHours 小时（预算保护）：中止云端任务、下载已有结果" -ForegroundColor Red
+            Rx "pkill -f '[k]eyframes.py'; pkill -f '[v]ideo_run.py'; pkill -f '[i]ntro_video.py'; cd /root/v11_out && tar -czf /root/v11_result_$Stage.tgz --exclude=vtmp --exclude='real/*/frame_*' probe.* kf real intro_hd*.gif *.log 2>/dev/null; touch /root/v11_out/DONE_$Stage"
+            break
+        }
         if (((Get-Date) - $lastChange).TotalMinutes -gt $IdleMin) {
             Write-Host "!! $IdleMin 分钟没有进展，判定卡住：中止云端任务" -ForegroundColor Red
-            Rx "pkill -f keyframes.py; pkill -f video_run.py; cd /root/v11_out && tar -czf /root/v11_result_$Stage.tgz --exclude=vtmp probe.* kf real *.log 2>/dev/null; touch /root/v11_out/DONE_$Stage"
+            Rx "pkill -f '[k]eyframes.py'; pkill -f '[v]ideo_run.py'; cd /root/v11_out && tar -czf /root/v11_result_$Stage.tgz --exclude=vtmp probe.* kf real *.log 2>/dev/null; touch /root/v11_out/DONE_$Stage"
             break
         }
     }
