@@ -12,8 +12,9 @@ INP = '/root/ComfyUI/input'
 OUTK = '/root/v11_out/kf'; os.makedirs(OUTK, exist_ok=True)
 WF_REAL = os.environ.get('V11_WF_REAL', 'Krea2-二转三-图生图-新版.json')
 WF_SWAP = os.environ.get('V11_WF_SWAP', '【推荐】Qwen2.1-人物替换.json')
-SWAP = ('使用图1中的人物替换图2中的{who}，置于同一画面位置。长相与图1完全相同，是同一个人（五官、脸型、眉眼、发型、肤色一致）。'
-        '保持图2的姿势、表情、构图、景别、服装和光影不变，其他人物和背景不变。')
+# 只换脸（2026-11-22 试片：图1 用整张标准照时，整人替换模型把长发、毛衣一起搬过来，和定稿造型不符）
+SWAP = ('把图2中{who}的脸换成图1这张脸：五官、脸型、眉眼、肤色与图1一致，是同一个人。'
+        '只换脸，图2的发型、发色、服装、饰品、姿势、表情、构图、景别和光影全部保持不变，其他人物和背景不变。')
 
 def first_frame(td, tid):
     src = os.path.join(td, 'first.png')
@@ -34,11 +35,12 @@ def main():
         td = os.path.join(pack, tid); task = json.load(open(os.path.join(td, 'task.json'), encoding='utf-8'))
         chars = task.get('characters', [])
         look = '；'.join(LOOK[c] for c in chars if c in LOOK)
-        base = comfy_run.run(WF_REAL, 'kfbase_' + tid, {'10.image': first_frame(td, tid)}, prefix=(look + '。') if look else '')
+        # 图生图：8 步采样从第 3 步开始（保留白模构图，只重绘质感）；不加人物描述——从头重画时会拉远镜头、多画出一个人（2026-11-22 试片）
+        base = comfy_run.run(WF_REAL, 'kfbase_' + tid, {'10.image': first_frame(td, tid), '21.start_at_step': int(os.environ.get('V11_KF_START', 3))})
         if not base: print('KF FAIL base', tid, flush=True); continue
         cur = base
         for c in chars:   # 逐个角色换脸（多人镜头：用外貌描述指明换的是哪一个）
-            ref = 'canon_%s.jpg' % c
+            ref = 'canonface_%s.jpg' % c if os.path.exists(os.path.join(INP, 'canonface_%s.jpg' % c)) else 'canon_%s.jpg' % c
             if not os.path.exists(os.path.join(INP, ref)): continue
             shutil.copy(cur, os.path.join(INP, 'kfcur_%s.png' % tid))
             who = '那个人' if len(chars) == 1 else '这个人：' + LOOK[c].split('，')[0]

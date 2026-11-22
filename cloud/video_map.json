@@ -1,19 +1,26 @@
 {
- "_说明": "开机后先跑 probe_comfy.py，看 probe.txt 里视频工作流的节点号，把下面 TODO 换成「节点号.输入名」。不用的项留 null。fps/max_frames 按模型（Wan2.2：16fps、81 帧）。",
- "workflow": "TODO-Wan2.2-图生视频.json",
+ "_说明": "2026-11-22 按 probe 填：Wan2.2 Remix i2v 3.0（两段采样 57 高噪 / 58 低噪，RIFE 插帧后合成）",
+ "workflow": "Wan2.2 Remix i2v 3.0 自动反推+图生视频_Qwen3VL-8B.json",
  "enable": [],
- "image": "TODO.image",
+ "image": "258.image",
  "control_video": null,
  "control_kind": "depth",
- "prompt": "TODO.text",
- "negative": "TODO.text",
- "frames": "TODO.length",
- "width": "TODO.width",
- "height": "TODO.height",
- "seed": "TODO.noise_seed",
- "extra": {},
+ "prompt": "6.text",
+ "negative": "7.text",
+ "frames": "107.length",
+ "width": "107.width",
+ "height": "107.height",
+ "seed": "57.noise_seed",
+ "extra": {
+  "58.noise_seed": 20261122,
+  "118.width": 832,
+  "118.height": 480
+ },
  "fps": 16,
  "max_frames": 81,
- "size": [832, 480],
+ "size": [
+  832,
+  480
+ ],
  "timeout": 2400
 }

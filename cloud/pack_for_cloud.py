@@ -25,12 +25,25 @@ def encode(frames, out_mp4, fps=24):
                     '-c:v', 'libx264', '-crf', '14', '-pix_fmt', 'yuv420p', out_mp4], check=True)
     os.remove(lst)
 
+def face_crop(c, im):
+    """标准长相照片只裁脸（不带头发、衣服）→ refs/canonface_<cid>.jpg：整人替换模型会把参考图的发型、衣服一起搬过来"""
+    import cv2
+    lp = os.path.join(REFS, c + '_landmarks_full.json')
+    if not os.path.exists(lp): return
+    lm = json.load(open(lp, encoding='utf-8'))
+    eR, eL = lm['eye_R'], lm['eye_L']; iod = ((eL[0] - eR[0]) ** 2 + (eL[1] - eR[1]) ** 2) ** 0.5
+    xs = [x for k in ('contour_R', 'contour_L') for _, x in lm.get(k, [])] or [eR[0] - iod, eL[0] + iod]
+    ey = (eR[1] + eL[1]) / 2
+    x0, x1 = int(min(xs) - 0.12 * iod), int(max(xs) + 0.12 * iod); y0, y1 = int(ey - 0.8 * iod), int(lm['chin'][1] + 0.25 * iod)
+    h, w = im.shape[:2]
+    cv2.imwrite(os.path.join(OUT, 'refs', 'canonface_%s.jpg' % c), im[max(0, y0):min(h, y1), max(0, x0):min(w, x1)], [cv2.IMWRITE_JPEG_QUALITY, 95])
+
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
     segs = [s for s in S.segments() if not args or s[0] in args]
     if os.path.isdir(OUT): shutil.rmtree(OUT)
     os.makedirs(os.path.join(OUT, 'refs'), exist_ok=True)
-    tasks = []
+    tasks = []; hd_jobs = {}
     for sid, scene, set_name, beats in segs:
         tl_p = os.path.join(config.SHOTS, sid + '_timeline.json'); cuts_p = os.path.join(config.SHOTS, sid + '_cuts.json')
         if not os.path.exists(tl_p): print('跳过（还没拍）', sid); continue
@@ -59,13 +72,26 @@ def main():
             for c in chars:   # 标准长相 → refs/canon_<cid>.jpg（云端人物替换的图1）；只带出场角色、存高质量 JPG（家里上行慢）
                 rp = os.path.join(OUT, 'refs', 'canon_%s.jpg' % c)
                 if not os.path.exists(rp) and os.path.exists(os.path.join(REFS, c + '.png')):
-                    import cv2; cv2.imwrite(rp, cv2.imread(os.path.join(REFS, c + '.png')), [cv2.IMWRITE_JPEG_QUALITY, 95])
-            fb = os.path.join(REN, sid, 'beauty_%04d.png' % f0)   # 首帧（云端写实关键帧的输入，原分辨率）
+                    import cv2; im_ = cv2.imread(os.path.join(REFS, c + '.png')); cv2.imwrite(rp, im_, [cv2.IMWRITE_JPEG_QUALITY, 95])
+                    face_crop(c, im_)
+            fb = os.path.join(REN, sid, 'beauty_%04d.png' % f0)   # 首帧（先放预览帧，下面再用高清单帧覆盖）
             if os.path.exists(fb): shutil.copy(fb, os.path.join(td, 'first.png'))
+            hd_jobs.setdefault(sid, []).append((f0, td))
             task = dict(id=tid, segment=sid, frames=[f0, f1], n=f1 - f0 + 1, beats=[b['id'] for b in bts], characters=chars,
                         prompt='%s. %s' % (en or 'a scene on a Chinese university campus', STYLE), refs=refs)
             json.dump(task, open(os.path.join(td, 'task.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
             tasks.append(task)
+    for sid, jobs in hd_jobs.items():   # 高清首帧 1920×1080（预览帧放大后很糊，二转三会脑补出第二个人）
+        shot = os.path.join(config.SHOTS, sid + '.blend'); tmp = os.path.join(OUT, '_first_' + sid)
+        if not os.path.exists(shot): continue
+        subprocess.run([config.BLENDER, '-b', shot, '--factory-startup', '-P', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'render_first.py'), '--', tmp]
+                       + [str(f) for f, _ in jobs], env=config.blender_env(), capture_output=True)
+        for f, td in jobs:
+            src = os.path.join(tmp, 'first_%04d.png' % f)
+            if os.path.exists(src):
+                import cv2; cv2.imwrite(os.path.join(td, 'first.png'), cv2.imread(src))
+        shutil.rmtree(tmp, ignore_errors=True)
+        print('高清首帧', sid, len(jobs), flush=True)
     json.dump(dict(fps=24, size=[832, 480], tasks=[t['id'] for t in tasks]), open(os.path.join(OUT, 'manifest.json'), 'w', encoding='utf-8'), indent=1)
     zp = OUT + '.zip'
     with zipfile.ZipFile(zp, 'w', zipfile.ZIP_STORED) as z:

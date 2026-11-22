@@ -24,7 +24,7 @@ def ff(*a): subprocess.run(['ffmpeg', '-v', 'error', '-y'] + list(a), check=True
 def log(*a):
     s = time.strftime('%H:%M:%S ') + ' '.join(str(x) for x in a); print(s, flush=True)
     open('/root/v11_out/video_progress.log', 'a', encoding='utf-8').write(s + '\n')
-def frames4(n): return max(5, min(MAXF, ((n - 1) // 4) * 4 + 1))   # Wan 系列帧数 = 4k+1
+def frames4(n): return max(5, min(MAXF, ((n - 1 + 3) // 4) * 4 + 1))   # Wan 系列帧数 = 4k+1（向上取整，多出的最后裁掉；向下取整会多跑一小段）
 
 def prompt_of(task):
     who = '; '.join(LOOK_EN[c] for c in task.get('characters', []) if c in LOOK_EN)
@@ -57,7 +57,7 @@ def main():
         n24 = task['n']; dur = n24 / 24.0; need = max(5, round(dur * FPS) + 1)
         seed = 1234 + sum(map(ord, tid)); t0 = time.time()
         img_name = 'vimg_%s_00.png' % tid; shutil.copy(kf, os.path.join(INP, img_name))
-        chunks, done, k = [], 0, 0
+        chunks, chunk_n, done, k = [], [], 0, 0
         while done < need:
             nfr = frames4(need - done + (1 if k else 0))                 # 续接段的第一帧与上一段最后一帧重合
             ctl = None
@@ -70,16 +70,21 @@ def main():
             res = run_chunk(tid, k, img_name, ctl, nfr, task, seed)
             if args.dry: break
             if not res: log('生成失败', tid, '段', k); break
-            chunks.append(res); done += nfr - (1 if k else 0); k += 1
+            chunks.append(res); chunk_n.append(nfr); done += nfr - (1 if k else 0); k += 1
             if args.test: break
             img_name = 'vimg_%s_%02d.png' % (tid, k)                       # 下一段首帧 = 这一段最后一帧
-            ff('-sseof', '-0.1', '-i', res, '-frames:v', '1', '-update', '1', os.path.join(INP, img_name))
+            ff('-i', res, '-update', '1', os.path.join(INP, img_name))   # 逐帧覆盖写，留下的就是最后一帧（输出可能是 GIF，-sseof 截不到）
         if args.dry or not chunks: continue
         # 拼接（续接段去掉重合的第一帧）→ 24fps → 帧号与白模一致
         parts = []
         for i, c in enumerate(chunks):
             p = os.path.join(TMP, '%s_%02d.mp4' % (tid, i))
-            ff('-i', c, '-vf', ('select=gte(n\\,1),' if i else '') + 'setpts=N/%d/TB,scale=%d:%d' % (FPS, W, H), '-an', '-c:v', 'libx264', '-crf', '14', p)
+            # 时间轴按「这一段应有的时长」重算：工作流先插帧（81→321 帧）再存 GIF，GIF 里记的帧率是错的（8.3fps，2026-11-22 试片全成了慢动作）
+            nf = int(subprocess.run(['ffprobe', '-v', 'error', '-count_frames', '-select_streams', 'v:0', '-show_entries', 'stream=nb_read_frames', '-of', 'csv=p=0', c],
+                                    capture_output=True, text=True).stdout.strip() or 0)
+            dur = (chunk_n[i] - 1) / FPS if chunk_n[i] > 1 else 1.0
+            rate = max(1.0, (nf - 1) / dur) if nf > 1 else FPS
+            ff('-i', c, '-vf', ('select=gte(n\\,%d),' % max(1, round(rate / FPS)) if i else '') + 'setpts=N/%.4f/TB,scale=%d:%d' % (rate, W, H), '-an', '-c:v', 'libx264', '-crf', '14', p)
             parts.append(p)
         lst = os.path.join(TMP, tid + '.txt'); open(lst, 'w').write(''.join("file '%s'\n" % p for p in parts))
         mp4 = os.path.join(OUT, tid + '.mp4')

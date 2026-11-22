@@ -11,22 +11,22 @@ $ErrorActionPreference = 'Stop'
 $Root = Split-Path $PSScriptRoot -Parent
 $Key = Join-Path $env:USERPROFILE '.ssh\xiangongyun_ed25519'
 $Opt = @('-i', $Key, '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=accept-new', '-o', 'ServerAliveInterval=30')
-function R([string]$cmd) { & ssh.exe @Opt -p $Port $SshHost $cmd }
+function Rx([string]$cmd) { & ssh.exe @Opt -p $Port $SshHost $cmd }
 $T0 = Get-Date
 Push-Location $Root
 try {
     Write-Host "[1/4] 连接 $SshHost"
-    R "nvidia-smi --query-gpu=name,memory.total --format=csv,noheader; df -h /root | tail -1"
+    Rx "nvidia-smi --query-gpu=name,memory.total --format=csv,noheader; df -h /root | tail -1"
     Write-Host '[2/4] 上传脚本（几 KB）'
     $tgz = Join-Path $env:TEMP 'v11_scripts.tgz'
     & tar.exe -czf $tgz -C cloud comfy_run.py looks.py probe_comfy.py keyframes.py video_run.py video_map.json session_realism.sh
-    R 'mkdir -p /root/v11_upload/scripts /root/v11_out'
+    Rx 'mkdir -p /root/v11_upload/scripts /root/v11_out'
     & scp.exe @Opt -P $Port $tgz "${SshHost}:/root/v11_upload/scripts.tgz"
-    R 'tar -xzf /root/v11_upload/scripts.tgz -C /root/v11_upload/scripts && sed -i "s/\r$//" /root/v11_upload/scripts/*.sh'
+    Rx 'tar -xzf /root/v11_upload/scripts.tgz -C /root/v11_upload/scripts && sed -i "s/\r$//" /root/v11_upload/scripts/*.sh'
     $zip = Join-Path $Root 'dist\cloud_pack.zip'
     if ($Stage -ne 'probe') {
         if (-not (Test-Path $zip)) { throw '没有 dist\cloud_pack.zip：先在本地跑 cloud\prep_trial.ps1' }
-        $local = (Get-Item $zip).Length; $remote = (R "stat -c %s /root/v11_upload/cloud_pack.zip 2>/dev/null || echo 0") -as [long]
+        $local = (Get-Item $zip).Length; $remote = (Rx "stat -c %s /root/v11_upload/cloud_pack.zip 2>/dev/null || echo 0") -as [long]
         if ($local -ne $remote) {
             Write-Host ('    上传素材包 {0:N1} MB（上行慢，约 {1:N0} 秒）' -f ($local / 1MB), ($local / 1MB / 0.35))
             & scp.exe @Opt -P $Port $zip "${SshHost}:/root/v11_upload/cloud_pack.zip"
@@ -34,17 +34,17 @@ try {
     }
     Write-Host "[3/4] 云端后台运行阶段 $Stage"
     $pre = ($Only -split ',' | Where-Object { $_ }) -join ' '
-    R "rm -f /root/v11_out/DONE_$Stage; nohup bash /root/v11_upload/scripts/session_realism.sh $Stage $pre > /root/v11_out/session_$Stage.log 2>&1 &"
+    Rx "rm -f /root/v11_out/DONE_$Stage; nohup bash /root/v11_upload/scripts/session_realism.sh $Stage $pre > /root/v11_out/session_$Stage.log 2>&1 &"
     $last = ''; $lastChange = Get-Date
     while ($true) {
         Start-Sleep -Seconds 30
-        $st = R "tail -4 /root/v11_out/session_$Stage.log; tail -2 /root/v11_out/video_progress.log 2>/dev/null; ls /root/v11_out/DONE_$Stage 2>/dev/null"
+        $st = Rx "tail -4 /root/v11_out/session_$Stage.log; tail -2 /root/v11_out/video_progress.log 2>/dev/null; ls /root/v11_out/DONE_$Stage 2>/dev/null"
         $txt = ($st -join "`n")
         if ($txt -ne $last) { Write-Host ("  [{0:HH:mm:ss}] " -f (Get-Date)) ($st | Select-Object -Last 3 | Out-String).Trim(); $last = $txt; $lastChange = Get-Date }
         if ($txt -match "DONE_$Stage") { break }
         if (((Get-Date) - $lastChange).TotalMinutes -gt $IdleMin) {
             Write-Host "!! $IdleMin 分钟没有进展，判定卡住：中止云端任务" -ForegroundColor Red
-            R "pkill -f keyframes.py; pkill -f video_run.py; cd /root/v11_out && tar -czf /root/v11_result_$Stage.tgz --exclude=vtmp probe.* kf real *.log 2>/dev/null; touch /root/v11_out/DONE_$Stage"
+            Rx "pkill -f keyframes.py; pkill -f video_run.py; cd /root/v11_out && tar -czf /root/v11_result_$Stage.tgz --exclude=vtmp probe.* kf real *.log 2>/dev/null; touch /root/v11_out/DONE_$Stage"
             break
         }
     }
@@ -53,6 +53,7 @@ try {
     & scp.exe @Opt -P $Port "${SshHost}:/root/v11_result_$Stage.tgz" "$dst\result.tgz"
     & scp.exe @Opt -P $Port "${SshHost}:/root/v11_out/session_$Stage.log" "$dst\"
     & tar.exe -xzf "$dst\result.tgz" -C $dst; Remove-Item "$dst\result.tgz"
+    if (Test-Path "$dst\real") { & python (Join-Path $Root 'cloud\mp4_frames.py') "$dst\real" | Out-Null }   # 逐帧 PNG 本地还原
     Write-Host "结果在 $dst"
 } finally {
     Pop-Location

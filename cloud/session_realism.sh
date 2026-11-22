@@ -40,6 +40,6 @@ case $STAGE in
   *) echo "未知阶段 $STAGE" ;;
 esac
 RC=$?; [ $RC = 124 ] && echo "!! 超时被中止（防止空烧钱）"
-cd $OUT && tar -czf /root/v11_result_$STAGE.tgz --exclude=vtmp probe.* kf real video_progress.log comfy.log 2>/dev/null
+cd $OUT && tar -czf /root/v11_result_$STAGE.tgz --exclude=vtmp --exclude='real/*/frame_*' probe.* kf real video_progress.log comfy.log 2>/dev/null   # 逐帧 PNG 不传（本地从 mp4 还原，省下载时间）
 echo "[$(date +%T)] 阶段 $STAGE 结束 rc=$RC，结果 /root/v11_result_$STAGE.tgz ($(du -h /root/v11_result_$STAGE.tgz | cut -f1))"
 touch $OUT/DONE_$STAGE
