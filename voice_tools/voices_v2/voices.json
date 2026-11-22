@@ -1006,5 +1006,69 @@
   "speed": "low",
   "text": "每个人都在努力地生活，也都值得被温柔地对待。",
   "dur": 5.58
+ },
+ "Claude娘_1": {
+  "role": "Claude娘",
+  "gender": "female",
+  "pitch": "moderate",
+  "speed": "low",
+  "text": "大家好，我是Claude。很高兴能陪大家一起看这个故事，如果有哪里没看明白，随时都可以来问我哦。",
+  "dur": 10.02
+ },
+ "Claude娘_2": {
+  "role": "Claude娘",
+  "gender": "female",
+  "pitch": "moderate",
+  "speed": "moderate",
+  "text": "大家好，我是Claude。很高兴能陪大家一起看这个故事，如果有哪里没看明白，随时都可以来问我哦。",
+  "dur": 8.02
+ },
+ "Claude娘_3": {
+  "role": "Claude娘",
+  "gender": "female",
+  "pitch": "high",
+  "speed": "low",
+  "text": "大家好，我是Claude。很高兴能陪大家一起看这个故事，如果有哪里没看明白，随时都可以来问我哦。",
+  "dur": 10.72
+ },
+ "Claude娘_4": {
+  "role": "Claude娘",
+  "gender": "female",
+  "pitch": "high",
+  "speed": "moderate",
+  "text": "大家好，我是Claude。很高兴能陪大家一起看这个故事，如果有哪里没看明白，随时都可以来问我哦。",
+  "dur": 8.18
+ },
+ "Claude娘_5": {
+  "role": "Claude娘",
+  "gender": "female",
+  "pitch": "moderate",
+  "speed": "low",
+  "text": "大家好，我是Claude。很高兴能陪大家一起看这个故事，如果有哪里没看明白，随时都可以来问我哦。",
+  "dur": 59.22
+ },
+ "Claude娘_6": {
+  "role": "Claude娘",
+  "gender": "female",
+  "pitch": "moderate",
+  "speed": "moderate",
+  "text": "大家好，我是Claude。很高兴能陪大家一起看这个故事，如果有哪里没看明白，随时都可以来问我哦。",
+  "dur": 8.46
+ },
+ "Claude娘_7": {
+  "role": "Claude娘",
+  "gender": "female",
+  "pitch": "high",
+  "speed": "low",
+  "text": "大家好，我是Claude。很高兴能陪大家一起看这个故事，如果有哪里没看明白，随时都可以来问我哦。",
+  "dur": 10.58
+ },
+ "Claude娘_8": {
+  "role": "Claude娘",
+  "gender": "female",
+  "pitch": "high",
+  "speed": "moderate",
+  "text": "大家好，我是Claude。很高兴能陪大家一起看这个故事，如果有哪里没看明白，随时都可以来问我哦。",
+  "dur": 8.28
  }
 }

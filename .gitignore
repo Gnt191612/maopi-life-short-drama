@@ -35,3 +35,26 @@ assets/cast_next/
 viewer/models/
 # 其他 AI 工具的本地工作日志
 .workbuddy/
+
+# 本地调试脚本、片头候选大图（可重新生成）
+cloud/dbg_*.py
+cloud/session_2026*.sh
+cloud/seg_status.py
+assets/intro/bg_candidates/
+assets/intro/*_small.png
+assets/intro/green_v/*.gif
+assets/intro/dlut_dl/p1.jpg
+assets/intro/dlut_dl/snow_[ab].png
+assets/intro/dlut_dl/snow_cmp.png
+assets/intro/dlut_dl/snow_clean_cmp.png
+assets/intro/dlut_dl/chk.png
+assets/intro/dlut_dl/p2_g*.png
+
+assets/intro/green_v/intro_talk1.mp4
+assets/intro/green_v/intro_v*.mp4
+assets/intro/green_v/*.png
+assets/intro/intro_first.png
+assets/intro/voice/claude_line_[0-9].wav
+assets/intro/voice/claude_line_all.wav
+assets/intro/voice/claude_line_6_slow.wav
+!voice_tools/voices_v2/Claude娘_6.wav
