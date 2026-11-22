@@ -61,7 +61,7 @@ FACE = {   # 五官个性化（MakeHuman 形态目标，0~1）：每人不同的
             'nose-point-width-decr': 0.4, **LR('eye-height2-decr', 0.3), 'mouth-scale-horiz-decr': 0.3, 'mouth-lowerlip-volume-decr': 0.4},
  'zhou':   {'mouth-scale-horiz-decr': 0.35, **LR('eye-scale-decr', 0.35), 'nose-scale-horiz-decr': 0.4, 'head-rectangular': 0.9, 'head-fat-decr': 0.9, **LR('cheek-volume-decr', 1.0), **LR('cheek-bones-incr', 0.8), 'chin-bones-incr': 0.7,
             'chin-prominent-incr': 0.3, 'forehead-scale-vert-incr': 0.4, 'nose-hump-incr': 0.5, 'nose-scale-vert-incr': 0.3,
-            **LR('eye-bag-incr', 0.8), **LR('eye-push2-in', 0.5), 'eyebrows-angle-down': 0.4, 'mouth-scale-horiz-incr': 0.2},   # 眼袋更重：熬夜复习的倦态
+            **LR('eye-bag-incr', 0.8), **LR('eye-push2-in', 0.5), 'mouth-scale-horiz-incr': 0.2},   # 眼袋更重：熬夜复习的倦态
  'wang':   {'head-fat-incr': 0.7, 'head-scale-horiz-incr': 0.5, **LR('cheek-volume-incr', 0.6), 'head-square': 0.9, 'head-age-incr': 0.9, 'chin-width-incr': 0.7, 'head-scale-horiz-incr': 0.3, 'nose-scale-horiz-incr': 0.5,
             'nose-flaring-incr': 0.5, 'mouth-laugh-lines-out': 0.9, 'mouth-scale-horiz-incr': 0.3, **LR('eye-bag-incr', 0.5),
             'forehead-scale-vert-incr': 0.5, 'eyebrows-angle-up': 0.3, 'neck-double-incr': 0.7},
@@ -80,7 +80,7 @@ FACE = {   # 五官个性化（MakeHuman 形态目标，0~1）：每人不同的
             'nose-point-up': 0.3, 'mouth-cupidsbow-incr': 0.6, 'mouth-lowerlip-volume-incr': 0.5, 'mouth-upperlip-volume-incr': 0.35,
             'mouth-scale-horiz-decr': 0.25, 'chin-triangle': 0.35, 'chin-width-decr': 0.35, **LR('cheek-volume-decr', 0.3), **LR('cheek-bones-incr', 0.25)},
 }
-EYEBROW = {'lin': 'eyebrow005', 'chen': 'eyebrow012', 'zhou': 'eyebrow007', 'wang': 'eyebrow001', 'mom': 'eyebrow011',
+EYEBROW = {'lin': 'eyebrow005', 'chen': 'eyebrow012', 'zhou': 'eyebrow012', 'wang': 'eyebrow001', 'mom': 'eyebrow011',
            'classA': 'eyebrow009', 'classB': 'eyebrow012',                                                    # 每人不同眉形（同学乙：平直偏浓，照标准照）
            'extM1': 'eyebrow001', 'extM2': 'eyebrow003', 'extM3': 'eyebrow006', 'extF1': 'eyebrow011', 'extF2': 'eyebrow010', 'extF3': 'eyebrow012'}
 SKIN_TINT = {'lin': (1.03, 1.0, 0.98), 'chen': (1.04, 1.01, 1.0), 'zhou': (0.94, 0.92, 0.92), 'wang': (0.93, 0.88, 0.84),
@@ -651,6 +651,8 @@ FIT_ADJUST = {
             'nose-width1-decr': 0.45, 'nose-greek-incr': 0.4, **LR('eye-push1-out', 0.12), 'eyebrows-trans-forward': 0.10,
             'nose-width2-decr': 1.0, 'nose-width3-decr': 0.35},   # 鼻梁中段收窄（用户：鼻头还原，但鼻子中间略粗）
 }
+FIT_ADJUST['lin'] = {'head-fat-incr': 0.45, **LR('cheek-volume-incr', 0.5), **LR('cheek-inner-incr', 0.25), 'neck-double-incr': 0.8, 'head-round': 0.25,   # 用户：林晓胖的特征被埋没（照片拟合只看正面轮廓，脸颊的肉、双下巴、圆脸都是深度上的，拟合不出来）
+                     'chin-width-incr': 0.2, 'chin-height-decr': 0.15, 'mouth-lowerlip-volume-incr': 0.3, **LR('eye-bag-incr', 0.3)}   # 第一版满强度脸胀得太大，减半
 # 局部磨平（照片拟合角色）：以某关键点连线中点为中心、半径内的皮肤做拉普拉斯平滑，越靠中心越强。
 # classB：内眼角与鼻根之间的那道弧形深沟（MakeHuman 头模本身的眶缘形状，形态参数去不掉）
 FIT_SMOOTH = {
@@ -662,7 +664,7 @@ FIT_SMOOTH = {
 }
 
 # 头顶压低（用户：头顶到眉毛的比例不对）：眉毛以上（眼睛中点上方 z0·眼距）的头骨按 k 往下压，过渡平滑，脸不动
-FIT_CROWN = {'classB': dict(z0=1.0, k=0.72)}
+FIT_CROWN = {'classB': dict(z0=1.0, k=0.72), 'chen': dict(z0=1.0, k=0.80), 'zhou': dict(z0=1.0, k=0.80), 'classA': dict(z0=1.0, k=0.82)}   # 男生头顶也偏高偏尖（用户：头顶要处理）
 
 def fit_crown(body, cid):
     S = FIT_CROWN.get(cid)
@@ -701,7 +703,7 @@ def fit_shoulder(body, cid):
     kb = body.shape_key_add(name='adj_shoulder', from_mix=False); kb.data.foreach_set('co', (basis.reshape(-1, 3) + (Y - X)).astype(np.float32).ravel()); kb.value = 1.0
     print('FIT SHOULDER', cid, flush=True)
 
-LIP_SEAL = {'classB'}   # 唇缝封口（MakeHuman 默认嘴唇微张，唇缝露出口腔暗色；形态参数合拢会把唇形扯方）
+LIP_SEAL = {'classB', 'lin', 'chen', 'zhou', 'wang', 'classA'}   # 所有照片拟合角色   # 唇缝封口（MakeHuman 默认嘴唇微张，唇缝露出口腔暗色；形态参数合拢会把唇形扯方）
 
 def fit_lipseal(body, cid):
     """找出上下唇贴合处（唇部顶点里法线朝上/朝下的内侧面），按左右位置求缝的中线高度，把缝两侧 6mm 内的唇部顶点往中线收拢"""
@@ -792,6 +794,7 @@ def apply_face(body, cid):
         except Exception as e: print('FACE WARN', cid, name, e, flush=True)
     depth = DEPTH_M if CAST[cid][1] > 0.5 else DEPTH_F
     for name, v in depth.items():
+        if fit is not None and CAST[cid][1] > 0.5 and name in ('eyebrows-trans-forward', 'l-eye-push1-in', 'r-eye-push1-in'): continue   # 照片拟合的男生：眉弓前凸 + 眼窝压凹在两眼之间顶出一道横棱，照片里没有
         if fit is None and name in FACE.get(cid, {}): continue            # 个人特征里已有的不重复叠加（照片拟合时立体度层照常叠加，与拟合时的基础人体一致）
         try: TargetService.load_target(body, TargetService.target_full_path(name), weight=v, name='depth_' + name)
         except Exception as e: print('DEPTH WARN', cid, name, e, flush=True)
@@ -1001,19 +1004,20 @@ def bone_child(obj, rig, bone):
 def glasses(rig):
     """陈瑶的黑色细框眼镜：两个镜框环 + 鼻梁"""
     pb = rig.pose.bones; L = rig.matrix_world @ pb['eye.L'].head; R = rig.matrix_world @ pb['eye.R'].head
-    c = (L + R) / 2; half = (L - R).length / 2; parts = []
+    # 照定妆照：圆形细金属框，镜片直径约为瞳距的 0.7、中心比瞳孔略低（2026-11-21）
+    c = (L + R) / 2; half = (L - R).length / 2; parts = []; rr = half * 2 * 0.35; dz = -half * 2 * 0.10; fy = -0.026
     for p in (L, R):
-        bpy.ops.mesh.primitive_torus_add(major_radius=0.019, minor_radius=0.0018, location=(p.x, p.y - 0.022, p.z), rotation=(math.radians(90), 0, 0))
+        bpy.ops.mesh.primitive_torus_add(major_radius=rr, minor_radius=0.0009, major_segments=64, location=(p.x, p.y + fy, p.z + dz), rotation=(math.radians(90), 0, 0))
         parts.append(bpy.context.object)
-    bpy.ops.mesh.primitive_cylinder_add(radius=0.0016, depth=half * 2 - 0.036, location=(c.x, c.y - 0.022, c.z + 0.004), rotation=(0, math.radians(90), 0))
+    bpy.ops.mesh.primitive_cylinder_add(radius=0.0008, depth=max(0.004, half * 2 - 2 * rr), location=(c.x, c.y + fy - 0.002, c.z + dz + rr * 0.35), rotation=(0, math.radians(90), 0))
     parts.append(bpy.context.object)
-    for side, p in ((1, L), (-1, R)):   # 镜腿
-        bpy.ops.mesh.primitive_cylinder_add(radius=0.0014, depth=0.10, location=(p.x + side * 0.02, p.y + 0.028, p.z), rotation=(math.radians(90), 0, 0))
+    for side, p in ((1, L), (-1, R)):   # 镜腿：从镜框外侧往后到耳朵
+        bpy.ops.mesh.primitive_cylinder_add(radius=0.0008, depth=0.10, location=(p.x + side * rr, p.y + fy + 0.05, p.z + dz + rr * 0.4), rotation=(math.radians(90), 0, 0))
         parts.append(bpy.context.object)
     bpy.ops.object.select_all(action='DESELECT')
     for o in parts: o.select_set(True)
     bpy.context.view_layer.objects.active = parts[0]; bpy.ops.object.join()
-    g = bpy.context.object; g.name = 'chen_glasses'; g.data.materials.append(mat('glasses_black', (0.02, 0.02, 0.02), 0.3))
+    g = bpy.context.object; g.name = 'chen_glasses'; gm = mat('glasses_metal', (0.30, 0.24, 0.16), 0.25); gm.node_tree.nodes['Principled BSDF'].inputs['Metallic'].default_value = 1.0; g.data.materials.append(gm)   # 浅金色金属细框
     bone_child(g, rig, 'head'); return g
 
 def hood(rig, rgb):

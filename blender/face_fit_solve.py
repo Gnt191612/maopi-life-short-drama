@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """脸型拟合 · 第 2 步（普通 Python，numpy/scipy/opencv）：按照片关键点求 MakeHuman 五官形态目标的权重。
 输入：face_fit_export.py 导出的 <cid>_head.npz + assets/identity/<cid>_landmarks_full.json
 做法：照片视角（偏航/俯仰角网格搜索）下正交投影模型关键点；交替求「照片→模型平面的相似变换」与「形态目标权重」（带边界的最小二乘 + 正则，
@@ -163,7 +163,8 @@ def overlay(m, lm, r0, r1, path):
             a = pts[k]; cv2.line(im, tuple(a.astype(int)), tuple(q.astype(int)), (0, 0, 255), 2)
             cv2.circle(im, tuple(a.astype(int)), 5, (0, 255, 0), -1); cv2.circle(im, tuple(q.astype(int)), 5, (0, 0, 255), -1)
         cv2.putText(im, '%s  err %.3f iod' % (title, r['cost'] ** 0.5), (20, 60), 0, 1.4, (0, 0, 255), 3)
-        panels.append(im[200:900, 180:780])
+        allp = np.array(list(pts.values())); x0, y0 = allp.min(0) - 120; x1, y1 = allp.max(0) + 120   # 按关键点范围裁切（各角色照片尺寸不同）
+        panels.append(cv2.resize(im[max(0, int(y0)):int(y1), max(0, int(x0)):int(x1)], (600, 700)))
     cv2.imwrite(path, np.hstack(panels))
 
 def main(cid):
@@ -185,6 +186,7 @@ def main(cid):
                # 关键点对应的网格顶点序号（MakeHuman 基础网格全序号），照片贴脸（face_project.py）用它们做对齐
                landmark_verts={k: int(z['hidx'][r1['sel'][k]]) for k in r1['keys']},
                # 照片像素 → 模型投影平面（偏航/俯仰旋转后的 x、z，米，未缩放的基础网格）：q = s·R·(x, −y) + t。发际线等照片标注投到模型上用
+               eye_z=float((z['cL'][2] + z['cR'][2]) / 2),   # 拟合时（未改身材）两眼中心高度：发际线等照片投影按它补偿头的上下移动
                photo_to_model=dict(s=float(r1['s']), R=np.asarray(r1['Rs']).tolist(), t=np.asarray(r1['t']).tolist()))
     json.dump(res, open(os.path.join(OUT, cid + '_fit.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     overlay(m, lm, r0, r1, os.path.join(OUT, cid + '_fit_overlay.png'))

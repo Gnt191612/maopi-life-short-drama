@@ -97,7 +97,7 @@ def tps_warp(photo, src, dst):
     inside = (fx >= 0) & (fx < wd - 1) & (fy >= 0) & (fy < h - 1)
     x0 = np.clip(fx.astype(int), 0, wd - 2); y0 = np.clip(fy.astype(int), 0, h - 2); tx = (fx - x0)[:, None]; ty = (fy - y0)[:, None]
     c = (photo[y0, x0] * (1 - tx) * (1 - ty) + photo[y0, x0 + 1] * tx * (1 - ty) + photo[y0 + 1, x0] * (1 - tx) * ty + photo[y0 + 1, x0 + 1] * tx * ty)
-    out = np.zeros((RES * RES, 4), np.float32); out[:, :3] = c[:, :3]; out[:, 3] = inside
+    out = np.zeros((RES * RES, 4), np.float32); out[:, :3] = c[:, :3]; out[:, 3] = inside * (c[:, 3] if c.shape[1] > 3 else 1.0)   # 照片自带的透明度（发际线以上置 0）一起带过来
     return out.reshape(RES, RES, 4)
 
 def load_rgba(path):
@@ -211,8 +211,75 @@ def project(cid):
         dstd = json.load(open(os.path.join(IDDIR, cid + '_landmarks.json'), encoding='utf-8')); keys = list(KEYS)
     cam = make_camera(c, iod, yaw, pitch); vdir, _ = view_dir(yaw, pitch)
     src = [to_px(cam, lm3[k]) for k in keys]; dst = [dstd[k] for k in keys]
+    srcd_all = dict(zip(keys, src))   # 剔除前的全部点（唇色取样等要用）
+    if fit is not None:   # 去掉对应关系明显不一致的点（模型上取错顶点时，薄板样条会把照片局部拧成一团，嘴上方出现色块）
+        S_, D_ = np.array(src, float), np.array(dst, float)
+        aff_ = np.linalg.lstsq(np.c_[S_, np.ones(len(S_))], D_, rcond=None)[0]
+        res_ = np.linalg.norm(np.c_[S_, np.ones(len(S_))] @ aff_ - D_, axis=1)
+        sc_ = np.linalg.norm(np.array(dstd['eye_L_out'], float) - np.array(dstd['eye_R_out'], float))
+        # 相邻点之间顺序颠倒也会折叠：同一竖线上的 鼻尖-鼻底-上唇-下唇-下巴 必须保持上下顺序
+        order_ = [k for k in ('nose', 'subnasal', 'lip_top', 'lip_bot', 'chin') if k in keys]
+        bad = {k for k, r in zip(keys, res_) if r > 0.10 * sc_}
+        for a_, b_ in zip(order_, order_[1:]):
+            ia, ib = keys.index(a_), keys.index(b_)
+            if not (src[ia][1] < src[ib][1]): bad.add(b_)
+        if bad:
+            print('TPS drop', sorted(bad), flush=True)
+            keep_ = [i for i, k in enumerate(keys) if k not in bad]
+            keys = [keys[i] for i in keep_]; src = [src[i] for i in keep_]; dst = [dst[i] for i in keep_]
+    if fit is not None:   # 眉毛控制点（用户：眉型不还原，眉尾被拉弯往下垂）：照片上自动找出眉毛中线，跟着同侧眼睛做刚性移动加进薄板样条
+        src, dst = list(src), list(dst); keys = list(keys)
+        ph0 = os.path.join(IDDIR, cid + '_noglasses.png'); ph0 = ph0 if os.path.exists(ph0) else os.path.join(IDDIR, cid + '.png')
+        g0 = load_rgba(ph0)[..., :3].mean(2)
+        lmj0 = json.load(open(os.path.join(IDDIR, cid + '_landmarks_full.json'), encoding='utf-8'))
+        top_ = sorted(lmj0.get('skin_top', lmj0.get('hairline', [])))
+        for s_ in ('R', 'L'):
+            ko, ki = 'eye_%s_out' % s_, 'eye_%s_in' % s_
+            if ko not in keys or ki not in keys: continue
+            po, pi = np.array(dstd[ko], float), np.array(dstd[ki], float); ro, ri = np.array(src[keys.index(ko)], float), np.array(src[keys.index(ki)], float)
+            w = np.linalg.norm(po - pi); ytop = np.array(dstd['eye_%s_top' % s_], float)[1]
+            xa, xb = sorted((pi[0] - (po[0] - pi[0]) * 0.12, po[0] + (po[0] - pi[0]) * 0.30))
+            y0, y1 = int(ytop - 1.0 * w), int(ytop - 0.12 * w)
+            reg = g0[y0:y1, int(xa):int(xb)]
+            if reg.size == 0: continue
+            base_ = np.percentile(reg, 80)
+            cols = []
+            for j in range(reg.shape[1]):
+                d = base_ - reg[:, j]; d = np.convolve(d, np.ones(5) / 5, 'same')
+                if d.max() > 0.10: cols.append((xa + j, y0 + int(np.argmax(d))))
+            if len(cols) < reg.shape[1] * 0.5: print('BROW skip', s_, flush=True); continue
+            cols = np.array(cols, float)
+            pts_b = []
+            for f in (0.08, 0.35, 0.65, 0.92):
+                x_ = xa + (xb - xa) * f; near = cols[np.abs(cols[:, 0] - x_) < (xb - xa) * 0.08]
+                if len(near) < 3: continue
+                y_ = float(np.median(near[:, 1]))
+                if top_ and y_ < np.interp(x_, [p[0] for p in top_], [p[1] for p in top_]) + 10: continue   # 被刘海盖住
+                pts_b.append(np.array([x_, y_]))
+            # 照片 → 画面：用同侧两个眼角定的相似变换（平移 + 旋转 + 缩放）
+            dp, dr = pi - po, ri - ro; sc = np.linalg.norm(dr) / max(np.linalg.norm(dp), 1e-6)
+            ang = math.atan2(dr[1], dr[0]) - math.atan2(dp[1], dp[0]); Rm2 = np.array([[math.cos(ang), -math.sin(ang)], [math.sin(ang), math.cos(ang)]])
+            for k_, p in enumerate(pts_b):
+                src.append(tuple(ro + sc * Rm2 @ (p - po))); dst.append(list(p)); keys.append('brow_%s_%d' % (s_, k_))
+            print('BROW pts', s_, len(pts_b), flush=True)
     tmp = os.path.join(config.ROOT, 'build', 'identity'); os.makedirs(tmp, exist_ok=True)
-    warped = tps_warp(load_rgba(os.path.join(IDDIR, cid + '.png')), src, dst)
+    def photo_masked(path):
+        """照片发际线以上（头发、刘海盖住的额头）透明：不把照片里的头发贴到模型额头上（刘海位置和模型不完全一致时会露出一片画上去的头发）"""
+        a = load_rgba(path)
+        lmj = json.load(open(os.path.join(IDDIR, cid + '_landmarks_full.json'), encoding='utf-8'))
+        if 'hairline' in lmj and fit is not None:
+            hl_ = sorted(lmj.get('skin_top', lmj['hairline']))   # skin_top：刘海下沿（刘海盖住额头的角色）
+            xs_ =np.array([p[0] for p in hl_], float); ys_ = np.array([p[1] for p in hl_], float)
+            h_, w_ = a.shape[:2]; yy_ = np.arange(h_)[:, None]; xx_ = np.arange(w_)[None, :]
+            yh = np.interp(xx_, xs_, ys_, left=ys_[0], right=ys_[-1])
+            a[..., 3] *= np.clip((yy_ - yh) / 70.0, 0, 1)                   # 发际线往下 70 像素渐变（窄了会看到照片肤色和模型肤色的分界线）
+            # 发际线两端以外（太阳穴、鬓角的头发是竖着往下的）：端点往下 80 像素以内不贴，往里 90 像素平滑过渡（硬切会留一道竖缝）
+            wout = np.clip(np.maximum(xs_[0] + 60 - xx_, xx_ - (xs_[-1] - 60)) / 90.0, 0, 1)
+            yend = np.where(xx_ < (xs_[0] + xs_[-1]) / 2, ys_[0], ys_[-1])
+            a[..., 3] *= 1 - wout * (1 - np.clip((yy_ - yend - 80) / 40.0, 0, 1))
+        return a
+    ph_ = os.path.join(IDDIR, cid + '_noglasses.png')   # 照片戴眼镜的角色：用去掉眼镜框的版本（3D 眼镜另外建模）
+    warped = tps_warp(photo_masked(ph_ if os.path.exists(ph_) else os.path.join(IDDIR, cid + '.png')), src, dst)
     m0_ = body.material_slots[0].material; gt_ = next(n for n in m0_.node_tree.nodes if n.type == 'GROUP').node_tree
     srcd = dict(zip(keys, src))
     if fit is not None:
@@ -281,7 +348,7 @@ def project(cid):
     if fit is not None:
         # 唇缝内侧（上下唇贴合处朝上/朝下的面）正面几乎看不到，投影上去的照片被拉成长条，3/4 角度像嘴角拖出一道深线：
         # 这些面改用照片下唇的平均唇色（越朝侧面越用它）
-        lt, lb = np.array(srcd['lip_top']), np.array(srcd['lip_bot']); sp = (lt + lb) / 2 + (lb - lt) * 0.28
+        lt, lb = np.array(srcd_all['lip_top']), np.array(srcd_all['lip_bot']); sp = (lt + lb) / 2 + (lb - lt) * 0.28
         x_, y_ = int(sp[0]), int(sp[1]); patch = warped[y_ - 6:y_ + 7, x_ - 10:x_ + 11, :3].reshape(-1, 3)
         lip_lin = np.where(patch <= 0.04045, patch / 12.92, ((patch + 0.055) / 1.055) ** 2.4).mean(0)
         wl = mul(an.outputs['Fac'], ramp(dot.outputs['Value'], 0.45, 0.10))
@@ -343,7 +410,8 @@ def project(cid):
     if subd: subd.render_levels = subd_lv
     if 'v11_lips' in me.attributes: me.attributes.remove(me.attributes['v11_lips'])
     bpy.data.objects.remove(cam, do_unlink=True)
-    for o in [o for o in bpy.data.objects if o.name.startswith(cid + '_eyebrow')]: bpy.data.objects.remove(o, do_unlink=True)   # 照片里有眉毛
+    keep3d = json.load(open(os.path.join(IDDIR, cid + '_landmarks_full.json'), encoding='utf-8')).get('keep_brow3d', False) if fit is not None else False
+    for o in [o for o in bpy.data.objects if o.name.startswith(cid + '_eyebrow') and not keep3d]: bpy.data.objects.remove(o, do_unlink=True)   # 照片里眉毛被刘海盖住的角色（keep_brow3d）保留 3D 眉毛   # 照片里有眉毛
     baked.pack(); wimg.user_clear(); bpy.data.images.remove(wimg)
     body['v11_identity'] = True
     bpy.ops.wm.save_mainfile()
