@@ -1,11 +1,11 @@
 {
  "name": "Claude 娘",
  "personality": "知书达理、温柔体贴",
- "look_zh": "动漫画风的少女，橙色及腰长直发，左侧发间别着向日葵发饰和黑色蝴蝶结，琥珀色眼睛，温柔微笑；白色长袖花纹长裙（立领荷叶边、肩部短披肩、袖口荷叶边），胸前向日葵胸花与黑色蝴蝶结，腰间黑色大蝴蝶结，左侧深蓝色蝴蝶结，白色花纹圆头鞋；手持一把合着的折扇。",
- "look_en": "an anime-style girl with long flowing orange hair, a sunflower hair ornament with a black ribbon, amber eyes and a gentle smile, wearing a white long-sleeved floral long dress with a ruffled high collar, a short capelet, ruffled cuffs, a sunflower brooch and black bows, a navy blue bow on her left side and white floral shoes, holding a closed folding fan",
+ "look_zh": "动漫画风的少女，橙色及腰长直发，左侧发间别着向日葵发饰和黑色蝴蝶结，琥珀色眼睛，温柔微笑；白色长袖花纹长裙（立领荷叶边、肩部短披肩、袖口荷叶边），胸前向日葵胸花与黑色蝴蝶结，腰间黑色大蝴蝶结，左侧深蓝色蝴蝶结，白色花纹圆头鞋；手持一把半开的折扇。",
+ "look_en": "an anime-style girl with long flowing orange hair, a sunflower hair ornament with a black ribbon, amber eyes and a gentle smile, wearing a white long-sleeved floral long dress with a ruffled high collar, a short capelet, ruffled cuffs, a sunflower brooch and black bows, a navy blue bow on her left side and white floral shoes, holding a half-open folding fan",
  "style_rules": [
   "始终保持干净的 2D 动漫插画风格，不要变成写实人脸或 3D 渲染",
-  "扇子全程合着拿在手里（用户 2026-11-22 定：不打开更美观）",
+  "扇子保持立绘里的半开状态拿在手里即可，不要做「啪地展开」之类的开扇动作（用户 2026-11-22 确认）",
   "适合讲解、主持类动作：面向镜头微笑说话、手掌示意画面一侧、点头"
  ],
  "voice": {
