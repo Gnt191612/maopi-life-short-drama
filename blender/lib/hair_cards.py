@@ -19,6 +19,11 @@ CARDS = {
                 part_notch=0.0, part_v=0.005, junction={'R': 4, 'L': 4}, edge_cards=0, curtain={},
                 tie_up=-0.10, tail=0.34, tail_r=0.026, n_cards=0, wisps={}, frame={'R': 5, 'L': 4}, baby=220, fly=90,
                 headband=(0.010, 0.010, 0.012)),
+ # （停用：用户 11-22 更喜欢原来的波浪短发轮廓）林母：及胸披肩直发、偏中分（照片分缝略偏她的左边）；头顶主体 + 三片垂帘（style='long'）；照片头顶有不少碎发
+ '_mom_long': dict(style='long', rgb=(0.006, 0.005, 0.0045), thick_top=0.008, thick_side=0.004, part_t=0.28, front_vol=0.005, corner=0.0, hl_drop=0.0178,
+                part_notch=0.0, part_v=0.004, junction={'R': 3, 'L': 3}, edge_cards=0, curtain={},
+                tie_up=-1.2, n_cards=0, wisps={}, frame={'R': 4, 'L': 4}, baby=120, fly=180,
+                drape=dict(az0=58, split=112, len_front=0.22, len_back=0.26, start=0.08, thick=0.007)),
  # 男生短发（style='short'）：发际线 = 照片上看得见的头发边缘（含刘海），厚度头顶厚、两侧薄；发流从前额往后脑梳
  'chen':   dict(style='short', no_part=True, rgb=(0.006, 0.005, 0.0045), thick_top=0.018, thick_side=0.009, part_t=0.28, front_vol=0.004, fringe=dict(n=160, az=48, len=(0.004, 0.025), w=(0.005, 0.011)), hl_drop=0.013,
                 tie_up=-0.35, n_cards=0, baby=80, fly=220, cap_edge=False, base_hl=dict(ear=-0.05, behind=-0.065, nape=-0.072), curl=0.25, sink=(0.0, -1.0, -0.6)),   # 韩式中分刘海
@@ -246,6 +251,100 @@ def _ribbon(bm, uvl, pts, normals, width, u0=0.0, u1=1.0):
         f = bm.faces.new((a0, b0, b1, a1))
         for lp, (x, y) in zip(f.loops, ((u0, i / (n - 1)), (u1, i / (n - 1)), (u1, (i + 1) / (n - 1)), (u0, (i + 1) / (n - 1)))):
             lp[uvl].uv = (x, y)
+
+def _drape(cid, S, rig, bb, H, eyes, on_mass, rnd, seed):
+    """披肩长发的垂帘：每一列头发（按方位角）先贴着发型主体表面往下，主体下沿以下自由下垂——
+    碰到脸、脖子沿表面让开；碰到肩膀往前（前帘）或往后（后帘）滑下去，一直垂到胸口。
+    三片：右前（方位角 az0→split）、后（split→180→−split）、左前；单面网格 + 加厚修改器。绑骨：头 → 脖子 → 上背（同马尾）"""
+    D = S['drape']; az0, split = D.get('az0', 58), D.get('split', 112)
+    L_front, L_back = D.get('len_front', 0.24), D.get('len_back', 0.27)
+    z_start = eyes.z + D.get('start', 0.08); dz = 0.006
+    def gap_at(z):   # 离皮肤的距离：脸旁贴近，脖子以下要让开毛衣
+        return 0.006 + 0.022 * HL._smooth(eyes.z - 0.10, eyes.z - 0.17, z)
+    def column(az, front):
+        a = math.radians(az); rad = Vector((math.sin(a), -math.cos(a), 0.0)); pts = []
+        # 贴主体：从 z_start 的高度沿表面往下（射线仰角递减），直到射不到主体或到了眼睛以下
+        for i in range(60):
+            z = z_start - i * dz
+            el = math.atan2(z - H.z, 0.085)
+            d = (rad * math.cos(el) + Vector((0, 0, math.sin(el)))).normalized()
+            p, nn = on_mass(d, 0.0015)
+            if p is None or z < eyes.z - D.get('hug_to', 0.02): break
+            pts.append(p)
+        if len(pts) < 3: return None
+        # 自由下垂 + 碰撞
+        L = L_front if front else L_back
+        L *= 1.0 + rnd.uniform(-0.06, 0.06)                                # 发尾参差
+        drift = Vector((0, -1.0 if front else 1.0, 0)) * 0.006
+        out = Vector((rad.x, rad.y, 0)) * 0.0008                           # 越往下略微散开
+        p = pts[-1].copy(); z_end = eyes.z - L; slid = 0.0
+        while p.z > z_end and len(pts) < 160:
+            prev = p.copy()
+            p = p + Vector((0, 0, -dz)) + out
+            for _ in range(6):
+                loc, nrm, _, dist = bb.find_nearest(p)
+                if loc is None: break
+                inside = (p - loc).dot(nrm) < 0
+                g = gap_at(p.z)
+                if not inside and dist >= g: break
+                p = loc + nrm * g
+                if abs(p.x - H.x) < abs(prev.x - H.x): p.x = prev.x        # 不往脸中线收（原来被下颌推到下巴前面）
+            if p.z > prev.z - dz * 0.3 and p.z < eyes.z - 0.14:            # 停在肩膀上没落下去：往前/往后滑一点（每步一次，总量有上限；下巴以上不滑）
+                p = p + drift; slid += drift.length
+                if slid > 0.16: break
+            if (p - prev).length > 0.04: break                             # 防止跳飞
+            pts.append(p.copy())
+        return pts
+    def sheet(azs, front):
+        cols = [c for c in (column(az, front) for az in azs) if c is not None]
+        if len(cols) < 3: return None
+        n = max(len(c) for c in cols)
+        def resample(c, m):   # 每列按弧长重采样成同样的点数
+            acc = [0.0]
+            for a_, b_ in zip(c, c[1:]): acc.append(acc[-1] + (b_ - a_).length)
+            out = []
+            for k in range(m):
+                s = acc[-1] * k / (m - 1); j = max(1, min(len(c) - 1, next((j for j in range(1, len(c)) if acc[j] >= s), len(c) - 1)))
+                f = 0.0 if acc[j] == acc[j - 1] else (s - acc[j - 1]) / (acc[j] - acc[j - 1]); out.append(c[j - 1].lerp(c[j], f))
+            return out
+        cols = [resample(c, n) for c in cols]
+        bm = bmesh.new(); uvl = bm.loops.layers.uv.new('UVMap')
+        V = [[bm.verts.new(p) for p in c] for c in cols]
+        for i in range(len(V) - 1):
+            for k in range(n - 1):
+                f = bm.faces.new((V[i][k], V[i + 1][k], V[i + 1][k + 1], V[i][k + 1]))
+                for lp, (u, v) in zip(f.loops, ((i, k), (i + 1, k), (i + 1, k + 1), (i, k + 1))):
+                    lp[uvl].uv = (azs[0] / 360.0 + u * (azs[1] - azs[0]) / 360.0 + 0.5, v / (n - 1))
+        return bm
+    step = D.get('step', 3.0)
+    def rng(a, b):
+        k = max(2, int(abs(b - a) / step)); return [a + (b - a) * i / k for i in range(k + 1)]
+    parts = [sheet(rng(-az0, -split), True), sheet(rng(split, 360 - split), False), sheet(rng(az0, split), True)]
+    bm = bmesh.new()
+    me_all = bpy.data.meshes.new(cid + '_hairdrape')
+    tmp = []
+    for b_ in parts:
+        if b_ is None: continue
+        m_ = bpy.data.meshes.new('tmp'); b_.to_mesh(m_); b_.free(); tmp.append(m_)
+    for m_ in tmp: bm.from_mesh(m_); bpy.data.meshes.remove(m_)
+    for v in bm.verts:   # 方位角超过 180 的列（后帘跨过正后方）坐标本来就连续，这里只做法线统一
+        pass
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    bm.to_mesh(me_all); bm.free()
+    for poly in me_all.polygons: poly.use_smooth = True
+    me_all.materials.append(_hair_mat(cid + '_hairdrape', S['rgb'], 'mass', freq=120.0, seed=seed + 5))
+    ob = _link(cid + '_hairdrape', me_all)
+    so = ob.modifiers.new('thick', 'SOLIDIFY'); so.thickness = D.get('thick', 0.007); so.offset = 0.0; so.use_even_offset = True
+    sd = ob.modifiers.new('subdiv', 'SUBSURF'); sd.levels = 1; sd.render_levels = 2
+    # 绑骨：头 → 脖子 → 上背（按高度渐变，同马尾）
+    MW = rig.matrix_world; zN = (MW @ rig.data.bones['neck01'].head_local).z; zS = (MW @ rig.data.bones['spine01'].head_local).z
+    g_h, g_n, g_s = (ob.vertex_groups.new(name=n_) for n_ in ('head', 'neck01', 'spine01'))
+    for v in ob.data.vertices:
+        z = v.co.z; a_ = HL._smooth(eyes.z - 0.12, eyes.z - 0.04, z); b_ = HL._smooth(zS, zN, z) * (1 - a_)
+        g_h.add([v.index], a_, 'REPLACE'); g_n.add([v.index], b_, 'REPLACE'); g_s.add([v.index], max(0.0, 1 - a_ - b_), 'REPLACE')
+    am = ob.modifiers.new('rig', 'ARMATURE'); am.object = rig; ob.modifiers.move(len(ob.modifiers) - 1, 0)
+    ob.parent = rig; ob.matrix_parent_inverse = rig.matrix_world.inverted()
+    return ob
 
 def build(cid, rig, body, shell, seed=1):
     S = CARDS[cid]; rnd = random.Random(seed)
@@ -593,6 +692,17 @@ def build(cid, rig, body, shell, seed=1):
                     if dd < 0.004 or out.dot(nn if nn.dot(out) > 0 else -nn) < 0: q = loc + (nn if nn.dot(Vector((sx, -0.3, 0))) > 0 else -nn) * 0.004
                 pts.append(q); nrs.append((q - Vector((H.x, H.y, q.z))).normalized())
             _ribbon(bmc, uvc, pts, nrs, rnd.uniform(0.005, 0.010), rnd.random(), rnd.random() + 0.6)
+    if S.get('style') == 'long':   # 披肩长发（林母）：头顶主体 + 两前一后三片垂帘，没有马尾、发圈
+        drape = _drape(cid, S, rig, bb, H, eyes, on_mass, rnd, seed)
+        cm = bpy.data.meshes.new(cid + '_haircards'); bmc.to_mesh(cm); bmc.free()
+        for poly in cm.polygons: poly.use_smooth = True
+        cm.materials.append(_hair_mat(cid + '_haircards', S['rgb'], 'card', freq=9.0, seed=seed + 2))
+        cards = _link(cid + '_haircards', cm); _parent(cards, rig, pinv)
+        cap_in = [fi for fi in cap_faces if hl.hd(sum((bv[i] for i in bp[fi]), Vector()) / len(bp[fi])) > 0.006]
+        HL._scalp_cap(cid, bv, bp, cap_in, H, rig, pinv)
+        if shell is not None: shell.hide_render = True; shell.hide_viewport = True
+        print('HAIR CARDS OK', cid, 'long', 'mass faces', len(mm.polygons), 'drape faces', len(drape.data.polygons), flush=True)
+        return mass
     if S.get('style') == 'short':   # 男生短发：没有马尾、发圈、发箍
         # 头发下面的头皮隐藏（耳后、后颈头发很薄，身体细分后皮肤会从头发里透出来，一块块肉色）
         mods_ = [m for m in body.modifiers if m.type == 'MASK' and m.show_viewport]

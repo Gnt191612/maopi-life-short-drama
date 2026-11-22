@@ -110,7 +110,7 @@ BODY.update({'lin':    {'upperlegs-height-incr': 0.20, 'lowerlegs-height-incr': 
              'wang':   {'upperlegs-height-incr': 0.15, 'lowerlegs-height-incr': 0.10, 'stomach-pregnant-incr': 0.25},
              'classA': {'upperlegs-height-incr': 0.30, 'lowerlegs-height-incr': 0.25}})
 IRIS = {'classB': dict(scale=0.9, rgb=(0.20, 0.075, 0.030))}   # 2026-11-21 调成照片里的中深棕（原来太暗，渲染出来发灰）   # 深棕眼仁（同学乙，照标准照；纯黑像瞪眼）；原放大 22% 像娃娃，写实化时每次被「纠正」得不一样
-LIP_TINT = {'mom': (1.10, 0.76, 0.76)}   # 唇色：红润（乘在唇部材质上）；已投影标准照的角色（同学乙）唇色来自照片，不再单染
+LIP_TINT = {}   # 唇色：红润（乘在唇部材质上）；已投影标准照的角色（同学乙）唇色来自照片，不再单染
 
 def iris_edit(eye_obj, scale, rgb):
     """改眼球贴图：虹膜按比例放大（以各自圆心做径向重映射，外圈眼白平滑过渡、不变形），颜色换成近黑的深褐（保留虹膜纹理明暗）。
@@ -685,6 +685,9 @@ FIT_ADJUST = {
 }
 FIT_ADJUST['lin'] = {'head-fat-incr': 0.45, **LR('cheek-volume-incr', 0.5), **LR('cheek-inner-incr', 0.25), 'neck-double-incr': 0.8, 'head-round': 0.25,   # 用户：林晓胖的特征被埋没（照片拟合只看正面轮廓，脸颊的肉、双下巴、圆脸都是深度上的，拟合不出来）
                      'chin-width-incr': 0.2, 'chin-height-decr': 0.15, 'mouth-lowerlip-volume-incr': 0.3, **LR('eye-bag-incr', 0.3)}   # 第一版满强度脸胀得太大，减半
+# 林母（用户 11-22：修一下脸型）：照片下颌到下巴附近都还宽、圆 U 形下巴，两颊饱满；拟合出来下巴窄尖、颧骨突、鼻子略长、嘴唇厚
+FIT_ADJUST['mom'] = {'chin-width-incr': 0.5, 'chin-height-incr': 0.15, 'head-round': 0.3, **LR('cheek-volume-incr', 0.4), **LR('cheek-bones-decr', 0.3),
+                     'nose-scale-vert-decr': 0.2, 'mouth-lowerlip-volume-decr': 0.2, 'mouth-upperlip-volume-decr': 0.15}
 # 局部磨平（照片拟合角色）：以某关键点连线中点为中心、半径内的皮肤做拉普拉斯平滑，越靠中心越强。
 # classB：内眼角与鼻根之间的那道弧形深沟（MakeHuman 头模本身的眶缘形状，形态参数去不掉）
 FIT_SMOOTH = {
@@ -735,7 +738,7 @@ def fit_shoulder(body, cid):
     kb = body.shape_key_add(name='adj_shoulder', from_mix=False); kb.data.foreach_set('co', (basis.reshape(-1, 3) + (Y - X)).astype(np.float32).ravel()); kb.value = 1.0
     print('FIT SHOULDER', cid, flush=True)
 
-LIP_SEAL = {'classB', 'lin', 'chen', 'zhou', 'wang', 'classA'}   # 所有照片拟合角色   # 唇缝封口（MakeHuman 默认嘴唇微张，唇缝露出口腔暗色；形态参数合拢会把唇形扯方）
+LIP_SEAL = {'classB', 'lin', 'chen', 'zhou', 'wang', 'classA', 'mom'}   # 所有照片拟合角色   # 唇缝封口（MakeHuman 默认嘴唇微张，唇缝露出口腔暗色；形态参数合拢会把唇形扯方）
 
 def fit_lipseal(body, cid):
     """找出上下唇贴合处（唇部顶点里法线朝上/朝下的内侧面），按左右位置求缝的中线高度，把缝两侧 6mm 内的唇部顶点往中线收拢"""
