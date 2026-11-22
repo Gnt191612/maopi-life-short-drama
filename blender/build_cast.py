@@ -103,6 +103,12 @@ BODY = {'classB': {'stomach-pregnant-decr': 0.8, 'stomach-tone-incr': 0.5, 'meas
                    **LR('upperleg-fat-decr', 0.35), **LR('lowerleg-fat-decr', 0.35),
                    **LR('upperarm-fat-decr', 0.9), **LR('upperarm-scale-horiz-decr', 0.4),
                    **LR('lowerarm-fat-decr', 0.4), **LR('lowerarm-scale-horiz-decr', 0.15)}}
+# 男生身体（2026-11-22 用户：开始身体白模优化）：腿略加长、不夸张；林晓腿少加（保持敦实）；周明远偏瘦不变
+BODY.update({'lin':    {'upperlegs-height-incr': 0.20, 'lowerlegs-height-incr': 0.15},
+             'chen':   {'upperlegs-height-incr': 0.35, 'lowerlegs-height-incr': 0.30, 'measure-waist-circ-decr': 0.2},
+             'zhou':   {'upperlegs-height-incr': 0.35, 'lowerlegs-height-incr': 0.30},
+             'wang':   {'upperlegs-height-incr': 0.15, 'lowerlegs-height-incr': 0.10, 'stomach-pregnant-incr': 0.25},
+             'classA': {'upperlegs-height-incr': 0.30, 'lowerlegs-height-incr': 0.25}})
 IRIS = {'classB': dict(scale=0.9, rgb=(0.20, 0.075, 0.030))}   # 2026-11-21 调成照片里的中深棕（原来太暗，渲染出来发灰）   # 深棕眼仁（同学乙，照标准照；纯黑像瞪眼）；原放大 22% 像娃娃，写实化时每次被「纠正」得不一样
 LIP_TINT = {'mom': (1.10, 0.76, 0.76)}   # 唇色：红润（乘在唇部材质上）；已投影标准照的角色（同学乙）唇色来自照片，不再单染
 
@@ -144,16 +150,17 @@ def iris_edit(eye_obj, scale, rgb):
 C = lambda pack, name: '%s/clothes/%s/%s.mhclo' % (pack, name, name)
 OUTFIT = {
  'lin':    [(C('shirts02', 'elvs_hooded_sweat_jacket1'), (0.22, 0.22, 0.24)),       # 深灰连帽卫衣
-            (C('pants02', 'elvs_jeans_straight_leg'), None)],                        # 直筒牛仔裤
- 'chen':   [(C('shirts02', 'elvs_male_shirt_untucked_bd1'), (0.90, 0.90, 0.88)),    # 白衬衫（不扎进裤子）
-            (C('pants02', 'mindfront_male_trousers_1'), (0.12, 0.12, 0.14))],        # 黑色长裤
+            (C('pants02', 'elvs_jeans_straight_leg'), (0.20, 0.26, 0.38)),           # 直筒牛仔裤（原贴图偏紫）
+            (C('shirts01', 'elvs_crude_t-shirt_male'), (0.30, 0.30, 0.32))],          # 卫衣里面的深灰 T 恤（卫衣是开襟的，原来里面直接露肚子）
+ 'chen':   [(C('shirts02', 'elvs_male_shirt_untucked_bd1'), 'SHIRT_WHITE'),          # 白衬衫（不扎进裤子；按颜色染会被贴图压成灰色）
+            (C('pants02', 'mindfront_male_trousers_1'), 'PANTS_BLACK')],   # 原贴图有明显竖条纹：只留很淡的明暗        # 黑色长裤
  'zhou':   [(C('shirts02', 'mindfront_knitted_sweater_01'), (0.30, 0.33, 0.22)),    # 橄榄绿针织毛衣
             (C('pants01', 'cortu_cargo_pants'), (0.20, 0.19, 0.16))],                # 工装裤
  'wang':   [(C('pants02', 'elvs_male_trouser'), (0.22, 0.22, 0.24)),                # 灰色西裤（衬衫扎在裤子里，裤子是外层）
-            (C('shirts02', 'elvs_male_shirt_tie_tucked1'), (0.62, 0.75, 0.90))],     # 浅蓝衬衫
+            (C('shirts02', 'elvs_male_shirt_tie_tucked1'), 'SHIRT_BLUE_TIE')],       # 浅蓝衬衫 + 深蓝领带（照定妆照）
  'mom':    [(C('shirts02', 'janexx_old_female_sweater'), (0.78, 0.70, 0.58)),       # 米色毛衣
             (C('pants01', 'toigo_wool_pants'), (0.30, 0.27, 0.25))],                 # 深褐宽松羊毛长裤（原来那条像紧身打底裤）
- 'classA': [(C('shirts01', 'elvs_crude_t-shirt_male'), (0.10, 0.14, 0.36)),         # 宽松深蓝 T 恤
+ 'classA': [(C('shirts01', 'elvs_crude_t-shirt_male'), (0.035, 0.045, 0.11)),        # 深藏青 T 恤（照定妆照；原来渲染成亮蓝）
             (C('pants02', 'punkduck_male_classic_jeans'), None)],                    # 牛仔裤
  # 同学乙 JK 制服（2026-11-21 用户要求）：衬衫扎进裙子，裙子是外层；颜色用 'JK_*' 表示改贴图（见 jk_retex）
  # 2026-11-21 用户嫌男款衬衫丑：改女式衬衫（泡泡袖、V 领荷叶边，穿在裙子外面）+ 程序生成的红色蝴蝶结（BOW）
@@ -324,7 +331,7 @@ def fit_cloth(top, bottom, body, rig, P):
         mt = (st == s_) & ~A & (np.abs(Tm[:, 0] - cxb) < 0.16)
         if mt.any() and (sb == s_).any(): need[s_] = max(0.0, Tm[mt, 2].min() - (B[sb == s_, 2].max() - P['hem_drop']))   # 下摆要低于裙腰 hem_drop：差多少往下拉多少
     print('HEM DBG', [(s_, round(float(Tm[(st == s_) & ~A & (np.abs(Tm[:, 0] - cxb) < 0.16), 2].min()), 3) if ((st == s_) & ~A & (np.abs(Tm[:, 0] - cxb) < 0.16)).any() else None, round(float(B[sb == s_, 2].max()), 3) if (sb == s_).any() else None) for s_ in range(0, 24, 2)], flush=True)
-    need = np.maximum(need, np.maximum(np.roll(need, 1), np.roll(need, -1)) * 0.7)   # 相邻方位平滑，不留锯齿
+    need = np.minimum(np.maximum(need, np.maximum(np.roll(need, 1), np.roll(need, -1)) * 0.7), P.get('hem_cap', 0.06))   # 最多拉长 6cm（开襟处没有下摆，原来被拉长 45cm）   # 相邻方位平滑，不留锯齿
     Mi = top.matrix_world.inverted()
     for i, v in enumerate(top.data.vertices):
         if A[i] or need[st[i]] <= 0: continue
@@ -521,6 +528,20 @@ def make_bow(cid, rig, body, blouse):
     ob.matrix_parent_inverse = (MW @ pb.matrix @ Mx.Translation((0, pb.length, 0))).inverted()
     print('BOW OK', cid, tuple(round(x, 3) for x in c), flush=True)
 
+# 男生上衣合身（2026-11-22）：林晓卫衣鼓成羽绒服、下摆露肚子；陈瑶衬衫下摆太长像长款上衣
+TOP_FIT = {'lin':  dict(top_off=0.010, top_keep=0.35, arm_off=0.008, arm_keep=0.45, bust=0.0, collar=1.0, skirt_keep=1.0, hem_drop=0.05),
+           'chen': dict(top_off=0.010, top_keep=0.60, arm_off=0.008, arm_keep=0.70, bust=0.0, collar=1.0, skirt_keep=1.0, hem_drop=0.0, hem_max=0.06)}
+
+def shorten_top(top, bottom, below):
+    """上衣下摆收短：裤腰往下 below 以下的部分往上压缩（袖子不动）"""
+    zt = max((bottom.matrix_world @ v.co).z for v in bottom.data.vertices); zl = zt - below
+    gi = {g.index: g.name for g in top.vertex_groups}; Mi = top.matrix_world.inverted(); n = 0
+    for v in top.data.vertices:
+        if sum(g.weight for g in v.groups if any(k in gi.get(g.group, '') for k in ('arm', 'hand', 'wrist', 'finger'))) > 0.4: continue
+        p_ = top.matrix_world @ v.co
+        if p_.z < zl: p_.z = zl - (zl - p_.z) * 0.2; v.co = Mi @ p_; n += 1
+    top.data.update(); print('SHORTEN', top.name, n, flush=True)
+
 def jk_retex(obj, kind):
     """JK 制服改贴图（保留原贴图的明暗、织纹）：
     JK_SKIRT：红色格纹 → 藏青格纹（白线保留成浅灰、黑线保留）；JK_SHIRT：衬衫整体白色、领带区域（贴图右上块）换成酒红斜纹"""
@@ -533,7 +554,18 @@ def jk_retex(obj, kind):
         img = tex.image; w, h = img.size
         px = np.empty(w * h * 4, np.float32); img.pixels.foreach_get(px); px = px.reshape(h, w, 4)
         rgb = px[..., :3]
-        if kind == 'JK_BLOUSE':   # 女式衬衫：白色；黑色系带染成白色（JK 衬衫前襟是干净的）
+        if kind == 'PANTS_BLACK':
+            lum = rgb.mean(2, keepdims=True); k_ = lum / max(float(lum.mean()), 1e-3)
+            out = np.array([0.045, 0.045, 0.052]) * np.clip(0.9 + 0.1 * k_, 0.75, 1.1)
+        elif kind in ('SHIRT_WHITE', 'SHIRT_BLUE_TIE'):   # 衬衫：保留布纹明暗，整体换色；领带区域（贴图右上块）换深蓝斜纹
+            lum = rgb.mean(2, keepdims=True); k_ = lum / max(float(lum.mean()), 1e-3)
+            base = np.array([0.90, 0.90, 0.88]) if kind == 'SHIRT_WHITE' else np.array([0.58, 0.68, 0.84])
+            out = base * np.clip(0.85 + 0.15 * k_, 0.6, 1.1)
+            if kind == 'SHIRT_BLUE_TIE':
+                yy, xx = np.mgrid[0:h, 0:w]; v = 1 - yy / h; u = xx / w; tie = (u > 0.50) & (v < 0.28)
+                stripe = ((xx + yy) // max(4, w // 64) % 2)[tie][:, None]
+                out[tie] = np.array([0.025, 0.035, 0.10]) * (0.85 + 0.3 * stripe)
+        elif kind == 'JK_BLOUSE':   # 女式衬衫：白色；黑色系带染成白色（JK 衬衫前襟是干净的）
             lum = rgb.mean(2, keepdims=True); out = np.where(lum < 0.45, np.array([0.86, 0.86, 0.85]) * (0.85 + 0.15 * lum), rgb)
         elif kind == 'JK_SKIRT_BLACK':   # 黑色百褶裙：只留贴图明暗（褶子、格纹的深浅压到很淡）
             lum = rgb.mean(2, keepdims=True); out = np.array([0.018, 0.018, 0.022]) * (0.8 + 0.4 * lum)
@@ -970,6 +1002,22 @@ def hide_body_under(body, garment, reach=0.025):
     body.modifiers.move(len(body.modifiers) - 1, i + 1)
     print('BODY HIDE', garment.name, len(hid), flush=True)
 
+def push_out(garment, body, off=0.005):
+    """衣服顶点在皮肤里面（胖角色肚子从衣服里顶出来）或离皮肤太近：推到皮肤外 off"""
+    from mathutils.bvhtree import BVHTree
+    masks = [m for m in body.modifiers if m.type == 'MASK' and m.show_viewport]
+    for m in masks: m.show_viewport = False
+    bpy.context.view_layer.update(); dg = bpy.context.evaluated_depsgraph_get(); ev = body.evaluated_get(dg); me = ev.to_mesh()
+    bvh = BVHTree.FromPolygons([body.matrix_world @ v.co for v in me.vertices], [tuple(p.vertices) for p in me.polygons]); ev.to_mesh_clear()
+    for m in masks: m.show_viewport = True
+    Mi = garment.matrix_world.inverted(); n = 0
+    for v in garment.data.vertices:
+        p = garment.matrix_world @ v.co; loc, nn, _, d = bvh.find_nearest(p)
+        if loc is None: continue
+        inside = (p - loc).dot(nn) < 0
+        if inside or d < off: v.co = Mi @ (loc + nn * off); n += 1
+    garment.data.update(); print('PUSH OUT', garment.name, n, flush=True)
+
 def tuck_under(under, over, depth=0.007):
     """内层衣服被外层盖住的部分往里收（裙腰、裤腰藏进毛衣/卫衣下摆里）：
     沿法线向外 6cm 内碰到外层 = 被盖住，往里缩 depth；沿法线向里 3cm 内碰到外层 = 跑到外层外面了（下摆漏出），
@@ -1105,11 +1153,16 @@ def build(cid):
         elif rel in color_of:        # 分件服装：按件染色（None = 保留原配色）
             if isinstance(color_of[rel], str): jk_retex(o, color_of[rel])
             elif color_of[rel] is not None: recolor(o, color_of[rel], asset=asset)
-            cloth_volume(o, 0.0015 if cid in FIT_CLOTH else 0.003); o['v11_cloth'] = True
+            cloth_volume(o, 0.0015 if (cid in FIT_CLOTH or cid in TOP_FIT) else 0.003); o['v11_cloth'] = True
         else: recolor(o, top, bottom, asset=asset); cloth_volume(o)
         o.name = '%s_%s' % (cid, asset)
     if cid in OUTFIT:   # 第一件是外层，其余收进去
         layers = [parts.get('community:' + rel) for rel, _ in OUTFIT[cid]]
+        for g_ in layers:   # 林晓胖：内搭 T 恤先推到皮肤外面
+            if cid == 'lin' and g_ is not None and 't-shirt' in g_.name: push_out(g_, body, 0.004)
+        if cid in TOP_FIT and len(layers) > 1 and None not in layers[:2]:   # 上衣是第一件（外层）
+            if 'hem_max' in TOP_FIT[cid]: shorten_top(layers[0], layers[1], TOP_FIT[cid]['hem_max'])
+            fit_cloth(layers[0], layers[1], body, rig, TOP_FIT[cid])
         if cid in FIT_CLOTH and len(layers) > 1 and None not in layers[:2]:   # 把男款衬衫、张开的裙子改合身（见 fit_cloth）
             fit_cloth(layers[1], layers[0], body, rig, FIT_CLOTH[cid])
         elif cid in DRAPE and len(layers) > 1 and None not in layers[:2]:
@@ -1118,13 +1171,13 @@ def build(cid):
             drape_top(layers[1], z_lo, (rig.matrix_world @ rig.pose.bones['neck01'].head).z - 0.05)
         if cid in BOW and len(layers) > 1 and None not in layers[:2]: tuck_top(layers[1], layers[0], body)
         for under in layers[1:]:
-            if layers[0] is not None and under is not None: hide_under(under, layers[0])
+            if layers[0] is not None and under is not None and not (cid == 'lin' and 't-shirt' in under.name): hide_under(under, layers[0], margin=0.15 if cid == 'lin' else None)   # 林晓：卫衣下摆起伏大，按最低点藏裤腰会露出一圈肚皮   # 林晓：卫衣开襟，里面 T 恤要露出来
         if cid in BOW and len(layers) > 1 and layers[1] is not None: make_bow(cid, rig, body, layers[1])
         if cid in jk_sailor.SAILOR:
             skirt_fit(layers[0], body, rig=rig)
             jk_sailor.build(cid, rig, body, layers[0])
         for g_ in layers:   # 只处理长裤（裙子下面是黑丝腿，不藏）
-            if g_ is not None and any(k in g_.name for k in ('pants', 'trouser', 'jeans')): hide_body_under(body, g_)
+            if g_ is not None and (any(k in g_.name for k in ('pants', 'trouser', 'jeans')) or False): hide_body_under(body, g_)
     shell = parts.get('hair/%s/%s.mhclo' % (hair_name, hair_name))   # 真实发丝：以发片为发型轮廓生长
     if cid in HAIR_ASSET:   # 成品发型：替换系统发片，不生成发丝
         if shell is not None: bpy.data.objects.remove(shell, do_unlink=True); shell = None
