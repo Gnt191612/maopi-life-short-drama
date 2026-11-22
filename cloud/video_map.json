@@ -1,0 +1,19 @@
+{
+ "_说明": "开机后先跑 probe_comfy.py，看 probe.txt 里视频工作流的节点号，把下面 TODO 换成「节点号.输入名」。不用的项留 null。fps/max_frames 按模型（Wan2.2：16fps、81 帧）。",
+ "workflow": "TODO-Wan2.2-图生视频.json",
+ "enable": [],
+ "image": "TODO.image",
+ "control_video": null,
+ "control_kind": "depth",
+ "prompt": "TODO.text",
+ "negative": "TODO.text",
+ "frames": "TODO.length",
+ "width": "TODO.width",
+ "height": "TODO.height",
+ "seed": "TODO.noise_seed",
+ "extra": {},
+ "fps": 16,
+ "max_frames": 81,
+ "size": [832, 480],
+ "timeout": 2400
+}

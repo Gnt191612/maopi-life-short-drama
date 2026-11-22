@@ -13,7 +13,7 @@ import segments as S
 REN = os.environ.get('V11_PACK_RENDERS') or (os.path.join(config.ROOT, 'build', 'renders_preview')
                                             if os.path.isdir(os.path.join(config.ROOT, 'build', 'renders_preview')) else config.RENDERS)
 OUT = os.path.join(config.ROOT, 'dist', 'cloud_pack')
-REFS = os.path.join(config.ROOT, 'assets', 'lookdev')
+REFS = os.path.join(config.ROOT, 'assets', 'identity')   # 2026-11-22 起：用户选定的标准长相照片 <cid>.png（原来是 assets/lookdev 的旧定妆照）
 CID = S.CID
 STYLE = ('photorealistic live-action film, shot on cinema camera, natural lighting, realistic skin texture, Chinese university campus, '
          'contemporary, 2020s, everyday clothing')
@@ -30,7 +30,6 @@ def main():
     segs = [s for s in S.segments() if not args or s[0] in args]
     if os.path.isdir(OUT): shutil.rmtree(OUT)
     os.makedirs(os.path.join(OUT, 'refs'), exist_ok=True)
-    for f in glob.glob(os.path.join(REFS, '*.png')): shutil.copy(f, os.path.join(OUT, 'refs'))
     tasks = []
     for sid, scene, set_name, beats in segs:
         tl_p = os.path.join(config.SHOTS, sid + '_timeline.json'); cuts_p = os.path.join(config.SHOTS, sid + '_cuts.json')
@@ -56,7 +55,13 @@ def main():
                 fr = [os.path.join(REN if kind != 'pose' else config.RENDERS, sid, '%s_%04d.png' % (kind, f)) for f in range(f0, f1 + 1)]
                 fr = [p for p in fr if os.path.exists(p)]
                 if len(fr) == f1 - f0 + 1: encode(fr, os.path.join(td, kind + '.mp4'))
-            refs = [os.path.basename(p) for c in chars[:3] for p in (os.path.join(REFS, '%s_face_front.png' % c), os.path.join(REFS, '%s_full.png' % c)) if os.path.exists(p)]
+            refs = ['canon_%s.jpg' % c for c in chars[:3] if os.path.exists(os.path.join(REFS, c + '.png'))]
+            for c in chars:   # 标准长相 → refs/canon_<cid>.jpg（云端人物替换的图1）；只带出场角色、存高质量 JPG（家里上行慢）
+                rp = os.path.join(OUT, 'refs', 'canon_%s.jpg' % c)
+                if not os.path.exists(rp) and os.path.exists(os.path.join(REFS, c + '.png')):
+                    import cv2; cv2.imwrite(rp, cv2.imread(os.path.join(REFS, c + '.png')), [cv2.IMWRITE_JPEG_QUALITY, 95])
+            fb = os.path.join(REN, sid, 'beauty_%04d.png' % f0)   # 首帧（云端写实关键帧的输入，原分辨率）
+            if os.path.exists(fb): shutil.copy(fb, os.path.join(td, 'first.png'))
             task = dict(id=tid, segment=sid, frames=[f0, f1], n=f1 - f0 + 1, beats=[b['id'] for b in bts], characters=chars,
                         prompt='%s. %s' % (en or 'a scene on a Chinese university campus', STYLE), refs=refs)
             json.dump(task, open(os.path.join(td, 'task.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)

@@ -82,11 +82,19 @@ def run(name, out_name, sets=None, prefix='', timeout=900, enable=()):
         if pid not in h: continue
         if h[pid].get('status', {}).get('status_str') == 'error':
             print('ERROR', out_name, json.dumps(h[pid]['status'], ensure_ascii=False)[:1500], flush=True); return None
+        saved = []   # 图片在 images，视频（VHS 合成节点等）在 gifs / videos；预览类（temp）不要
         for o in h[pid].get('outputs', {}).values():
-            for im in o.get('images', []):
-                q = urllib.parse.urlencode({'filename': im['filename'], 'subfolder': im['subfolder'], 'type': im['type']})
-                p = os.path.join(OUT, out_name + '.png'); open(p, 'wb').write(urllib.request.urlopen(URL + '/view?' + q).read())
-                print('SAVED', p, '%.0fs' % (time.time() - t0), flush=True); return p
+            for key in ('gifs', 'videos', 'images'):
+                for im in o.get(key, []):
+                    if im.get('type') == 'temp' and any(x.get('type') != 'temp' for oo in h[pid]['outputs'].values() for kk in ('gifs', 'videos', 'images') for x in oo.get(kk, [])): continue   # 有正式输出时跳过预览图
+                    ext = os.path.splitext(im['filename'])[1] or '.png'
+                    q = urllib.parse.urlencode({'filename': im['filename'], 'subfolder': im.get('subfolder', ''), 'type': im.get('type', 'output')})
+                    p = os.path.join(OUT, out_name + ('' if not saved else '_%d' % len(saved)) + ext)
+                    open(p, 'wb').write(urllib.request.urlopen(URL + '/view?' + q).read()); saved.append(p)
+        if saved:
+            print('SAVED', ' '.join(saved), '%.0fs' % (time.time() - t0), flush=True)
+            vids = [p for p in saved if p.lower().endswith(('.mp4', '.webm', '.mov', '.gif'))]
+            return (vids or saved)[0]
         return None
     print('TIMEOUT', out_name, flush=True)
 
