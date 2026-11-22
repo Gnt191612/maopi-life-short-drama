@@ -20,7 +20,8 @@ try {
     Rx "nvidia-smi --query-gpu=name,memory.total --format=csv,noheader; df -h /root | tail -1"
     Write-Host '[2/4] 上传脚本（几 KB）'
     $tgz = Join-Path $env:TEMP 'v11_scripts.tgz'
-    & tar.exe -czf $tgz -C cloud comfy_run.py looks.py probe_comfy.py keyframes.py video_run.py video_map.json session_realism.sh intro_video.py qctl.py edit_photo.py
+    & python -c "import sys,json; sys.path.insert(0,'cloud'); import looks; json.dump(dict(look=looks.LOOK, look_en=looks.LOOK_EN, name=looks.NAME), open('cloud/looks_gen.json','w',encoding='utf-8'), ensure_ascii=False, indent=1)"   # 人物库外貌描述 → 云端
+    & tar.exe -czf $tgz -C cloud comfy_run.py looks.py probe_comfy.py keyframes.py video_run.py video_map.json looks_gen.json session_realism.sh intro_video.py qctl.py edit_photo.py
     Rx 'mkdir -p /root/v11_upload/scripts /root/v11_out'
     & scp.exe @Opt -P $Port $tgz "${SshHost}:/root/v11_upload/scripts.tgz"
     Rx 'tar -xzf /root/v11_upload/scripts.tgz -C /root/v11_upload/scripts && sed -i "s/\r$//" /root/v11_upload/scripts/*.sh'

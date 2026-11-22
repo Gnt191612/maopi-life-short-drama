@@ -26,3 +26,21 @@ STYLE_EN = ('photorealistic live-action film still, shot on a cinema camera, nat
             'contemporary China, 2020s')
 NEG_EN = ('cartoon, anime, 3d render, cgi, video game, doll, plastic skin, blurry, deformed face, extra fingers, extra people, '
           'text, watermark, subtitles, flickering, low quality, oversaturated')
+
+# 人物库优先（characters/<cid>/character.py 的 look / look_en）：本地直接读；云端读 session.ps1 上传的 looks_gen.json
+def _load_lib():
+    import os, json, glob, runpy
+    here = os.path.dirname(os.path.abspath(__file__))
+    gen = os.path.join(here, 'looks_gen.json')
+    lib = os.path.join(os.path.dirname(here), 'characters')
+    if os.path.isdir(lib):
+        for p in glob.glob(os.path.join(lib, '*', 'character.py')):
+            cid = os.path.basename(os.path.dirname(p))
+            if cid.startswith('_'): continue
+            C = runpy.run_path(p).get('CHAR', {})
+            if C.get('look'): LOOK[cid] = C['look']
+            if C.get('look_en'): LOOK_EN[cid] = C['look_en']
+            if C.get('cast'): NAME[cid] = C['cast'][0]
+    elif os.path.exists(gen):
+        d = json.load(open(gen, encoding='utf-8')); LOOK.update(d.get('look', {})); LOOK_EN.update(d.get('look_en', {})); NAME.update(d.get('name', {}))
+_load_lib()

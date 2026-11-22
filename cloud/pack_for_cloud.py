@@ -13,7 +13,8 @@ import segments as S
 REN = os.environ.get('V11_PACK_RENDERS') or (os.path.join(config.ROOT, 'build', 'renders_preview')
                                             if os.path.isdir(os.path.join(config.ROOT, 'build', 'renders_preview')) else config.RENDERS)
 OUT = os.path.join(config.ROOT, 'dist', 'cloud_pack')
-REFS = os.path.join(config.ROOT, 'assets', 'identity')   # 2026-11-22 起：用户选定的标准长相照片 <cid>.png（原来是 assets/lookdev 的旧定妆照）
+sys.path.insert(0, os.path.join(config.ROOT, 'blender')); import charlib
+REFS = os.path.join(config.ROOT, 'assets', 'identity')   # 旧位置；现在用 charlib.identity()（人物库优先）   # 2026-11-22 起：用户选定的标准长相照片 <cid>.png（原来是 assets/lookdev 的旧定妆照）
 CID = S.CID
 STYLE = ('photorealistic live-action film, shot on cinema camera, natural lighting, realistic skin texture, Chinese university campus, '
          'contemporary, 2020s, everyday clothing')
@@ -28,7 +29,7 @@ def encode(frames, out_mp4, fps=24):
 def face_crop(c, im):
     """标准长相照片只裁脸（不带头发、衣服）→ refs/canonface_<cid>.jpg：整人替换模型会把参考图的发型、衣服一起搬过来"""
     import cv2
-    lp = os.path.join(REFS, c + '_landmarks_full.json')
+    lp = charlib.identity(c, '_landmarks_full.json')
     if not os.path.exists(lp): return
     lm = json.load(open(lp, encoding='utf-8'))
     eR, eL = lm['eye_R'], lm['eye_L']; iod = ((eL[0] - eR[0]) ** 2 + (eL[1] - eR[1]) ** 2) ** 0.5
@@ -68,11 +69,11 @@ def main():
                 fr = [os.path.join(REN if kind != 'pose' else config.RENDERS, sid, '%s_%04d.png' % (kind, f)) for f in range(f0, f1 + 1)]
                 fr = [p for p in fr if os.path.exists(p)]
                 if len(fr) == f1 - f0 + 1: encode(fr, os.path.join(td, kind + '.mp4'))
-            refs = ['canon_%s.jpg' % c for c in chars[:3] if os.path.exists(os.path.join(REFS, c + '.png'))]
+            refs = ['canon_%s.jpg' % c for c in chars[:3] if os.path.exists(charlib.identity(c, '.png'))]
             for c in chars:   # 标准长相 → refs/canon_<cid>.jpg（云端人物替换的图1）；只带出场角色、存高质量 JPG（家里上行慢）
                 rp = os.path.join(OUT, 'refs', 'canon_%s.jpg' % c)
-                if not os.path.exists(rp) and os.path.exists(os.path.join(REFS, c + '.png')):
-                    import cv2; im_ = cv2.imread(os.path.join(REFS, c + '.png')); cv2.imwrite(rp, im_, [cv2.IMWRITE_JPEG_QUALITY, 95])
+                if not os.path.exists(rp) and os.path.exists(charlib.identity(c, '.png')):
+                    import cv2; im_ = cv2.imread(charlib.identity(c, '.png')); cv2.imwrite(rp, im_, [cv2.IMWRITE_JPEG_QUALITY, 95])
                     face_crop(c, im_)
             fb = os.path.join(REN, sid, 'beauty_%04d.png' % f0)   # 首帧（先放预览帧，下面再用高清单帧覆盖）
             if os.path.exists(fb): shutil.copy(fb, os.path.join(td, 'first.png'))

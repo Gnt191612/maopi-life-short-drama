@@ -13,7 +13,9 @@ from mathutils import Vector
 from bpy_extras.object_utils import world_to_camera_view
 
 RES = 2048   # 投影画面（变形后照片）分辨率：照片里脸约 440 像素宽，画面里脸约占一半宽
-IDDIR = os.path.join(config.ROOT, 'assets', 'identity')
+import charlib
+_cid_arg = sys.argv[sys.argv.index('--') + 1] if '--' in sys.argv and len(sys.argv) > sys.argv.index('--') + 1 else ''
+IDDIR = os.path.dirname(charlib.identity(_cid_arg, '.png')) if _cid_arg else os.path.join(config.ROOT, 'assets', 'identity')   # 人物库 characters/<cid>/ 优先
 KEYS = ('eye_R', 'eye_L', 'nose', 'mouth_R', 'mouth_L', 'chin')
 
 def fit_info(cid):

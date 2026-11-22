@@ -31,6 +31,8 @@ os.makedirs(OUT, exist_ok=True)
 ASIAN = {'asian': 1.0, 'caucasian': 0.0, 'african': 0.0}
 HEIGHT = {'lin': 1.72, 'chen': 1.82, 'zhou': 1.76, 'wang': 1.74, 'mom': 1.60, 'classA': 1.75, 'classB': 1.63}   # 目标身高（米）
 # id: (中文名, 性别 1男0女, 年龄, 体重, 肌肉, 身高滑块, 比例, 服装, 发型, 上衣颜色, 裤子颜色)
+# ★ 七个主角（lin chen zhou wang mom classA classB）的人物参数已集中到人物库 characters/<cid>/character.py，
+#   建模时由 charlib.apply() 覆盖下面各表里的同名条目——改人物请改 characters/，这里的主角条目只是历史默认值。
 CAST = {
  'lin':    ('林晓',   1.0, 0.50, 1.00, 0.18, 0.50, 0.40, 'male_casualsuit02',   'short02',    (0.22, 0.22, 0.24), (0.15, 0.18, 0.28)),  # 深灰卫衣；肌肉减少显得更胖更软
  'chen':   ('陈瑶',   1.0, 0.44, 0.30, 0.45, 0.80, 0.60, 'male_casualsuit01',   'short04',    (0.90, 0.90, 0.88), (0.12, 0.12, 0.14)),  # 白衬衫
@@ -709,7 +711,7 @@ def fit_crown(body, cid):
     S = FIT_CROWN.get(cid)
     if not S: return
     import json, numpy as np
-    lv = json.load(open(os.path.join(config.ROOT, 'assets', 'identity', cid + '_face_fit.json'), encoding='utf-8'))['landmark_verts']
+    lv = json.load(open(charlib.identity(cid, '_face_fit.json'), encoding='utf-8'))['landmark_verts']
     me = body.data; n = len(me.vertices)
     tmp = body.shape_key_add(name='tmp_mix', from_mix=True)
     X = np.empty(n * 3, np.float32); tmp.data.foreach_get('co', X); X = X.reshape(-1, 3).astype(np.float64)
@@ -777,7 +779,7 @@ def fit_smooth(body, cid):
     jobs = FIT_SMOOTH.get(cid)
     if not jobs: return
     import json, numpy as np
-    lv = json.load(open(os.path.join(config.ROOT, 'assets', 'identity', cid + '_face_fit.json'), encoding='utf-8'))['landmark_verts']
+    lv = json.load(open(charlib.identity(cid, '_face_fit.json'), encoding='utf-8'))['landmark_verts']
     me = body.data; n = len(me.vertices)
     tmp = body.shape_key_add(name='tmp_mix', from_mix=True)
     X = np.empty(n * 3, np.float32); tmp.data.foreach_get('co', X); X = X.reshape(-1, 3).astype(np.float64)
@@ -812,7 +814,7 @@ def fit_smooth(body, cid):
 
 def face_fit(cid):
     """按标准长相照片拟合出的五官权重（blender/face_fit_*.py 生成，assets/identity/<cid>_face_fit.json），没有则返回 None"""
-    p = os.path.join(config.ROOT, 'assets', 'identity', cid + '_face_fit.json')
+    p = charlib.identity(cid, '_face_fit.json')
     if not os.path.exists(p): return None
     import json
     return json.load(open(p, encoding='utf-8'))['weights']
@@ -1107,6 +1109,9 @@ def recolor_asset_hair(obj, rgb=(0.014, 0.011, 0.009)):
         b.inputs['Roughness'].default_value = 0.42
         if 'Coat Weight' in b.inputs: b.inputs['Coat Weight'].default_value = 0.15
 
+import charlib   # 人物库 characters/<cid>/character.py：同名条目以人物库为准（同事新增/优化人物只改 characters/）
+charlib.apply({'build_cast': globals(), 'hair_cards': hair_cards, 'jk_sailor': jk_sailor, 'accessories': accessories})
+
 def build(cid):
     name, g, age, wt, mu, ht, pr, suit, hair_name, top, bottom = CAST[cid]
     bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -1122,7 +1127,7 @@ def build(cid):
     _fit = face_fit(cid); _nv = None
     if _fit is not None:
         import json as _js
-        _nv = _js.load(open(os.path.join(config.ROOT, 'assets', 'identity', cid + '_face_fit.json'), encoding='utf-8'))['landmark_verts']['nose']
+        _nv = _js.load(open(charlib.identity(cid, '_face_fit.json'), encoding='utf-8'))['landmark_verts']['nose']
         _z0 = _vz(_nv)
     for tn, v in BODY.get(cid, {}).items():
         try: TargetService.load_target(body, TargetService.target_full_path(tn.split('/')[-1]), weight=v, name='body_' + tn.split('/')[-1])

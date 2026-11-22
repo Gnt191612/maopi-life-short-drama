@@ -18,11 +18,12 @@ try {
     Low @('-b', '--factory-startup', '-P', 'blender\build_cast.py', '--', $Cid) "$Logs\round_build.log"
     if (-not (Select-String "$Logs\round_build.log" -Pattern 'CAST OK' -Quiet)) { Get-Content "$Logs\round_build.log.err" -Tail 20; throw "建模失败（$Logs\round_build.log）" }
     $blend = Join-Path $env:V11_CAST_DIR "$Cid.blend"
-    if (Test-Path "assets\identity\$Cid.png") {
+    $idp = if (Test-Path "characters\$Cid\$Cid.png") { "characters\$Cid" } else { "assets\identity" }   # 人物库优先
+    if (Test-Path "$idp\$Cid.png") {
         Low @('-b', $blend, '--factory-startup', '-P', 'blender\face_project.py', '--', $Cid) "$Logs\round_proj.log"
         if (-not (Select-String "$Logs\round_proj.log" -Pattern 'IDENTITY OK' -Quiet)) { Get-Content "$Logs\round_proj.log.err" -Tail 20; throw "贴脸失败（$Logs\round_proj.log）" }
     }
-    $yaw = '0'; $fj = "assets\identity\${Cid}_face_fit.json"
+    $yaw = '0'; $fj = "$idp\${Cid}_face_fit.json"
     if (Test-Path $fj) { $yaw = [string]((Get-Content $fj -Raw -Encoding utf8 | ConvertFrom-Json).yaw_deg) }
     if ($Back) { $env:V11_BACK = '1' } else { Remove-Item Env:V11_BACK -ErrorAction SilentlyContinue }
     if ($CamDz -ne 0) { $env:V11_CAM_DZ = [string]$CamDz }

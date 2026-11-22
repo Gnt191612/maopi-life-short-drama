@@ -8,6 +8,7 @@ python blender/face_fit_solve.py <cid>"""
 import os, sys, json
 import numpy as np, cv2
 from scipy.optimize import lsq_linear
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import charlib
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, 'build', 'face_fit')
 PMAX = int(os.environ.get('FIT_PMAX', 6))   # 俯仰角搜索范围（度）：照片基本平视，放太宽会用抬头低头去「冒充」脸的上下比例
@@ -16,7 +17,7 @@ W = dict(eye=3.0, nose=2.0, mouth=2.0, chin=2.0, contour=1.0, skull=0.8)   # 头
 
 def load(cid):
     z = np.load(os.path.join(OUT, cid + '_head.npz'))
-    lm = json.load(open(os.path.join(ROOT, 'assets', 'identity', cid + '_landmarks_full.json'), encoding='utf-8'))
+    lm = json.load(open(charlib.identity(cid, '_landmarks_full.json'), encoding='utf-8'))
     return z, lm
 
 def groups(z):
@@ -153,7 +154,7 @@ def to_photo(r, pts2):
     p = (r['Rs'].T @ ((pts2 - r['t']) / r['s']).T).T; return p * np.array([1, -1])
 
 def overlay(m, lm, r0, r1, path):
-    img = cv2.imread(os.path.join(ROOT, 'assets', 'identity', lm['_cid'] + '.png'))
+    img = cv2.imread(charlib.identity(lm['_cid'], '.png'))
     pts = photo_points(lm); panels = []
     for r, title in ((r0, 'before (current base)'), (r1, 'fitted')):
         im = img.copy(); Y = m.shape(r['u']); P = (Y @ r['R'].T)[:, [0, 2]]

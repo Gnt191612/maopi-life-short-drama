@@ -12,7 +12,7 @@
 ```
 剧本（story/）──► 分场拍摄表（逐拍动作、台词、机位描述）──► 走位表
       │
-标准长相照片（每个角色 AI 出候选，人挑一张：assets/identity/<cid>.png）
+标准长相照片（每个角色 AI 出候选，人挑一张：characters/<cid>/<cid>.png）
       │ 关键点标注 → 脸型拟合 → 照片贴脸 → 照着照片做发型 → 身体与服装
       ▼
 角色白模（MakeHuman/MPFB，blender/build_cast.py）  场景白模（blender/build_sets.py）
@@ -58,7 +58,7 @@ $env:V11_ONLY='s03_00,s03_01'; python run_all.py  # 只拍指定片段
 
 ## 三、人物（已定稿；改人物或做新角色时看这里）
 
-详细流程与每个参数的含义：[docs/人物定妆与建模.md](docs/人物定妆与建模.md)。一轮精修：
+人物全部集中在**人物库 `characters/`**（同事新增/优化人物看 [characters/README.md](characters/README.md)）。详细流程：[docs/人物定妆与建模.md](docs/人物定妆与建模.md)。一轮精修：
 ```powershell
 powershell -ExecutionPolicy Bypass -File blender\tests\identity_round.ps1 -Cid mom -Tag r1 [-Body] [-Back]
 ```
@@ -95,7 +95,7 @@ Claude 娘（`assets/intro/claude_girl.png`）绿幕讲解视频（云端 `cloud
 | `blender/` | 角色/场景搭建、拍摄引擎、脸型拟合、照片贴脸、片头合成 | 是 |
 | `blender/lib/` | 姿态库、机位、发型（`hair_cards.py`）、程序服装（`jk_sailor.py`）、饰品等 | 是 |
 | `blender/tests/` | 对比图、全身检查、精修一轮脚本 `identity_round.ps1` | 是 |
-| `assets/identity/` | 每个角色的标准长相照片、关键点标注、脸型拟合结果 | 是 |
+| `characters/` | **人物库**：每个角色一个文件夹（全部参数 `character.py`、标准长相照片、关键点、拟合结果、效果图）；新增/优化人物只改这里，见 [characters/README.md](characters/README.md) | 是 |
 | `assets/intro/` | 片头素材（Claude 娘立绘、绿幕视频、背景、校徽、配音） | 是 |
 | `assets/cast/` `sets/` `audio/` `music/` | 定稿角色、场景、配音、配乐 | Release 附件 |
 | `voice_tools/` | 音色设计、挑选、配音脚本与各角色选定的参考音 | 是 |

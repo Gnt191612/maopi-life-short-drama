@@ -14,6 +14,7 @@ from mathutils.bvhtree import BVHTree
 import hair as HL
 
 # rgb 发色（线性）；thick_top/side 头顶/两侧发层厚度（米，未缩放的基础网格）；tail 马尾长；tail_r 马尾最粗半径；tie_up 扎发点方向的高低
+# ★ 主角的发型参数以人物库 characters/<cid>/character.py 的 'hair' 为准（charlib.apply 覆盖这里的同名条目）
 CARDS = {
  'classB': dict(style='ponytail', rgb=(0.007, 0.0055, 0.005), thick_top=0.006, thick_side=0.003, part_t=0.28, front_vol=0.007, corner=0.0, hl_drop=0.0178,   # 2026-11-21 发际线补偿改按拟合时眼睛高度后标定
                 part_notch=0.0, part_v=0.005, junction={'R': 4, 'L': 4}, edge_cards=0, curtain={},
@@ -40,7 +41,8 @@ CARDS = {
 def _photo_hairline(cid, bb, eyes, H):
     """定妆照上标注的发际线 → 模型上的 3D 点（按脸型拟合的视角与相似变换投影，再沿视线打到头上）→ [(方位角, 高度)]"""
     root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    fp = os.path.join(root, 'assets', 'identity', cid + '_face_fit.json'); lp = os.path.join(root, 'assets', 'identity', cid + '_landmarks_full.json')
+    sys.path.insert(0, os.path.join(root, 'blender')); import charlib
+    fp = charlib.identity(cid, '_face_fit.json'); lp = charlib.identity(cid, '_landmarks_full.json')
     if not (os.path.exists(fp) and os.path.exists(lp)): return None
     fit = json.load(open(fp, encoding='utf-8')); lm = json.load(open(lp, encoding='utf-8'))
     if 'hairline' not in lm or 'photo_to_model' not in fit: return None

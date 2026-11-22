@@ -3,6 +3,7 @@
 python blender/tests/identity_sheet.py <cid> <渲染目录> <输出.png> [标题]"""
 import os, sys
 import numpy as np, cv2
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'blender')); import charlib
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 cid, d, out = sys.argv[1:4]; title = sys.argv[4] if len(sys.argv) > 4 else ''
 H = 560
@@ -10,7 +11,7 @@ def fit(im):
     s = H / im.shape[0]; return cv2.resize(im, (int(im.shape[1] * s), H), interpolation=cv2.INTER_AREA)
 def label(im, t):
     im = im.copy(); cv2.rectangle(im, (0, 0), (im.shape[1], 34), (30, 30, 30), -1); cv2.putText(im, t, (10, 24), 0, 0.75, (255, 255, 255), 2); return im
-photo = cv2.imread(os.path.join(ROOT, 'assets', 'identity', cid + '.png'))
+photo = cv2.imread(charlib.identity(cid, '.png'))
 ph = photo.shape; crop = photo[int(ph[0] * 0.05):int(ph[0] * 0.62), int(ph[1] * 0.08):int(ph[1] * 0.92)]
 r = lambda tag, v: cv2.imread(os.path.join(d, '%s_%s_%s.png' % (cid, tag, v)))
 row1 = [label(fit(crop), 'photo'), label(fit(r('skin', 'front')), 'skin front'), label(fit(r('clay', 'front')), 'clay front')]
