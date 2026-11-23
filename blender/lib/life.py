@@ -96,7 +96,8 @@ def talk_motion(rig, spans, seed):
     for f0, f1 in spans:
         if f1 - f0 < 10: continue
         period = FPS * rnd.uniform(0.7, 1.1)             # 点头节奏约每秒一下，像说话的重音
-        for bone, amp, idx in (('head', rnd.uniform(0.022, 0.035), 1), ('neck02', 0.012, 1), ('spine03', 0.008, 1), ('head', rnd.uniform(0.008, 0.015), 2)):
+        for bone, amp, idx in (('head', rnd.uniform(0.034, 0.052), 1), ('neck02', 0.018, 1), ('spine03', 0.012, 1),   # 点头约 4~6°（实测 0.022 时只有 2~3°，看不出来）
+                                   ('head', rnd.uniform(0.008, 0.015), 2)):
             for fc in _fcurves(rig, bone):
                 if fc.array_index != idx: continue      # 1 = 绕局部 X 点头/挺胸；2 = 绕骨骼自身 Y 轻微转头
                 m = fc.modifiers.new('FNGENERATOR'); m.function_type = 'SIN'; m.use_additive = True
