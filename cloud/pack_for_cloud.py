@@ -14,6 +14,7 @@ REN = os.environ.get('V11_PACK_RENDERS') or (os.path.join(config.ROOT, 'build', 
                                             if os.path.isdir(os.path.join(config.ROOT, 'build', 'renders_preview')) else config.RENDERS)
 OUT = os.path.join(config.ROOT, 'dist', 'cloud_pack')
 sys.path.insert(0, os.path.join(config.ROOT, 'blender')); import charlib
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import backgrounds   # 每个场景的背景描述、运镜词
 REFS = os.path.join(config.ROOT, 'assets', 'identity')   # 旧位置；现在用 charlib.identity()（人物库优先）   # 2026-11-22 起：用户选定的标准长相照片 <cid>.png（原来是 assets/lookdev 的旧定妆照）
 CID = S.CID
 STYLE = ('photorealistic live-action film, shot on cinema camera, natural lighting, realistic skin texture, Chinese university campus, '
@@ -79,7 +80,9 @@ def main():
             if os.path.exists(fb): shutil.copy(fb, os.path.join(td, 'first.png'))
             hd_jobs.setdefault(sid, []).append((f0, td))
             task = dict(id=tid, segment=sid, frames=[f0, f1], n=f1 - f0 + 1, beats=[b['id'] for b in bts], characters=chars,
-                        prompt='%s. %s' % (en or 'a scene on a Chinese university campus', STYLE), refs=refs)
+                        move=(cuts[k][2] if len(cuts[k]) > 2 else 'static'),
+                        prompt='%s. Background: %s. %s. %s' % (en or 'a scene on a Chinese university campus', backgrounds.bg(set_name),
+                                                              backgrounds.MOVE_EN.get(cuts[k][2] if len(cuts[k]) > 2 else 'static', ''), STYLE), refs=refs)
             json.dump(task, open(os.path.join(td, 'task.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
             tasks.append(task)
     for sid, jobs in hd_jobs.items():   # 高清首帧 1920×1080（预览帧放大后很糊，二转三会脑补出第二个人）

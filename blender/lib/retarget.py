@@ -129,7 +129,7 @@ def retarget(src, tgt, f0, f1, dst_start=1, action_name='clip', root_offset=(0, 
             else:
                 head = wb.translation
             basis = base.inverted() @ (MWi @ Matrix.LocRotScale(head, new_rot, wb.to_scale()))
-            tb.matrix_basis = basis; P[b.name] = base @ basis
+            tb.matrix_basis = basis; tb.scale = (1, 1, 1); P[b.name] = base @ Matrix.LocRotScale(basis.to_translation(), basis.to_quaternion(), (1, 1, 1))   # 不带缩放（防累积变形）
             tb.keyframe_insert('rotation_quaternion', frame=f, group=tb.name)
             if b.name == 'root': tb.keyframe_insert('location', frame=f, group='root')
     return act

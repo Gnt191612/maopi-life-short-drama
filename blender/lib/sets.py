@@ -226,8 +226,8 @@ def dorm(time='am'):
         x = sx * (W / 2 - 0.48)
         box('furn_bed_%s' % who, (0.95, 2.0, 0.12), (x, cy, 1.70), 'wood', col)
         box('furn_mattress_%s' % who, (0.9, 1.95, 0.10), (x, cy, 1.82), 'white', col)
-        box('furn_quilt_%s' % who, (0.88, 1.3, 0.12), (x, cy + 0.25, 1.92), 'fabric', col)
-        box('furn_pillow_%s' % who, (0.5, 0.3, 0.1), (x, cy - 0.75, 1.92), 'white', col)
+        box('furn_quilt_%s' % who, (0.88, 1.3, 0.04), (x, cy + 0.25, 1.925), 'fabric', col)   # 比床垫高 5mm：底面和床垫面重合时，落座射线穿过被子后起点在床垫里面，漏掉床垫、把人压到床板上（2026-11-22）；4cm：原来 12cm 的被子方块把坐在床上的人下半身整个盖住，像陷进床里（2026-11-22）
+        box('furn_pillow_%s' % who, (0.5, 0.3, 0.1), (x, cy - 0.75, 1.925), 'white', col)
         box('furn_rail_%s' % who, (0.04, 2.0, 0.3), (x - sx * 0.46, cy, 1.82), 'metal', col)
         for dy in (-0.98, 0.98):
             for dx in (-0.45, 0.45):
@@ -245,9 +245,10 @@ def dorm(time='am'):
         marks[who + '_ladder_foot'] = (x - sx * 0.75, cy - 0.75, 0.0, 90 * sx)
     # 林晓桌上：显示器、外卖盒、手机；陈瑶桌上：单词书
     box('prop_monitor_lin', (0.05, 0.55, 0.35), (-W / 2 + 0.2, -0.35, 0.78), 'dark', col)
-    box('prop_screen_monitor_lin', (0.005, 0.5, 0.3), (-W / 2 + 0.23, -0.35, 0.80), (0.1, 0.12, 0.15), col)
+    box('prop_monitorscreen_lin',   # 不能叫 prop_screen_*：那是手机屏幕的前缀（机位检查放行、遮罩编号 15），显示器会挡在镜头前也不被移走
+         (0.005, 0.5, 0.3), (-W / 2 + 0.23, -0.35, 0.80), (0.1, 0.12, 0.15), col)
     for i in range(3): box('prop_takeout_%d' % i, (0.18, 0.14, 0.07), (-W / 2 + 0.38, 0.1 + i * 0.2, 0.76), 'white', col)
-    phone('lin', (-1.22, -1.35, 1.93), col)                           # 枕边
+    phone('lin', (-0.95, -1.35, 1.925), col)                          # 枕边床垫上（原来放在 x=-1.22 正好在枕头里面，枕边特写只能拍到头发，2026-11-22）
     box('prop_wordbook_chen', (0.17, 0.24, 0.02), (W / 2 - 0.45, -0.45, 0.76), (0.85, 0.3, 0.2), col)
     # 门边洗手台 + 镜子
     box('furn_sink_cabinet', (0.55, 0.5, 0.82), (-W / 2 + 0.33, -D / 2 + 0.45, 0), 'white', col)

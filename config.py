@@ -67,6 +67,7 @@ def blender_env():
     env = dict(os.environ)
     env['BLENDER_USER_RESOURCES'] = BLENDER_USER
     env['PYTHONIOENCODING'] = 'utf-8'
+    if 'bpy' not in sys.modules: env.setdefault('V11_SYSPY', sys.executable)   # Blender 里画手机屏幕文字要用系统 Python + PIL
     return env
 
 # ---- 配音模型（仅在需要改台词、重新配音时使用；由 setup/setup_tts_* 安装，或用环境变量指向已有安装）----

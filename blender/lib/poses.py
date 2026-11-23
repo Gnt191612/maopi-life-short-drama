@@ -103,7 +103,9 @@ def _is_person(obj):
     return (obj.type != 'MESH' or (obj.parent is not None and obj.parent.type == 'ARMATURE')
             or obj.name.startswith(SOFT))
 
-def support_height(rig, x, y, z_hint):
+NOT_SEAT = ('table', 'desk', 'shelf', 'counter', 'board', 'cabinet', 'hutch')   # 坐的时候不能当座位（2026-11-22：射线先碰到伸过来的桌面边，人坐到了桌面上）
+
+def support_height(rig, x, y, z_hint, kind='seat'):
     """从髋部上方往下打射线，跳过人物，返回 (支撑面高度, 家具名)；找不到返回 None"""
     sc = bpy.context.scene; dg = bpy.context.evaluated_depsgraph_get()
     o = Vector((x, y, z_hint + 0.6)); d = Vector((0, 0, -1)); t = 0
@@ -111,8 +113,39 @@ def support_height(rig, x, y, z_hint):
         hit, loc, _, _, obj, _ = sc.ray_cast(dg, o + d * t, d, distance=2.5 - t)
         if not hit: return None
         if _is_person(obj) or obj.name.startswith('prop_'): t = (o - loc).length + 0.01; continue
+        if kind == 'seat' and any(k in obj.name.lower() for k in NOT_SEAT): t = (o - loc).length + 0.01; continue
         return loc.z, obj.name
     return None
+
+SEAT_WORDS = ('_seat', 'stool', 'bench', 'sofa', 'couch')
+
+def nearest_seat(x, y, radius):
+    """离 (x,y) 最近的座位（椅面/凳子/长椅/沙发）中心；半径内没有返回 None"""
+    best = None
+    for o in bpy.data.objects:
+        if o.type != 'MESH' or not o.name.startswith('furn_') or not any(k in o.name for k in SEAT_WORDS): continue
+        bb = [o.matrix_world @ Vector(c) for c in o.bound_box]
+        cx = sum(p.x for p in bb) / 8; cy = sum(p.y for p in bb) / 8
+        if max(p.x for p in bb) - min(p.x for p in bb) > 1.0 or max(p.y for p in bb) - min(p.y for p in bb) > 1.0:   # 长椅、沙发：取离得最近的那一点
+            cx = min(max(x, min(p.x for p in bb) + 0.25), max(p.x for p in bb) - 0.25); cy = min(max(y, min(p.y for p in bb) + 0.25), max(p.y for p in bb) - 0.25)
+        d = math.hypot(cx - x, cy - y)
+        if d < radius and (best is None or d < best[0]): best = (d, (cx, cy))
+    return best[1] if best else None
+
+def make_stool(rig, x, y):
+    """在 (x,y) 放一张 45cm 高的方凳（furn_stool_auto_*），已有就复用"""
+    for o in bpy.data.objects:
+        if o.name.startswith('furn_stool_auto') and math.hypot(o.location.x - x, o.location.y - y) < 0.15: return True
+    s, h = 0.17, 0.45
+    vs = [(-s, -s, 0), (s, -s, 0), (s, s, 0), (-s, s, 0), (-s, -s, h), (s, -s, h), (s, s, h), (-s, s, h)]
+    fs = [(0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)]
+    me = bpy.data.meshes.new('furn_stool_auto'); me.from_pydata(vs, [], fs); me.update()
+    ob = bpy.data.objects.new('furn_stool_auto_' + rig.name, me); ob.location = (x, y, 0)
+    src = next((o for o in bpy.data.objects if o.name.startswith('furn_chair') and o.type == 'MESH' and o.data.materials), None)
+    if src: me.materials.append(src.data.materials[0])
+    bpy.context.scene.collection.objects.link(ob); bpy.context.view_layer.update()
+    print('STOOL', rig.name, round(x, 2), round(y, 2), flush=True)
+    return True
 
 def body_rot(yaw, pitch):
     # 先在身体坐标系里俯仰（躺下），再绕世界竖轴转朝向。原来用 'ZXY' 顺序会先转朝向再绕世界 X 轴倒下，
@@ -122,7 +155,7 @@ def body_rot(yaw, pitch):
 def reset(rig):
     for n in BODY:
         pb = rig.pose.bones.get(n)
-        if pb: pb.rotation_mode = 'QUATERNION'; pb.rotation_quaternion = (1, 0, 0, 0); pb.location = (0, 0, 0)
+        if pb: pb.rotation_mode = 'QUATERNION'; pb.rotation_quaternion = (1, 0, 0, 0); pb.location = (0, 0, 0); pb.scale = (1, 1, 1)
     bpy.context.view_layer.update()
 
 def aim(rig, name, wdir):
@@ -132,6 +165,7 @@ def aim(rig, name, wdir):
     W = rig.matrix_world @ pb.matrix
     q = (W.to_quaternion() @ Y).rotation_difference(wdir) @ W.to_quaternion()
     pb.matrix = rig.matrix_world.inverted() @ Matrix.LocRotScale(W.translation, q, W.to_scale())
+    pb.scale = (1, 1, 1)   # 写整个矩阵会带进缩放误差，反复转头会累积（2026-11-22：第 8 场林晓的头被拉长 10 倍）；骨骼动画只要旋转
     bpy.context.view_layer.update()
 
 def apply_state(rig, st, frame=None, lag=0):
@@ -144,9 +178,17 @@ def apply_state(rig, st, frame=None, lag=0):
     x, y, z = st.get('pos', (0, 0, 0))
     hip = R0.translation.z + b['dz'] + z
     kind = SUPPORTED.get(st.get('base', 'stand'))
-    support = support_height(rig, x, y, hip) if (kind and SUPPORT_ON) else None
+    support = support_height(rig, x, y, hip, kind) if (kind and SUPPORT_ON) else None
     if support is not None and abs(support[0] - (hip - 0.1)) > 0.6: support = None   # 离得太远：不是它坐/躺的那件家具
-    root.matrix = rig.matrix_world.inverted() @ Matrix.LocRotScale(Vector((x, y, hip)), Rb @ R0.to_quaternion(), R0.to_scale())
+    if SUPPORT_ON and st.get('base', 'stand') in ('stand', 'stand_rest') and nearest_seat(x, y, 0.2):   # 从椅子上站起来原地站着：椅子穿过腿，像站在椅子上（s08 陈瑶）——往前迈一步
+        fwd = Rb @ Vector((0, -1, 0)); fwd.z = 0
+        if fwd.length > 1e-3: fwd.normalize(); x, y = x + fwd.x * 0.4, y + fwd.y * 0.4
+    if kind == 'seat' and SUPPORT_ON and b['dz'] > -0.6 and (support is None or support[0] < 0.2):   # 只管坐椅子的姿势（盘腿、抱膝可以坐地上）   # 要坐但身下没有座位：附近 45cm 内有椅子就对过去，没有就放一张凳子（剧本让人坐在空地上，脚陷进地板）
+        xy = nearest_seat(x, y, 0.45) or (make_stool(rig, x, y) and (x, y))
+        x, y = xy
+        support = support_height(rig, x, y, hip, kind)
+        if support is not None and abs(support[0] - (hip - 0.1)) > 0.6: support = None
+    root.matrix = rig.matrix_world.inverted() @ Matrix.LocRotScale(Vector((x, y, hip)), Rb @ R0.to_quaternion(), R0.to_scale()); root.scale = (1, 1, 1)
     bpy.context.view_layer.update()
     W = lambda d: Rb @ d
     spine_d = b['spine']
@@ -323,7 +365,7 @@ def clear_space(rig, iters=4, zmin_rel=None, radius=0.27):
         if push.length < 0.004: return
         if push.length > 0.6: push = push.normalized() * 0.6
         M = rig.matrix_world @ root.matrix; M.translation += push
-        root.matrix = rig.matrix_world.inverted() @ M
+        root.matrix = rig.matrix_world.inverted() @ M; root.scale = (1, 1, 1)
         bpy.context.view_layer.update()
 
 def settle_on(rig, support, kind):
@@ -342,6 +384,13 @@ def settle_on(rig, support, kind):
     w = np.concatenate(pts)
     reach = 0.35 if kind == 'seat' else 1.2           # 坐：只看臀部/大腿（小腿垂到地上不算）；躺：整个身体
     w = w[(np.hypot(w[:, 0] - rh.x, w[:, 1] - rh.y) < reach) & (w[:, 2] < rh.z + 0.3)]
+    for side in ('L', 'R'):   # 手和前臂不算：坐着垂下的手落在椅面边上，整个人被抬高 26cm（s02 陈瑶挥手，2026-11-22）
+        e0 = rig.pose.bones.get('lowerarm01.' + side); wr = rig.pose.bones.get('wrist.' + side)
+        if e0 is None or wr is None or not len(w): continue
+        a_ = np.array(rig.matrix_world @ e0.head, np.float32); b_ = np.array(rig.matrix_world @ wr.tail, np.float32)
+        b_ = b_ + (b_ - a_) / max(1e-4, float(np.linalg.norm(b_ - a_))) * 0.12   # 延长到指尖
+        ab = b_ - a_; tt = np.clip(((w - a_) @ ab) / float(ab @ ab), 0, 1)
+        w = w[np.linalg.norm(w - (a_ + tt[:, None] * ab), axis=1) > 0.09]
     if not len(w): return
     cell = np.floor(w[:, :2] / 0.06).astype(np.int64)  # 6 cm 网格，每格取最低点，逐点往下打射线找它正下方的面
     key = cell[:, 0] * 100003 + cell[:, 1]
@@ -353,11 +402,13 @@ def settle_on(rig, support, kind):
             hit, loc, _, _, obj, _ = sc.ray_cast(dg, o + Vector((0, 0, -t)), Vector((0, 0, -1)), distance=1.2 - t)
             if not hit: break
             if _is_person(obj) or obj.name.startswith('prop_') or obj.hide_render: t = o.z - loc.z + 0.005; continue
+            if kind == 'seat' and any(k in obj.name.lower() for k in NOT_SEAT): t = o.z - loc.z + 0.005; continue   # 坐着时大腿下面的书桌不算支撑（林晓被抬到大腿搁在桌面上，浮在椅子上方 36cm，2026-11-22）
+            if loc.z > float(p[2]) + 0.15: t = o.z - loc.z + 0.005; continue   # 面在这一点上方 15cm 以上：人在它下面（腿伸在桌下），不是压在它上面
             g = float(p[2]) - loc.z; gap = g if gap is None else min(gap, g); break
     if gap is None: return
     dz = -0.01 - gap                                     # 最贴近的那一处压在面上（软垫陷 1 cm）
     M = rig.matrix_world @ root.matrix; M.translation.z += dz
-    root.matrix = rig.matrix_world.inverted() @ M
+    root.matrix = rig.matrix_world.inverted() @ M; root.scale = (1, 1, 1)
     bpy.context.view_layer.update()
 
 # 两个状态之间真人需要的过渡时间（秒）：下半身换姿态最慢，转身按角度，手臂动作约 0.8 秒

@@ -20,7 +20,7 @@ t0 = time.time()
 timeline = shoot.build_segment(*seg)
 json.dump(timeline, open(os.path.join(config.SHOTS, seg_id + '_timeline.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 # 镜头切换点（每台机位从哪一帧开始用）——云端按镜头切分任务
-cuts = sorted(((m.frame, m.camera.name) for m in bpy.context.scene.timeline_markers if m.camera), key=lambda c: c[0])
+cuts = sorted(((m.frame, m.camera.name, m.camera.get('move', 'static')) for m in bpy.context.scene.timeline_markers if m.camera), key=lambda c: c[0])   # 第三项：运镜方式（云端提示词用）
 json.dump(cuts, open(os.path.join(config.SHOTS, seg_id + '_cuts.json'), 'w', encoding='utf-8'), ensure_ascii=False)
 out = os.path.join(config.RENDERS, seg_id); os.makedirs(out, exist_ok=True)
 shoot.setup_render(out)

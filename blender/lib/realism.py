@@ -107,6 +107,17 @@ def apply_hdri(set_name):
     env = nt.nodes.new('ShaderNodeTexEnvironment'); env.image = bpy.data.images.load(p, check_existing=True)
     bg = nt.nodes.new('ShaderNodeBackground'); bg.inputs['Strength'].default_value = strength
     out = nt.nodes.new('ShaderNodeOutputWorld')
-    nt.links.new(env.outputs['Color'], bg.inputs['Color']); nt.links.new(bg.outputs[0], out.inputs['Surface'])
+    nt.links.new(env.outputs['Color'], bg.inputs['Color'])
+    if set_name in INTERIOR:
+        # 室内：镜头直接看到的背景换成接近墙面的浅米白（光照、反射仍用 HDRI）。拍摄引擎会临时拆掉镜头后面的墙，
+        # 原来拆墙后画面边缘露出 HDRI 里的荒山晚霞，写实化会画成「宿舍外是荒山」（2026-11-22 全片检查）
+        flat = nt.nodes.new('ShaderNodeBackground'); flat.inputs['Color'].default_value = (0.80, 0.78, 0.74, 1); flat.inputs['Strength'].default_value = 1.0
+        lp = nt.nodes.new('ShaderNodeLightPath'); mix = nt.nodes.new('ShaderNodeMixShader')
+        nt.links.new(lp.outputs['Is Camera Ray'], mix.inputs['Fac']); nt.links.new(bg.outputs[0], mix.inputs[1]); nt.links.new(flat.outputs[0], mix.inputs[2])
+        nt.links.new(mix.outputs[0], out.inputs['Surface'])
+    else:
+        nt.links.new(bg.outputs[0], out.inputs['Surface'])
     bpy.context.scene.world = w
     return True
+
+INTERIOR = {'dorm_am', 'dorm_pm', 'dorm_dusk', 'dorm_nt', 'lib', 'canteen', 'class', 'home', 'home_nt'}

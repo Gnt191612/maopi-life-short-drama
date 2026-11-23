@@ -54,13 +54,55 @@ def _rect(root, name, w, h, x, y, rgb, z=0.0, strength=1.0):
     o.material_slots[0].link = 'OBJECT'; o.material_slots[0].material = _emit('ui_' + '_'.join('%.2f' % c for c in rgb), rgb, strength)
     return o
 
+def _wrap(body, max_w):
+    """按字宽手动换行（汉字记 1、英文数字记 0.55）：Blender 文字框只在空格处换行，中文整段冲出屏幕（2026-11-22）"""
+    if not max_w: return body
+    out, cur, w = [], '', 0.0
+    for ch in body:
+        if ch == '\n': out.append(cur); cur, w = '', 0.0; continue
+        cw = 0.55 if ord(ch) < 0x2E80 else 1.0
+        if w + cw > max_w and cur: out.append(cur); cur, w = '', 0.0
+        cur += ch; w += cw
+    out.append(cur); return '\n'.join(out)
+
+_PX = 64   # 文字贴图：每个汉字 64 像素
+
+def _text_png(body, rgb, align):
+    """用系统 Python + PIL 把文字画成透明 PNG（缓存到 build/screen_text/），失败返回 None"""
+    import os, hashlib, subprocess
+    d = os.path.join(config.ROOT, 'build', 'screen_text'); os.makedirs(d, exist_ok=True)
+    key = hashlib.md5(('%s|%s|%s' % (body, rgb, align)).encode('utf-8')).hexdigest()[:16]
+    out = os.path.join(d, key + '.png')
+    if not os.path.exists(out):
+        py = os.environ.get('V11_SYSPY') or 'python'
+        try:
+            subprocess.run([py, os.path.join(config.BLENDER_SCRIPTS, 'tools_text_png.py'), out, body, ','.join('%.3f' % c for c in rgb), align, str(_PX), '1'],
+                           capture_output=True, timeout=60)
+        except Exception as e: print('TEXT PNG FAIL', e, flush=True)
+    return out if os.path.exists(out) else None
+
 def _text(root, name, body, x, y, size, rgb, width=None, align='LEFT', z=0.0):
-    cu = bpy.data.curves.new(name, 'FONT'); cu.body = body; cu.font = font(); cu.size = size * EM
-    cu.align_x = align; cu.align_y = 'TOP'
-    if width:
-        cu.text_boxes[0].width = width
-    o = bpy.data.objects.new(name, cu); _child(root, o, (x, y, Z0 + 0.0006 + z))
-    o.data.materials.append(_emit('ui_txt_' + '_'.join('%.2f' % c for c in rgb), rgb, 1.0))
+    """屏幕文字：PIL 画好的透明贴图贴在小平面上（size = 一个汉字多宽，米；width = 文字框宽，米）"""
+    body = _wrap(body, (width / size) if width else None)
+    png = _text_png(body, rgb, align)
+    if png is None:   # 兜底：Blender 文字曲线（笔画会缺块，但至少有字）
+        cu = bpy.data.curves.new(name, 'FONT'); cu.body = body; cu.font = font(); cu.size = size * EM
+        cu.align_x = align; cu.align_y = 'TOP'
+        o = bpy.data.objects.new(name, cu); _child(root, o, (x, y, Z0 + 0.0006 + z))
+        o.data.materials.append(_emit('ui_txt_' + '_'.join('%.2f' % c for c in rgb), rgb, 1.0))
+        return o
+    img = bpy.data.images.load(png, check_existing=True)
+    w_m, h_m = img.size[0] / _PX * size, img.size[1] / _PX * size
+    cx = x + w_m / 2 if align == 'LEFT' else x
+    o = bpy.data.objects.new(name, sets._unit_cube()); _child(root, o, (cx, y - h_m / 2, Z0 + 0.0006 + z), (w_m, h_m, 0.00005))
+    m = bpy.data.materials.new('ui_txtimg_' + name); m.use_nodes = True; nt = m.node_tree; nt.nodes.clear()
+    tex = nt.nodes.new('ShaderNodeTexImage'); tex.image = img; tex.interpolation = 'Cubic'; tex.extension = 'CLIP'
+    tc = nt.nodes.new('ShaderNodeTexCoord'); nt.links.new(tc.outputs['Generated'], tex.inputs['Vector'])   # 按包围盒 0~1 铺满（立方体自带的 UV 每个面只占贴图一小块，字只显示一角，2026-11-22）
+    em = nt.nodes.new('ShaderNodeEmission'); tr = nt.nodes.new('ShaderNodeBsdfTransparent'); mx = nt.nodes.new('ShaderNodeMixShader')
+    out = nt.nodes.new('ShaderNodeOutputMaterial')
+    nt.links.new(tex.outputs['Color'], em.inputs['Color']); nt.links.new(tex.outputs['Alpha'], mx.inputs['Fac'])
+    nt.links.new(tr.outputs[0], mx.inputs[1]); nt.links.new(em.outputs[0], mx.inputs[2]); nt.links.new(mx.outputs[0], out.inputs[0])
+    o.material_slots[0].link = 'OBJECT'; o.material_slots[0].material = m
     return o
 
 def _show(objs, f_on, f_off):

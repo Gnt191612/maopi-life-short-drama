@@ -14,7 +14,7 @@ SCN = {
  's01': dict(side=1,
    init={'lin': dict(at='lin_bed', face=180, base='lie', arms='down'),
          'chen': dict(at='chen_desk_seat', base='sit', arms='desk')},
-   phones={'lin': (-1.22, -1.40, 1.93), 'chen': (1.35, -0.2, 0.76)},
+   phones={'lin': (-0.95, -1.35, 1.925), 'chen': (1.35, -0.2, 0.76)},
    beats={
     's01_02': {'lin': Bl(1.6, arms='phone_up')},
     's01_06': {'lin': Bl(0.35, base='sit_bed', arms='phone')},
