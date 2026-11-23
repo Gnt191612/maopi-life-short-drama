@@ -172,7 +172,7 @@ def place_camera(name, subj_pts, facing_yaw, kind, side, bounds, frame0, frame1,
             cam.data.dof.use_dof = True; cam.data.dof.aperture_fstop = fstop; cam.data.dof.focus_distance = max(0.2, (pos - tgt).length)
         dd = tgt - pos; cam.location = pos
         up = Vector((0, 0, 1))
-        if head_up is not None and abs(dd.normalized().z) > 0.6: up = Vector(head_up)   # 俯拍/仰拍躺着的人：以头顶方向为画面上方，避免人脸倒置
+        if head_up is not None and (abs(dd.normalized().z) > 0.6 or (lying and kind in ('ECU', 'CU', 'MCU'))): up = Vector(head_up)   # 躺着的人拍近景：画面上方对着头顶（侧面机位按世界竖直会把脸拍倒，s01 林晓）   # 俯拍/仰拍躺着的人：以头顶方向为画面上方，避免人脸倒置
         z = (-dd).normalized(); x = up.cross(z)
         if x.length < 1e-4: x = Vector((1, 0, 0))
         x.normalize(); y = z.cross(x)
@@ -412,6 +412,12 @@ def object_target(en, rigs, subj, phones):
         held, rest = phones.get(who, (None, None))
         if 'pillow' in e and rest is not None: return (lambda: rest.matrix_world.translation.copy()), None
         return wrist, rig
+    if any(k in e for k in ('table', 'desk')):   # 桌面特写：对准手前方 20cm 的桌面（对准手腕时镜头被身子挡，拍到一大块外套，s02 窗边桌）
+        def on_table():
+            fd = face_dir(rig)[0]; fd.z = 0
+            fd = fd.normalized() if fd.length > 1e-3 else Vector((0, -1, 0))
+            return wrist() + fd * 0.2 - Vector((0, 0, 0.03))
+        return on_table, rig
     if any(k in e for k in OBJ_CLOSE['hands']): return wrist, rig
     return None
 
