@@ -558,10 +558,10 @@ def climb_path(start, new):
     t, steps = 0, []
     edge = lad - out * 0.28
     t += round(0.7 * FPS); steps.append((t, dict(start, pos=(edge.x, edge.y, start['pos'][2]), yaw=face_room, base='sit_bed', arms='down')))
-    t += round(0.8 * FPS); steps.append((t, dict(pos=(edge.x, edge.y, start['pos'][2]), yaw=face_ladder, base='crouch', arms='down', lean=30)))   # 蹲着时手放下、身体前倾（上铺离天花板只有 1.28m，直着蹲头顶到天花板）；（举手的爬梯姿势会插进天花板）
+    t += round(0.8 * FPS); steps.append((t, dict(pos=(edge.x, edge.y, start['pos'][2]), yaw=face_ladder, base='crouch', arms='down', lean=12)))   # 蹲着时手放下、身体前倾（上铺离天花板只有 1.28m，直着蹲头顶到天花板）；（举手的爬梯姿势会插进天花板）
     lip = lad - out * 0.06
-    t += round(0.5 * FPS); steps.append((t, dict(pos=(lip.x, lip.y, start['pos'][2]), yaw=face_ladder, base='crouch', arms='climb', lean=30)))   # 挪到床沿、手扶梯子   # 先在床上转身蹲好、面朝床里（原来坐着直接接爬梯姿势：转身 180° + 下降同时插值，人斜着飞出去穿过床板，2026-11-23）
-    on = lad + out * 0.32   # 离床沿远一点（0.2 时林晓的肚子顶进床板）
+    t += round(0.5 * FPS); steps.append((t, dict(pos=(lip.x, lip.y, start['pos'][2]), yaw=face_ladder, base='crouch', arms='climb', lean=12)))   # 挪到床沿、手扶梯子   # 先在床上转身蹲好、面朝床里（原来坐着直接接爬梯姿势：转身 180° + 下降同时插值，人斜着飞出去穿过床板，2026-11-23）
+    on = lad + out * 0.40   # 离床沿远一点（0.2/0.32 时林晓的肚子顶进床板）
     t += round(0.7 * FPS); steps.append((t, dict(pos=(on.x, on.y, tops[-1]), yaw=face_ladder, base='climbA', arms='climb')))   # 再往后一步踩上最高一级
     for k, z in enumerate(reversed(tops[:-1])):
         t += round(0.42 * FPS); steps.append((t, dict(pos=(on.x, on.y, z), yaw=face_ladder, base='climbB' if k % 2 == 0 else 'climbA', arms='climb')))

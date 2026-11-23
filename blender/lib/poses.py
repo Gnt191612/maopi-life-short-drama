@@ -338,6 +338,8 @@ def _body_points(rig):
 
 WALLISH = ('wall', 'mirror', 'glass', 'facade', 'curtain')
 
+GROUND_WORDS = ('step', 'landing', 'stair', 'platform', 'stage', 'curb', 'podium', 'ground', 'floor', 'track', 'plaza', 'path', 'road', 'grass', 'lawn', 'pavement')
+
 def clear_space(rig, iters=4, zmin_rel=None, radius=0.27):
     """躯干/腿钻进家具或墙：沿水平方向把人推出来（标记点离家具太近、胖角色肚子顶进柜子等）。
     手臂只和墙/镜子/玻璃比较——手搭在桌上是正常的，伸进墙里不正常。zmin_rel：只看髋部以上多高的部分（坐着时用）"""
@@ -353,7 +355,7 @@ def clear_space(rig, iters=4, zmin_rel=None, radius=0.27):
         if not len(core): return
         push = Vector((0, 0, 0))
         for o in bpy.context.scene.objects:
-            if o.type != 'MESH' or _is_person(o) or o.name.startswith(('prop_', 'cam_')): continue   # 不跳过 hide_render：那是机位临时藏的家具，换机位就出现（原来趴桌时书架正被藏着，没推开，下一拍头嵌在书架里）
+            if o.type != 'MESH' or _is_person(o) or o.name.startswith(('prop_', 'cam_')) or any(k in o.name.lower() for k in GROUND_WORDS): continue   # 地面类（台阶、平台）不是障碍：站在 1.2m 平台上时脚踩着平台，原来被当成「陷进平台」水平推出去、推进外墙 24cm（s04）；不跳过 hide_render：那是机位临时藏的家具，换机位就出现（原来趴桌时书架正被藏着，没推开，下一拍头嵌在书架里）
             w = arms if any(k in o.name for k in WALLISH) else core
             lo, hi = w.min(0), w.max(0)
             bb = [o.matrix_world @ Vector(c) for c in o.bound_box]
