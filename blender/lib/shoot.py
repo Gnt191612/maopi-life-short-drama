@@ -676,7 +676,11 @@ def build_segment(seg_id, scene, set_name, beats):
                 kind = shot_type(bt.get('en'))
                 if kind in ('MS', 'WS'): subj = [CID[c] for c in bt['chars'] if CID[c] in rigs][:3] or subj
                 sc.frame_set(f0)
-                pts = [poses.head_pos(rigs[s]) for s in subj] or [Vector((0, 0, 1.4))]
+                def _avg_head(r_):   # 头在本拍的平均位置（转头、俯身时头会移开，只对准第一帧，转过来脸就在画面边上，s09 林晓回头）
+                    a_ = Vector()
+                    for fr_ in (f0, (f0 + f1) // 2, f1): sc.frame_set(fr_); a_ += poses.head_pos(r_)
+                    sc.frame_set(f0); return a_ / 3
+                pts = [_avg_head(rigs[s]) for s in subj] or [Vector((0, 0, 1.4))]
                 obj_t = object_target(bt.get('en'), rigs, subj, phones)   # 「手机/手/桌面/脚的特写」：镜头对准物件，不对准人头
                 if obj_t is not None and kind == 'ECU': kind = 'CU'   # 物件特写退半步：0.42m 只拍到一块黑色机身，看不出是什么（枕边手机）
                 if obj_t is not None:   # 物件（手、手机）在本拍里会动：瞄开头、中间、结尾三处的平均位置（原来只瞄开头，手一抬就出画）
@@ -692,9 +696,9 @@ def build_segment(seg_id, scene, set_name, beats):
                 hu = poses.body_rot(st0['yaw'], poses.BASE[st0.get('base', 'stand')]['pitch']) @ Vector((0, 0, 1))
                 if subj and st0.get('base', 'stand') not in ('lie', 'lie_side'):   # 按头的真实朝向（三帧平均）摆机位：人在本拍里转身时，按身体朝向摆的机位全在背后（s01 陈瑶进门）
                     acc = Vector()
-                    for fr_ in (f0, (f0 + f1) // 2, f1): sc.frame_set(fr_); acc += face_dir(rigs[subj[0]])[0]
+                    for fr_, w_ in ((f0, 0.5), ((f0 + f1) // 2, 1.0), (f1, 1.5)): sc.frame_set(fr_); acc += face_dir(rigs[subj[0]])[0] * w_   # 偏向结尾：转头/转身的拍子，观众要看的是转过来之后的脸（s09 林晓回头）
                     sc.frame_set(f0); acc.z *= 0.3
-                    if acc.length > 0.5: yaw = acc.normalized()
+                    if acc.length > 1.5: yaw = acc.normalized()
                 watch = [speaker] if speaker in rigs else subj[:1]
                 movers = [s_ for s_ in subj if s_ in walking]
                 sc.frame_set(f0); hp0 = {s_: poses.head_pos(rigs[s_]) for s_ in subj}
@@ -710,7 +714,7 @@ def build_segment(seg_id, scene, set_name, beats):
                 cam = place_camera('cam_' + bt['id'], pts, yaw, kind, side, bounds, f0, f1, bt.get('en'), head_up=hu, protect=protect, validate=vfun, own_rigs=[rigs[s_] for s_ in subj])
                 if movers:   # 走动的人：镜头跟着摇（真人摄影师的跟拍），不会拍着拍着人走出画面
                     con = cam.constraints.new('TRACK_TO'); con.target = rigs[movers[0]]; con.up_axis = 'UP_Y'   # 保持画面水平（DAMPED_TRACK 会让镜头歪，s10 结尾三人走远时画面倾斜）
-                    con.subtarget = 'spine01' if movers[0] in walking else 'neck01'
+                    con.subtarget = 'neck01'   # 跟拍瞄脖子（原来走路的人瞄 spine01，人走近时头被切出画面，s07 林晓）
                     con.track_axis = 'TRACK_NEGATIVE_Z'; con.influence = 0.9; cam['move'] = 'track'
         if cam is not cam_prev:
             m = sc.timeline_markers.new(bt['id'], frame=f0); m.camera = cam

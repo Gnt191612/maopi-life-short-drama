@@ -4,6 +4,7 @@
 外加 refs/（每个角色的照片级定妆照）。输出 dist/cloud_pack/ 和 dist/cloud_pack.zip，上传到仙宫云实例即可。
 用法：python cloud/pack_for_cloud.py [片段id ...]   （默认全片；先跑完预演渲染 V11_PREVIEW=1 python run_all.py 与骨架导出）
       --pose  先为缺骨架图的片段导出骨架（调用 Blender）
+      --update 只重打命令行给出的片段，其余已打好的镜头任务保留
 """
 import os, sys, json, glob, shutil, subprocess, zipfile
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -43,7 +44,10 @@ def face_crop(c, im):
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
     segs = [s for s in S.segments() if not args or s[0] in args]
-    if os.path.isdir(OUT): shutil.rmtree(OUT)
+    if '--update' in sys.argv and os.path.isdir(OUT):   # 只重打给定片段（其余镜头任务保留），补拍个别片段后不用全部重打
+        for sid_ in {s[0] for s in segs}:
+            for d_ in glob.glob(os.path.join(OUT, sid_ + '_*')): shutil.rmtree(d_, ignore_errors=True)
+    elif os.path.isdir(OUT): shutil.rmtree(OUT)
     os.makedirs(os.path.join(OUT, 'refs'), exist_ok=True)
     tasks = []; hd_jobs = {}
     for sid, scene, set_name, beats in segs:
@@ -96,12 +100,13 @@ def main():
                 import cv2; cv2.imwrite(os.path.join(td, 'first.png'), cv2.imread(src))
         shutil.rmtree(tmp, ignore_errors=True)
         print('高清首帧', sid, len(jobs), flush=True)
-    json.dump(dict(fps=24, size=[832, 480], tasks=[t['id'] for t in tasks]), open(os.path.join(OUT, 'manifest.json'), 'w', encoding='utf-8'), indent=1)
+    all_ids = sorted(os.path.basename(os.path.dirname(p_)) for p_ in glob.glob(os.path.join(OUT, '*', 'task.json')))   # --update 时包含保留下来的旧任务
+    json.dump(dict(fps=24, size=[832, 480], tasks=all_ids), open(os.path.join(OUT, 'manifest.json'), 'w', encoding='utf-8'), indent=1)
     zp = OUT + '.zip'
     with zipfile.ZipFile(zp, 'w', zipfile.ZIP_STORED) as z:
         for root, _, files in os.walk(OUT):
             for f in files: z.write(os.path.join(root, f), os.path.relpath(os.path.join(root, f), os.path.dirname(OUT)))
-    print('打包完成：%d 个镜头任务，%s（%.0f MB）' % (len(tasks), zp, os.path.getsize(zp) / 1e6))
+    print('打包完成：%d 个镜头任务（本次重打 %d），%s（%.0f MB）' % (len(all_ids), len(tasks), zp, os.path.getsize(zp) / 1e6))
 
 if __name__ == '__main__':
     main()
