@@ -712,11 +712,26 @@ def build_segment(seg_id, scene, set_name, beats):
             hand_ev[cid].append((f0, grips(start))); hand_ev[cid].append((t_change, grips(new)))
         # 1b) 生活小动作：不说话的人在较长的镜头里做一次自己的习惯动作；说长句的人换一种说话手势（各有性格）
         for cid, rig in rigs.items():
-            if cid in plans: continue
-            st = state[cid]; base = st.get('base', 'stand'); seated = poses.SUPPORTED.get(base) == 'seat'
-            if base not in ('stand', 'stand_rest') and not seated: continue
-            if st.get('arms', 'down') not in ('down', 'thighs', 'lap', 'desk', 'pocket', 'pockets', 'gesture'): continue
             talking = cid == speaker
+            if cid in plans and not (talking and plans[cid][0] in ('snap', 'blend') and n >= 4.5 * FPS): continue
+            st = plans[cid][1] if cid in plans else state[cid]; base = st.get('base', 'stand'); seated = poses.SUPPORTED.get(base) == 'seat'
+            if base not in ('stand', 'stand_rest') and not seated and base != 'sit_lean': continue
+            if st.get('arms', 'down') not in ('down', 'thighs', 'lap', 'desk', 'pocket', 'pockets', 'gesture', 'open_palms'): continue
+            if talking and n >= 4.5 * FPS:   # 长段台词：每 3 秒左右换一个说话手势（抬手→停住→放下→歇一下），原来 9 秒独白双手一直搭在腿上（s08 王老师，2026-11-23）
+                pool = list(dict.fromkeys((TALK.get(cid) or []) + ['gesture']))
+                k0 = sum(map(ord, bt['id'] + cid)); lk = looks.get(cid); tr = round(0.6 * FPS)
+                t_ = f0 + round(n * (0.35 if cid in plans else 0.15)); i_ = 0
+                while t_ + tr * 2 + round(1.3 * FPS) < f1 - LAG and i_ < 8:
+                    act_ = pool[(k0 + i_) % len(pool)]; i_ += 1
+                    if act_ == st.get('arms'): continue
+                    hold = round((1.3 + 0.35 * ((k0 + i_) % 3)) * FPS)
+                    poses.apply_state(rig, dict(st, look=lk), t_, lag=LAG)
+                    poses.apply_state(rig, dict(st, arms=act_, look=lk), t_ + tr, lag=LAG)
+                    poses.apply_state(rig, dict(st, arms=act_, look=lk), t_ + tr + hold, lag=LAG)
+                    poses.apply_state(rig, dict(st, look=lk), t_ + tr * 2 + hold, lag=LAG)
+                    t_ += tr * 2 + hold + round(0.7 * FPS)
+                continue
+            if cid in plans: continue
             if n < (3.0 if talking else 3.6) * FPS: continue
             pool = TALK.get(cid) if talking else HABITS.get(cid, {}).get('sit' if seated else 'stand')
             if not pool: continue

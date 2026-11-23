@@ -85,7 +85,7 @@ ARMS = {
  'sleeves':     dict(R=DOWN_R, hand={'R': ('belly', (0.22, 0.03, 0.0)), 'L': ('belly', (0.22, -0.03, 0.02))}),     # 缩着袖子两手拢在身前
  'rub_hands':   dict(R=DOWN_R, hand={'R': ('chest', (0.26, 0.02, -0.12)), 'L': ('chest', (0.26, -0.02, -0.12))}), # 搓手
  'hand_chest':  dict(R=DOWN_R, hand={'R': ('chest', (0.11, 0.03, 0.0))}),                                         # 手按胸口（真诚）
- 'open_palms':  dict(R=DOWN_R, hand={'R': ('belly', (0.30, -0.22, 0.06)), 'L': ('belly', (0.30, 0.22, 0.06))}),    # 摊开双手说话
+ 'open_palms':  dict(R=DOWN_R, hand={'R': ('chest', (0.32, -0.22, -0.12)), 'L': ('chest', (0.32, 0.22, -0.12))}),   # 胸前高度（原来对准肚子，坐着时和手搭腿上看不出区别）    # 摊开双手说话
  'hair_tuck':   dict(R=DOWN_R, hand={'R': ('ear', (0.0, 0.0, 0.01))}),                                             # 把头发别到耳后
  'strap':       dict(R=DOWN_R, hand={'R': ('chest', (0.06, -0.13, 0.08))}),                                        # 抓着书包带
  'climb':      dict(R=(V(-0.15, -0.55, 0.8), V(-0.05, -0.35, 1))),                                                             # 双手握梯子扶手
