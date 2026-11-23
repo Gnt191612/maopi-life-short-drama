@@ -45,7 +45,7 @@ SCN = {
     's02_06': {'lin': S(pos=(6.0, -0.75, 0), face=180, arms='desk')},
     's02_07': {'lin': S(pos=(5.9, -1.2, 0), face=160, base='crouch', arms='phone')},
     's02_08': {'chen': S(arms='desk')},
-    's02_08c': {'lin': S(pos=(-1.95, -4.25, 0), face=-90, base='crouch', arms='down')},
+    's02_08c': {'lin': S(pos=(-1.62, -4.25, 0), face=-90, base='crouch', arms='down')},   # 离陈瑶 0.5m（原来 0.2m，蹲下凑过去时两人身体互相嵌进去，2026-11-23）
     's02_09': {'lin': S(at='window_seat', face=180, base='sit', arms='phone')},
    }),
  # ---------------- 午后宿舍 / 视频电话 ----------------

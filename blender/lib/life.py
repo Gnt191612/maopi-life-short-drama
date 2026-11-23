@@ -13,9 +13,10 @@ FPS = 24
 FINGERS = ['finger%d-%d.%s' % (i, j, s) for s in 'LR' for i in range(2, 6) for j in range(1, 4)]
 THUMB = ['finger1-%d.%s' % (j, s) for s in 'LR' for j in range(1, 4)]
 # (骨骼, 噪声强度[四元数分量], 噪声周期[帧]) —— 强度 0.01 ≈ 1.1°
-SWAY = [('spine04', 0.006, 70), ('spine02', 0.008, 60), ('neck02', 0.010, 50), ('head', 0.016, 42),
-        ('clavicle.L', 0.006, 55), ('clavicle.R', 0.006, 55), ('upperarm01.L', 0.010, 65), ('upperarm01.R', 0.010, 65),
-        ('lowerarm01.L', 0.008, 58), ('lowerarm01.R', 0.008, 58)]
+# 2026-11-23 幅度整体加大约一倍：原来 ±1° 左右，白模几乎是定住的，看着僵（云端按骨架图生成，僵硬会带进成片）
+SWAY = [('spine04', 0.012, 75), ('spine02', 0.015, 64), ('neck02', 0.018, 52), ('head', 0.028, 44),
+        ('clavicle.L', 0.010, 58), ('clavicle.R', 0.010, 58), ('upperarm01.L', 0.020, 68), ('upperarm01.R', 0.020, 68),
+        ('lowerarm01.L', 0.016, 60), ('lowerarm01.R', 0.016, 60)]
 BREATH = [('spine03', 0.010), ('spine01', 0.006), ('clavicle.L', 0.005), ('clavicle.R', 0.005)]
 
 def _fcurves(rig, bone, path='rotation_quaternion'):
@@ -87,3 +88,18 @@ def hands(rig, frame, grip_R=False, grip_L=False):
         if n not in pb: continue
         grip = grip_R if n.endswith('.R') else grip_L
         _key_rot(pb[n], frame, (math.radians(25 if grip else 8), 0, 0))
+
+def talk_motion(rig, spans, seed):
+    """说话时头和上身跟着动：每句台词期间叠加轻微点头（头、颈）和上身起伏（胸椎），句首稍重、句尾收住。
+    原来说话只有嘴动，头和身子纹丝不动，看着像念稿（2026-11-23）。spans：[(起始帧, 结束帧), ...]"""
+    rnd = random.Random(seed)
+    for f0, f1 in spans:
+        if f1 - f0 < 10: continue
+        period = FPS * rnd.uniform(0.7, 1.1)             # 点头节奏约每秒一下，像说话的重音
+        for bone, amp, idx in (('head', rnd.uniform(0.022, 0.035), 1), ('neck02', 0.012, 1), ('spine03', 0.008, 1), ('head', rnd.uniform(0.008, 0.015), 2)):
+            for fc in _fcurves(rig, bone):
+                if fc.array_index != idx: continue      # 1 = 绕局部 X 点头/挺胸；2 = 绕骨骼自身 Y 轻微转头
+                m = fc.modifiers.new('FNGENERATOR'); m.function_type = 'SIN'; m.use_additive = True
+                m.amplitude = amp; m.phase_multiplier = 2 * math.pi / (period * (1.6 if idx == 2 else 1.0)); m.phase_offset = rnd.uniform(0, 6.28)
+                m.use_restricted_range = True; m.frame_start = f0; m.frame_end = f1
+                m.blend_in = min(8, (f1 - f0) // 3); m.blend_out = min(10, (f1 - f0) // 3)

@@ -228,7 +228,7 @@ def dorm(time='am'):
         box('furn_mattress_%s' % who, (0.9, 1.95, 0.10), (x, cy, 1.82), 'white', col)
         box('furn_quilt_%s' % who, (0.88, 1.3, 0.04), (x, cy + 0.25, 1.925), 'fabric', col)   # 比床垫高 5mm：底面和床垫面重合时，落座射线穿过被子后起点在床垫里面，漏掉床垫、把人压到床板上（2026-11-22）；4cm：原来 12cm 的被子方块把坐在床上的人下半身整个盖住，像陷进床里（2026-11-22）
         box('furn_pillow_%s' % who, (0.5, 0.3, 0.1), (x, cy - 0.75, 1.925), 'white', col)
-        box('furn_rail_%s' % who, (0.04, 2.0, 0.3), (x - sx * 0.46, cy, 1.82), 'metal', col)
+        box('furn_rail_%s' % who, (0.04, 1.45, 0.3), (x - sx * 0.46, cy + 0.275, 1.82), 'metal', col)   # 护栏在梯子口留缺口（原来 2m 整条拦住梯子，下床时腿必穿过护栏）
         for dy in (-0.98, 0.98):
             for dx in (-0.45, 0.45):
                 box('furn_post_%s' % who, (0.05, 0.05, 2.1), (x + dx, cy + dy, 0), 'metal', col)

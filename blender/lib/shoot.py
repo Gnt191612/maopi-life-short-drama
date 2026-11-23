@@ -16,14 +16,16 @@ from segments import FPS, LEAD, META, TEXT, CID, EST_SET, audio_plan, screen_pla
 from lines import SCREEN
 NAME = {v: k for k, v in CID.items()}
 # 人物习惯动作（不说话时在长镜头里自然流露）：林晓局促、陈瑶理性克制、周明远沉稳、王老师师长气、同学甲大大咧咧、同学乙文静、林母慈和
+# 不用推眼镜/托腮：IK 只管手腕位置、手掌顺着前臂立起来，整只手盖在嘴和鼻子上，云端换脸、口型都会坏（2026-11-23 手势总览检查）
 HABITS = {'lin':    {'stand': ['scratch_head', 'neck_rub', 'pocket1', 'rub_hands'], 'sit': ['rub_hands', 'neck_rub', 'scratch_head']},
-          'chen':   {'stand': ['glasses', 'cross_arms', 'pockets'], 'sit': ['glasses', 'chin', 'cross_arms']},
-          'zhou':   {'stand': ['pockets', 'hands_back', 'chin'], 'sit': ['chin', 'rub_hands']},
-          'wang':   {'stand': ['hands_back', 'cross_arms', 'chin'], 'sit': ['chin', 'rub_hands']},
+          'chen':   {'stand': ['cross_arms', 'pockets', 'hands_back'], 'sit': ['cross_arms', 'hand_chest']},
+          'zhou':   {'stand': ['pockets', 'hands_back'], 'sit': ['rub_hands', 'hand_chest']},
+          'wang':   {'stand': ['hands_back', 'cross_arms'], 'sit': ['rub_hands', 'hand_chest']},
           'classA': {'stand': ['scratch_head', 'hip_hand', 'pockets'], 'sit': ['scratch_head', 'neck_rub']},
           'classB': {'stand': ['sleeves', 'hair_tuck', 'cross_arms'], 'sit': ['sleeves', 'hair_tuck']},
           'mom':    {'stand': ['hand_chest'], 'sit': ['hair_tuck', 'hand_chest']}}
-TALK = {'lin': ['open_palms', 'scratch_head', 'hand_chest'], 'chen': ['glasses', 'open_palms'], 'zhou': ['open_palms', 'hand_chest'],
+TALK = {'lin': ['open_palms', 'scratch_head', 'hand_chest'], 'chen': ['open_palms', 'hand_chest'],   # 说话时不用推眼镜/托腮：手挡在脸前，云端换脸和口型都会坏（2026-11-23）
+        'zhou': ['open_palms', 'hand_chest'],
         'wang': ['open_palms', 'hand_chest'], 'classA': ['scratch_head', 'open_palms'], 'classB': ['hand_chest', 'hair_tuck'],
         'mom': ['hand_chest', 'open_palms']}
 
@@ -429,6 +431,37 @@ def assign_ids():
     ids[15] = '手机'
     return ids
 
+OBSTACLE = ('ext_trunk', 'ext_crown', 'ext_lamp', 'ext_bench', 'ext_bin', 'ext_sign', 'ext_bike', 'ext_column')
+
+def _xy_box(o):
+    bb = [o.matrix_world @ Vector(c) for c in o.bound_box]
+    return Vector((sum(p.x for p in bb) / 8, sum(p.y for p in bb) / 8)), bb
+
+def clear_walk_path(a, b):
+    """路人走的直线上挡着的树、路灯、长椅等：整段移走（同一棵树的树干、树冠一起）。原来路人从树干、树冠里穿过去（s04，2026-11-23）"""
+    from mathutils.geometry import intersect_point_line
+    ab = b - a
+    if ab.length < 0.1: return
+    obs = [o for o in bpy.data.objects if o.type == 'MESH' and o.name.startswith(OBSTACLE) and not o.hide_render]
+    hide = set()
+    for o in obs:
+        c, bb = _xy_box(o)
+        if min(p.z for p in bb) > 1.95: continue                     # 头顶上方的树冠不碍事
+        rad = max(max(p.x for p in bb) - min(p.x for p in bb), max(p.y for p in bb) - min(p.y for p in bb)) / 2 + 0.3
+        q, t = intersect_point_line(c, a, b); t = max(0.0, min(1.0, t))
+        if (c - (a + ab * t)).length < rad: hide.add(o.name)
+    for n in list(hide):   # 同一棵树：树干和树冠水平位置相近
+        if not n.startswith(('ext_trunk', 'ext_crown')): continue
+        c0, _ = _xy_box(bpy.data.objects[n])
+        for o in obs:
+            if o.name.startswith(('ext_trunk', 'ext_crown')) and (_xy_box(o)[0] - c0).length < 0.8: hide.add(o.name)
+    for n in hide:
+        ob = bpy.data.objects[n]
+        if ob.animation_data and ob.animation_data.action:   # 机位临时移走时打过 hide_render 关键帧，不删的话换机位又冒出来
+            for fc in [fc for fc in ob.animation_data.action.fcurves if fc.data_path in ('hide_render', 'hide_viewport')]: ob.animation_data.action.fcurves.remove(fc)
+        ob.hide_render = True; ob.hide_viewport = True
+    if hide: print('WALK PATH CLEAR', len(hide), sorted(hide)[:6], flush=True)
+
 def add_walkers(walkers, f_end, clip):
     """外景背景里来往的路人学生：按设定时刻出发、动捕走路；片段结束前走不完就走到哪算哪（只烘焙需要的帧）"""
     for cid, p0, p1, t0 in walkers:
@@ -441,6 +474,7 @@ def add_walkers(walkers, f_end, clip):
         frames, _, _ = retarget.walk_plan(clip, rig, p0, p1)
         frac = min(1.0, (f_end - fs) / max(1, frames))                      # 只走到片段结束
         q1 = Vector(p0) + d * frac
+        clear_walk_path(Vector(p0[:2]), q1.xy)
         poses.apply_state(rig, dict(pos=(p0[0], p0[1], 0), yaw=yaw, base='stand', arms='down'), 1)
         retarget.walk(clip, rig, fs, p0, (q1.x, q1.y))
         if fs > 1:   # 出发前不在画面里（不会有人杵在路边等着）
@@ -449,6 +483,58 @@ def add_walkers(walkers, f_end, clip):
                     c.hide_render = v; c.keyframe_insert('hide_render', frame=fr)
         life.add_idle(rig, sum(map(ord, cid)))
         life.hands(rig, 1)
+
+GROUNDISH = ('step', 'landing', 'stair', 'platform', 'stage', 'curb', 'podium', 'ground', 'floor', 'track', 'plaza', 'path', 'road', 'grass', 'lawn', 'pavement')
+
+def ground_follow(rigs, f_start, f_end):
+    """站着/走路的人脚不能低于脚下的地面：台阶、门口平台、路沿。走路动捕和站位都按 z=0 摆，
+    s04 林晓走上图书馆台阶时腿整个埋进台阶、站在平台上埋到腰（2026-11-23）。逐帧算要抬多少，前后平滑后补关键帧。
+    坐着/躺着（髋部离脚不到 0.7m）不动：坐在台阶上的人已经按台阶落座了。"""
+    sc = bpy.context.scene
+    grounds = [o for o in bpy.data.objects if o.type == 'MESH' and any(k in o.name.lower() for k in GROUNDISH)]
+    if not any(max((o.matrix_world @ Vector(c)).z for c in o.bound_box) > 0.04 for o in grounds): return   # 场景里没有高出地面的台阶/平台
+    raise_ = {r: [0.0] * (f_end + 2) for r in rigs}; hipz = {r: [0.0] * (f_end + 2) for r in rigs}
+    for f in range(f_start, f_end + 1):
+        sc.frame_set(f); dg = bpy.context.evaluated_depsgraph_get()
+        for r in rigs:
+            M = r.matrix_world; pb = r.pose.bones
+            if pb.get('foot.L') is None: continue
+            feet = [M @ pb['foot.' + s].head for s in 'LR'] + [M @ pb['foot.' + s].tail for s in 'LR']
+            z0 = M.translation.z; bd = r.data.bones   # 鞋底高度 = 踝/脚尖骨骼点 − 它们静止时离地的高度（骨骼点本身比鞋底高约 20cm，原来直接用骨骼点，每级台阶都抬得不够）
+            soles = [feet[k].z - ((M @ (bd['foot.' + 'LRLR'[k]].head_local if k < 2 else bd['foot.' + 'LRLR'[k]].tail_local)).z - z0) for k in range(4)]
+            fz = min(soles); hip = M @ pb['root'].head; hipz[r][f] = hip.z
+            if hip.z - fz < 0.7: continue
+            need = 0.0
+            for p in feet:   # 每只脚正下方（从鞋底上方 0.9m 往下）第一块地面的高度；扶手、栏杆等非地面物体穿过去
+                o = Vector((p.x, p.y, fz + 1.4)); t = 0.0   # 从鞋底上方 1.4m 往下（平台高 1.2m，起点低于平台顶就看不到顶面）
+                while t < 1.7:
+                    hit, loc, _, _, obj, _ = sc.ray_cast(dg, o + Vector((0, 0, -t)), Vector((0, 0, -1)), distance=1.7 - t)
+                    if not hit: break
+                    if (obj.parent is not None and obj.parent.type == 'ARMATURE') or obj.name.startswith('prop_') or obj.hide_render: t = o.z - loc.z + 0.005; continue
+                    if any(k in obj.name.lower() for k in GROUNDISH): need = max(need, loc.z - fz); break
+                    t = o.z - loc.z + 0.005
+            raise_[r][f] = max(0.0, need)
+            if os.environ.get('V11_GDEBUG') and f % 6 == 0: print('GDBG', r.name, f, 'fz %.2f hip %.2f need %.2f' % (fz, hip.z, need), flush=True)
+    for r, arr in raise_.items():
+        if max(arr) < 0.01: continue
+        sm = arr[:]
+        for f in range(f_start, f_end + 1):   # 先取前后 4 帧最大值（不许中途陷下去），再平均（台阶一级级上去、不跳）
+            sm[f] = max(arr[max(f_start, f - 4):min(f_end, f + 4) + 1])
+        sm2 = sm[:]
+        for f in range(f_start, f_end + 1):
+            w = sm[max(f_start, f - 3):min(f_end, f + 3) + 1]; sm2[f] = sum(w) / len(w)
+            hz = hipz[r]; near = [arr[g] for g in range(max(f_start, f - 2), min(f_end, f + 2) + 1) if abs(hz[g] - hz[f]) < 0.1]
+            sm2[f] = min(sm2[f], max(near) + 0.02)   # 原动画自己已经升上去的帧不再叠加（走到终点时原走位跳上平台，叠加后冲高到 2.8m）
+        root = r.pose.bones['root']; todo = []
+        for f in range(f_start, f_end + 1):   # 先把每帧该到的位置全算好再写关键帧（边算边写的话，后一帧的基准会被前一帧新插的键带高，抬两次）
+            if sm2[f] < 0.004 and (f == f_start or sm2[f - 1] < 0.004) and (f == f_end or sm2[f + 1] < 0.004): continue
+            sc.frame_set(f)
+            Mw = r.matrix_world @ root.matrix; Mw.translation.z += sm2[f]
+            root.matrix = r.matrix_world.inverted() @ Mw; todo.append((f, root.location.copy()))
+        for f, loc_ in todo:
+            root.location = loc_; root.keyframe_insert('location', frame=f, group='root')
+        n = len(todo)
+        print('GROUND FOLLOW', r.name, 'max %.2f m' % max(arr), 'frames', n, flush=True)
 
 def climb_path(start, new):
     """从上铺爬梯子下来的分步状态 [(相对帧, 状态)]：梯子位置取离起点最近的梯子横档"""
@@ -466,8 +552,11 @@ def climb_path(start, new):
     t, steps = 0, []
     edge = lad - out * 0.28
     t += round(0.7 * FPS); steps.append((t, dict(start, pos=(edge.x, edge.y, start['pos'][2]), yaw=face_room, base='sit_bed', arms='down')))
-    on = lad + out * 0.2
-    t += round(0.9 * FPS); steps.append((t, dict(pos=(on.x, on.y, tops[-1]), yaw=face_ladder, base='climbA', arms='climb')))
+    t += round(0.8 * FPS); steps.append((t, dict(pos=(edge.x, edge.y, start['pos'][2]), yaw=face_ladder, base='crouch', arms='down', lean=30)))   # 蹲着时手放下、身体前倾（上铺离天花板只有 1.28m，直着蹲头顶到天花板）；（举手的爬梯姿势会插进天花板）
+    lip = lad - out * 0.06
+    t += round(0.5 * FPS); steps.append((t, dict(pos=(lip.x, lip.y, start['pos'][2]), yaw=face_ladder, base='crouch', arms='climb', lean=30)))   # 挪到床沿、手扶梯子   # 先在床上转身蹲好、面朝床里（原来坐着直接接爬梯姿势：转身 180° + 下降同时插值，人斜着飞出去穿过床板，2026-11-23）
+    on = lad + out * 0.32   # 离床沿远一点（0.2 时林晓的肚子顶进床板）
+    t += round(0.7 * FPS); steps.append((t, dict(pos=(on.x, on.y, tops[-1]), yaw=face_ladder, base='climbA', arms='climb')))   # 再往后一步踩上最高一级
     for k, z in enumerate(reversed(tops[:-1])):
         t += round(0.42 * FPS); steps.append((t, dict(pos=(on.x, on.y, z), yaw=face_ladder, base='climbB' if k % 2 == 0 else 'climbA', arms='climb')))
     t += round(0.45 * FPS); steps.append((t, dict(pos=(on.x, on.y, 0.0), yaw=face_ladder, base='stand', arms='climb')))
@@ -486,6 +575,7 @@ def build_segment(seg_id, scene, set_name, beats):
     rigs = {CID[c]: append_cast(CID[c]) for c in chars}
     init = B.get('init_' + set_name) or B['init']
     phones = {}
+    talk_spans = {}
     for cid, rig in rigs.items():   # 手上一部（挂手骨）+ 放下的一部（固定位置），按拿起/放下切换显示
         held = make_phone(cid + '_held'); held.parent = rig; held.parent_type = 'BONE'; held.parent_bone = 'wrist.R'
         held.location = (0.0, 0.06, 0.03)
@@ -638,6 +728,7 @@ def build_segment(seg_id, scene, set_name, beats):
             cid = CID.get(TEXT[lid][0])
             if cid in rigs and os.path.exists(os.path.join(VIS, lid + '.json')):
                 face.apply_rhubarb(rigs[cid], os.path.join(VIS, lid + '.json'), f0 + off * FPS, FPS)
+                talk_spans.setdefault(cid, []).append((round(f0 + off * FPS), round(f0 + (off + META[lid]['dur']) * FPS)))   # 说话时头和上身跟着动（life.talk_motion）
         # 3) 机位：cont 沿用上一机位，其余按描述自动生成
         def faces_away(cam):   # 说话人背对（或侧背对）这台机位：看不见嘴
             if not speaker or speaker not in rigs: return False
@@ -739,10 +830,12 @@ def build_segment(seg_id, scene, set_name, beats):
                              sfx=[s_ for s_ in bt.get('sfx', []) if s_[1] != 'ding'] +          # 评论提示音跟着评论出现的时刻走
                                  [(round(o, 2), 'ding') for o, sid, d in screen_plan(bt) if SCREEN[sid][0].startswith(('网友', '妈妈'))]))
         f = f1 + 1
+    ground_follow(list(rigs.values()), 1, f - 1)   # 站着/走路的人脚落到台阶、平台上
     for i, (cid, rig) in enumerate(sorted(rigs.items())):   # 活人感：呼吸、微动、眨眼、眼神、手指
         seed = sum(map(ord, seg_id + cid))
         life.inertia(rig)
         life.add_idle(rig, seed)
+        life.talk_motion(rig, talk_spans.get(cid, []), seed + 7)
         life.blinks(rig, 1, f - 1, seed)
         last = None
         for fr, (gr, gl) in sorted(hand_ev[cid]):
