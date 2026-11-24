@@ -170,6 +170,8 @@ def place_camera(name, subj_pts, facing_yaw, kind, side, bounds, frame0, frame1,
             walls = sum(1 for n in hidden if _wall(n))
             score = (min(clear, dist) / dist - 0.04 * k - epen - (0.6 if k >= n_main else 0) - 0.01 * len(hidden) - 0.04 * walls
                      - ((1.0 if clear < 0.8 * dist else 0.5) if by_person else 0))   # 被别人挡住：前景一大块肩膀，尽量不用
+            zlim = max(2.4, tgt.z + 0.6)   # 机位高度：现实里三脚架/手持一般不超过 2.4m（拍上铺的人最多比他高 0.6m）
+            if d.z > 1e-3 and tgt.z + d.z * clear > zlim: clear = max(0.3, (zlim - tgt.z) / d.z)
             if walls_ok and not any(_wall(n) for n in hidden): continue   # 没穿墙的和第一轮重复
             cands.append((score - (10 if walls_ok else 0), d, max(0.3, min(clear, dist)), hidden, walls_ok))
     cands.sort(key=lambda c_: -c_[0])
@@ -177,7 +179,7 @@ def place_camera(name, subj_pts, facing_yaw, kind, side, bounds, frame0, frame1,
     fstop = {'ECU': 2.8, 'CU': 2.8, 'MCU': 2.8, 'MS': 4.0}.get(kind)   # 景深：对焦在主体脸上
     def aim_at(d, clear):
         pos = tgt + d * clear
-        cam.data.lens = max(14, lens * clear / dist)              # 被迫收近时换广角，保持景别
+        cam.data.lens = max(18, lens * clear / dist)              # 被迫收近时换广角，保持景别；最广 18mm（14mm 超广角变形明显，宿舍里实拍一般不用）
         cam.data.clip_start = 0.05; cam.data.clip_end = 300
         if fstop:
             cam.data.dof.use_dof = True; cam.data.dof.aperture_fstop = fstop; cam.data.dof.focus_distance = max(0.2, (pos - tgt).length)
@@ -511,6 +513,20 @@ def _xy_box(o):
     bb = [o.matrix_world @ Vector(c) for c in o.bound_box]
     return Vector((sum(p.x for p in bb) / 8, sum(p.y for p in bb) / 8)), bb
 
+def walk_path_blocked(a, b):
+    """路人直线路线是否穿过树干、树冠（1.95m 以下）、路灯、长椅等"""
+    from mathutils.geometry import intersect_point_line
+    ab = b - a
+    if ab.length < 0.1: return False
+    for o in bpy.data.objects:
+        if o.type != 'MESH' or not o.name.startswith(OBSTACLE) or o.hide_render: continue
+        c, bb = _xy_box(o)
+        if min(p.z for p in bb) > 1.95: continue
+        rad = max(max(p.x for p in bb) - min(p.x for p in bb), max(p.y for p in bb) - min(p.y for p in bb)) / 2 + 0.3
+        q, t = intersect_point_line(c, a, b); t = max(0.0, min(1.0, t))
+        if (c - (a + ab * t)).length < rad: return True
+    return False
+
 def clear_walk_path(a, b):
     """路人走的直线上挡着的树、路灯、长椅等：整段移走（同一棵树的树干、树冠一起）。原来路人从树干、树冠里穿过去（s04，2026-11-23）"""
     from mathutils.geometry import intersect_point_line
@@ -548,7 +564,16 @@ def add_walkers(walkers, f_end, clip):
         frames, _, _ = retarget.walk_plan(clip, rig, p0, p1)
         frac = min(1.0, (f_end - fs) / max(1, frames))                      # 只走到片段结束
         q1 = Vector(p0) + d * frac
-        clear_walk_path(Vector(p0[:2]), q1.xy)
+        a0, b0 = Vector(p0[:2]), q1.xy; side_ = (b0 - a0).normalized(); side_ = Vector((-side_.y, side_.x))
+        for off in (0, 1.0, -1.0, 2.0, -2.0, None):   # 路线穿过树/长椅/路灯：整条路线左右平移绕开（原来把树整段移走，同一地点前后镜头树时有时无）
+            if off is None: break
+            if not walk_path_blocked(a0 + side_ * off, b0 + side_ * off): break
+        if off is None:   # 跳过时把已加载的路人删掉（否则 T 字站在原点）
+            for c_ in list(rig.children_recursive): bpy.data.objects.remove(c_, do_unlink=True)
+            bpy.data.objects.remove(rig, do_unlink=True); print('WALKER SKIP', cid, '（路线绕不开障碍）', flush=True); continue
+        if off:
+            p0 = (p0[0] + side_.x * off, p0[1] + side_.y * off) + tuple(p0[2:]); q1 = Vector((q1.x + side_.x * off, q1.y + side_.y * off, q1.z if len(q1) > 2 else 0))
+            print('WALKER SHIFT', cid, off, flush=True)
         poses.apply_state(rig, dict(pos=(p0[0], p0[1], 0), yaw=yaw, base='stand', arms='down'), 1)
         retarget.walk(clip, rig, fs, p0, (q1.x, q1.y))
         if fs > 1:   # 出发前不在画面里（不会有人杵在路边等着）

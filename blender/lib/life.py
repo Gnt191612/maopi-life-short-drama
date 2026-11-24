@@ -106,8 +106,8 @@ def talk_motion(rig, spans, seed):
                                    ('head', rnd.uniform(0.008, 0.015), 2)):
             for fc in _fcurves(rig, bone):
                 if fc.array_index != idx: continue      # 1 = 绕局部 X 点头/挺胸；2 = 绕骨骼自身 Y 轻微转头
-                m = fc.modifiers.new('FNGENERATOR'); m.function_type = 'SIN'; m.use_additive = True
-                m.amplitude = amp; m.phase_multiplier = 2 * math.pi / (period * (1.6 if idx == 2 else 1.0)); m.phase_offset = rnd.uniform(0, 6.28)
+                m = fc.modifiers.new('NOISE'); m.blend_type = 'ADD'   # 噪声而不是正弦：点头幅度、间隔都不规律（正弦像节拍器，2026-11-23 规则审查）
+                m.scale = period * (1.6 if idx == 2 else 1.0) * 0.55; m.strength = amp * 2.4; m.phase = rnd.uniform(0, 1000)
                 m.use_restricted_range = True; m.frame_start = f0; m.frame_end = f1
                 m.blend_in = min(8, (f1 - f0) // 3); m.blend_out = min(10, (f1 - f0) // 3)
 
@@ -129,8 +129,8 @@ def phone_motion(rig, hand_events, f_end, seed):
                                         ('lowerarm01.' + side, rnd.uniform(0.015, 0.025), rnd.uniform(3.0, 4.2), 1)):
                 for fc in _fcurves(rig, bone):
                     if fc.array_index != idx: continue
-                    m = fc.modifiers.new('FNGENERATOR'); m.function_type = 'SIN'; m.use_additive = True
-                    m.amplitude = amp; m.phase_multiplier = 2 * math.pi / (per * FPS); m.phase_offset = rnd.uniform(0, 6.28)
+                    m = fc.modifiers.new('NOISE'); m.blend_type = 'ADD'   # 不规律的小动作（看屏幕、划一下）
+                    m.scale = per * FPS * 0.5; m.strength = amp * 2.4; m.phase = rnd.uniform(0, 1000)
                     m.use_restricted_range = True; m.frame_start = f0; m.frame_end = f1; m.blend_in = 10; m.blend_out = 10
 
 def wave(rig, f0, f1, seed, side='R'):

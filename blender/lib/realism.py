@@ -111,7 +111,7 @@ def apply_hdri(set_name):
     if set_name in INTERIOR:
         # 室内：镜头直接看到的背景换成接近墙面的浅米白（光照、反射仍用 HDRI）。拍摄引擎会临时拆掉镜头后面的墙，
         # 原来拆墙后画面边缘露出 HDRI 里的荒山晚霞，写实化会画成「宿舍外是荒山」（2026-11-22 全片检查）
-        flat = nt.nodes.new('ShaderNodeBackground'); flat.inputs['Color'].default_value = (0.80, 0.78, 0.74, 1); flat.inputs['Strength'].default_value = 1.0
+        flat = nt.nodes.new('ShaderNodeBackground'); flat.inputs['Color'].default_value = WINDOW_BG.get(set_name, (0.78, 0.84, 0.93)) + (1,); flat.inputs['Strength'].default_value = 1.0   # 现在机位不出墙，这个背景只从窗户看得到：按时段给天色（原来一律浅米白，深夜窗外也是亮的，2026-11-23）
         lp = nt.nodes.new('ShaderNodeLightPath'); mix = nt.nodes.new('ShaderNodeMixShader')
         nt.links.new(lp.outputs['Is Camera Ray'], mix.inputs['Fac']); nt.links.new(bg.outputs[0], mix.inputs[1]); nt.links.new(flat.outputs[0], mix.inputs[2])
         nt.links.new(mix.outputs[0], out.inputs['Surface'])
@@ -120,4 +120,5 @@ def apply_hdri(set_name):
     bpy.context.scene.world = w
     return True
 
+WINDOW_BG = {'dorm_nt': (0.015, 0.022, 0.05), 'home_nt': (0.015, 0.022, 0.05), 'dorm_dusk': (0.42, 0.26, 0.18)}   # 窗外：夜里深蓝、黄昏暗橙，其余白天浅蓝灰
 INTERIOR = {'dorm_am', 'dorm_pm', 'dorm_dusk', 'dorm_nt', 'lib', 'canteen', 'class', 'home', 'home_nt'}
