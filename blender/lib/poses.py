@@ -28,6 +28,7 @@ BASE = {
  'hug_knees': dict(dz=-0.85, pitch=0, spine=V(0, -0.35, 1), uleg=V(0.12, -0.6, 0.8), lleg=V(0.05, 0.25, -1), foot=V(0, -1, -0.2)),
  'lie':    dict(dz=-0.80, pitch=-90, spine=V(0, 0, 1), uleg=V(0, 0, -1), lleg=V(0, 0, -1), foot=V(0, -1, -0.3)),
  'crouch': dict(dz=-0.42, pitch=0, spine=V(0, -0.35, 1), uleg=V(0.12, -1, 0.35), lleg=V(0.04, 0.5, -1), foot=V(0, -1, -0.2)),
+'crouch_low': dict(dz=-0.58, pitch=0, spine=V(0, -0.6, 1), uleg=V(0.15, -1, 0.6), lleg=V(0.04, 0.75, -1), foot=V(0, -1, -0.2)),   # 深蹲：上铺离天花板只有 1.28m，普通蹲姿头顶擦到天花板（2026-11-23）
  'climbA': dict(dz=0.0, pitch=0, spine=V(0, -0.15, 1), uleg=V(0.05, -0.75, -0.65), lleg=V(0, 0.15, -1), foot=V(0, -1, -0.3),
                  ulegL=V(-0.04, -0.05, -1), llegL=V(0, 0.05, -1)),   # 爬梯：右膝抬到上一级横档，左腿伸直
  'climbB': dict(dz=0.0, pitch=0, spine=V(0, -0.15, 1), uleg=V(0.04, -0.05, -1), lleg=V(0, 0.05, -1), foot=V(0, -1, -0.3),
@@ -88,7 +89,8 @@ ARMS = {
  'open_palms':  dict(R=DOWN_R, hand={'R': ('chest', (0.32, -0.22, -0.12)), 'L': ('chest', (0.32, 0.22, -0.12))}),   # 胸前高度（原来对准肚子，坐着时和手搭腿上看不出区别）    # 摊开双手说话
  'hair_tuck':   dict(R=DOWN_R, hand={'R': ('ear', (0.0, 0.0, 0.01))}),                                             # 把头发别到耳后
  'strap':       dict(R=DOWN_R, hand={'R': ('chest', (0.06, -0.13, 0.08))}),                                        # 抓着书包带
- 'climb':      dict(R=(V(-0.15, -0.55, 0.8), V(-0.05, -0.35, 1))),                                                             # 双手握梯子扶手
+ 'climb':      dict(R=(V(-0.15, -0.55, 0.8), V(-0.05, -0.35, 1))),
+'climb_low':  dict(R=(V(-0.2, -0.45, -0.6), V(-0.1, -0.85, 0.45))),   # 手肘弯曲、手握在身前约 38cm 的梯子扶手上（伸直 60cm 时手穿进床板）；                                                       # 下上铺：双手在胸口高度握床沿/梯子扶手（举过头顶会插进天花板，2026-11-23）                                                             # 双手握梯子扶手
  'face_hands': dict(R=(V(-0.15, -0.7, -0.7), V(0.35, -0.25, 0.9)), head=V(0, -0.6, 0.8)),                                       # 趴着/捂脸
 }
 
@@ -447,7 +449,7 @@ def settle_on(rig, support, kind, base='sit'):
     bpy.context.view_layer.update()
 
 # 两个状态之间真人需要的过渡时间（秒）：下半身换姿态最慢，转身按角度，手臂动作约 0.8 秒
-BASE_T = {frozenset(('stand', 'sit')): 2.0, frozenset(('stand', 'crouch')): 1.2, frozenset(('sit', 'slump')): 1.1,
+BASE_T = {frozenset(('stand', 'sit')): 2.0, frozenset(('stand', 'crouch')): 1.2, frozenset(('sit_bed', 'crouch_low')): 1.3, frozenset(('crouch_low', 'climbA')): 1.0, frozenset(('sit', 'slump')): 1.1,
           frozenset(('sit_bed', 'lie')): 1.7, frozenset(('sit_bed', 'stand')): 1.8, frozenset(('sit_bed', 'hug_knees')): 1.3,
           frozenset(('stand', 'lie')): 2.4, frozenset(('crouch', 'sit')): 1.3, frozenset(('stand', 'sit_tight')): 2.0, frozenset(('stand', 'sit_lean')): 2.0, frozenset(('stand', 'sit_back')): 2.0}
 

@@ -649,16 +649,20 @@ def climb_path(start, new):
     face_room = math.degrees(math.atan2(out.x, -out.y))                     # 朝向角 yaw 的面朝方向 = (sin yaw, -cos yaw)
     face_ladder = (face_room + 180) % 360
     t, steps = 0, []
-    edge = lad - out * 0.28
-    t += round(0.7 * FPS); steps.append((t, dict(start, pos=(edge.x, edge.y, start['pos'][2]), yaw=face_room, base='sit_bed', arms='down')))
-    t += round(0.8 * FPS); steps.append((t, dict(pos=(edge.x, edge.y, start['pos'][2]), yaw=face_ladder, base='crouch', arms='down', lean=12)))   # 蹲着时手放下、身体前倾（上铺离天花板只有 1.28m，直着蹲头顶到天花板）；（举手的爬梯姿势会插进天花板）
+    edge = lad - out * 0.15   # 蹲在靠床沿的地方（0.28 时离墙太近，前倾时手碰到墙）
+    ceil_ = min((min((o.matrix_world @ Vector(c)).z for c in o.bound_box) for o in bpy.data.objects if 'ceiling' in o.name), default=9.0)
+    tops = [z for z in tops if z + 1.85 < ceil_ - 0.1] or tops[:1]   # 站在梯子上头顶要离天花板 10cm 以上（原来直接踩最上一级站直，头顶穿进天花板）
+    t += round(0.6 * FPS); steps.append((t, dict(start, base='hug_knees', arms='down')))   # 先原地收腿（伸着腿边挪边转身，腿扫进墙里，2026-11-23）
+    t += round(0.7 * FPS); steps.append((t, dict(start, pos=(edge.x, edge.y, start['pos'][2]), yaw=face_room, base='hug_knees', arms='down')))   # 抱着腿挪到床沿、转向房间
+    t += round(0.8 * FPS); steps.append((t, dict(pos=(edge.x, edge.y, start['pos'][2]), yaw=face_ladder, base='crouch_low', arms='down')))   # 蹲着时手放下、身体前倾（上铺离天花板只有 1.28m，直着蹲头顶到天花板）；（举手的爬梯姿势会插进天花板）
     lip = lad - out * 0.06
-    t += round(0.5 * FPS); steps.append((t, dict(pos=(lip.x, lip.y, start['pos'][2]), yaw=face_ladder, base='crouch', arms='climb', lean=12)))   # 挪到床沿、手扶梯子   # 先在床上转身蹲好、面朝床里（原来坐着直接接爬梯姿势：转身 180° + 下降同时插值，人斜着飞出去穿过床板，2026-11-23）
+    t += round(0.5 * FPS); steps.append((t, dict(pos=(lip.x, lip.y, start['pos'][2]), yaw=face_ladder, base='crouch_low', arms='down')))   # 还在床上：手撑着（扶梯手势前伸会插进墙里），踩上梯子才握扶手；挪到床沿、手扶梯子   # 先在床上转身蹲好、面朝床里（原来坐着直接接爬梯姿势：转身 180° + 下降同时插值，人斜着飞出去穿过床板，2026-11-23）
     on = lad + out * 0.40   # 离床沿远一点（0.2/0.32 时林晓的肚子顶进床板）
-    t += round(0.7 * FPS); steps.append((t, dict(pos=(on.x, on.y, tops[-1]), yaw=face_ladder, base='climbA', arms='climb')))   # 再往后一步踩上最高一级
+    rails = [tuple(o.matrix_world.translation.xy) for o in bpy.data.objects if o.name.startswith('furn_ladderrail_') and (o.matrix_world.translation.xy - lad.xy).length < 0.5]   # 梯子两根竖杆：下梯时双手握在上面
+    t += round(0.7 * FPS); steps.append((t, dict(pos=(on.x, on.y, tops[-1]), yaw=face_ladder, base='climbA', arms='climb_low', rails=rails)))   # 再往后一步踩上最高一级
     for k, z in enumerate(reversed(tops[:-1])):
-        t += round(0.42 * FPS); steps.append((t, dict(pos=(on.x, on.y, z), yaw=face_ladder, base='climbB' if k % 2 == 0 else 'climbA', arms='climb')))
-    t += round(0.45 * FPS); steps.append((t, dict(pos=(on.x, on.y, 0.0), yaw=face_ladder, base='stand', arms='climb')))
+        t += round(0.42 * FPS); steps.append((t, dict(pos=(on.x, on.y, z), yaw=face_ladder, base='climbB' if k % 2 == 0 else 'climbA', arms='climb_low', rails=rails)))
+    t += round(0.45 * FPS); steps.append((t, dict(pos=(on.x, on.y, 0.0), yaw=face_ladder, base='stand', arms='climb_low', rails=rails)))
     t += round(0.6 * FPS); steps.append((t, new))
     return steps
 
@@ -677,9 +681,7 @@ def build_segment(seg_id, scene, set_name, beats):
     talk_spans = {}
     for cid, rig in rigs.items():   # 手上一部（挂手骨）+ 放下的一部（固定位置），按拿起/放下切换显示
         held = make_phone(cid + '_held'); held.parent = rig; held.parent_type = 'BONE'; held.parent_bone = 'wrist.R'
-        held.location = (0.0, 0.06, 0.03)
-        con = held.constraints.new('DAMPED_TRACK'); con.target = rig; con.subtarget = 'head'; con.track_axis = 'TRACK_Z'   # 屏幕始终朝向自己的脸
-        con.influence = 0.85
+        held.location = (0.0, 0.07, 0.04)   # 手机贴在掌心一侧、手指轻握在背面。原来位置在手背一侧、再被「对准脸」约束转动，手机板直接插在手掌里（2026-11-23 用户指出）；去掉约束后屏幕仍朝脸（实测夹角余弦 0.95）
         rest = make_phone(cid + '_rest'); rest.location = B.get('phones', {}).get(cid, (0, -60, -10))
         phones[cid] = (held, rest)
     state = {cid: dict(init.get(cid, dict(pos=(0, 0, 0), yaw=0, base='stand', arms='down'))) for cid in rigs}
@@ -782,7 +784,18 @@ def build_segment(seg_id, scene, set_name, beats):
             elif kind == 'climb':    # 挪到床边 -> 转身面向梯子 -> 双手扶梯一级级踩下来 -> 落地
                 prev_f = f0; poses.apply_state(rig, start, f0, lag=LAG)
                 for k_, (fr_, st_) in enumerate(arg):
-                    fk = min(f1 - LAG, f0 + fr_); poses.apply_state(rig, dict(st_, look=None) if k_ < len(arg) - 1 else new_l, fk, lag=LAG if k_ in (0, len(arg) - 1) else 1)
+                    fk = min(f1 - LAG, f0 + fr_); lg_ = LAG if k_ in (0, len(arg) - 1) else 1
+                    if st_.get('rails') and k_ < len(arg) - 1:   # 双手握梯子竖杆（IK 落在竖杆上、比肩略低；原来按固定角度前伸，手穿进梯子后面的床板）
+                        poses.apply_state(rig, dict(st_, look=None), None)
+                        Mr = rig.matrix_world; rgt = (Mr @ rig.pose.bones['upperarm01.R'].head) - (Mr @ rig.pose.bones['upperarm01.L'].head); rgt.z = 0; rgt.normalize()   # 身体右方 = 左肩指向右肩
+                        for sd in ('R', 'L'):
+                            sh_ = Mr @ rig.pose.bones['upperarm01.' + sd].head
+                            rx, ry = max(st_['rails'], key=lambda r_: (Vector(r_) - sh_.xy).dot(rgt.xy) * (1 if sd == 'R' else -1))
+                            tgt_ = Vector((rx, ry, sh_.z - 0.18))
+                            poses._two_bone(rig, sd, tgt_, Vector((0, 0, -1)) + rgt * (0.5 if sd == 'R' else -0.5))
+                        poses.key(rig, fk, lg_)
+                    else:
+                        poses.apply_state(rig, dict(st_, look=None) if k_ < len(arg) - 1 else new_l, fk, lag=lg_)
                 poses.apply_state(rig, new_l, f1)
                 t_change = f0 + arg[-1][0]
             elif kind == 'walk':     # 先起身/转身 -> 动捕走路（整步循环）-> 停步、转向、摆好姿势

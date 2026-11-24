@@ -98,7 +98,13 @@ def check(seg):
                     if n >= 3:
                         k = (b['id'], cid, o.name)
                         if k not in found or depth > found[k][0]: found[k] = (depth, fr, n)
-                # 人与人：A 的顶点离 B 的顶点很近且 B 在 A 的包围盒内部方向——用 KD 树找「互相嵌入」的点数
+                # 手机穿手：手里的手机只有 8mm 厚，按上面 1.5cm 的阈值永远查不出来，单独数落在手机里面的手部顶点（2026-11-23 用户指出握手机一直穿模）
+                for ph in [o for o in sc.objects if o.type == 'MESH' and o.name.startswith('prop_phonebody_') and '_held' in o.name and cid in o.name and not o.hide_render]:
+                    inv = ph.matrix_world.inverted(); blo = Vector([min(c[i] for c in ph.bound_box) for i in range(3)]); bhi = Vector([max(c[i] for c in ph.bound_box) for i in range(3)])
+                    nin = sum(1 for p in P if all(blo[i] + 1e-4 < (inv @ p)[i] < bhi[i] - 1e-4 for i in range(3)))
+                    if nin >= 4:
+                        k = (b['id'], cid, '手机穿手')
+                        if k not in found or nin > found[k][2]: found[k] = (0.0, fr, nin)                # 人与人：A 的顶点离 B 的顶点很近且 B 在 A 的包围盒内部方向——用 KD 树找「互相嵌入」的点数
                 for cid2, Q in pts.items():
                     if cid2 <= cid or not Q: continue
                     kd = KDTree(len(Q))

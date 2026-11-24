@@ -81,6 +81,8 @@ def blinks(rig, f0, f1, seed):
             _key_rot(e, f, e.rotation_euler[:] if f > f0 else (0, 0, 0)); _key_rot(e, f + 2, (ex, 0, ez))
         f += rnd.randint(int(1.0 * FPS), int(3.0 * FPS))
 
+GRIP = (22, 26, 16); GRIP_THUMB = 25   # 轻握（原来 48/55/35 握拳，手指穿过 8mm 厚的手机）   # 握持时手指三节、拇指的弯曲角度（度）
+
 def hands(rig, frame, grip_R=False, grip_L=False):
     """手指：放松微屈；拿手机的手握住"""
     pb = rig.pose.bones
@@ -88,12 +90,12 @@ def hands(rig, frame, grip_R=False, grip_L=False):
         if n not in pb: continue
         grip = grip_R if n.endswith('.R') else grip_L
         j = int(n.split('-')[1][0])
-        deg = (48, 55, 35)[j - 1] if grip else (14, 20, 12)[j - 1]
+        deg = GRIP[j - 1] if grip else (14, 20, 12)[j - 1]
         _key_rot(pb[n], frame, (math.radians(deg), 0, 0))
     for n in THUMB:
         if n not in pb: continue
         grip = grip_R if n.endswith('.R') else grip_L
-        _key_rot(pb[n], frame, (math.radians(25 if grip else 8), 0, 0))
+        _key_rot(pb[n], frame, (math.radians(GRIP_THUMB if grip else 8), 0, 0))
 
 def talk_motion(rig, spans, seed):
     """说话时头和上身跟着动：每句台词期间叠加轻微点头（头、颈）和上身起伏（胸椎），句首稍重、句尾收住。
