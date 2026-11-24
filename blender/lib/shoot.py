@@ -801,7 +801,16 @@ def build_segment(seg_id, scene, set_name, beats):
             state[cid] = new
             # 手机：在手上 or 放下；手指握持随之变化
             prop = poses.ARMS[new.get('arms', 'down')].get('prop')
-            show_phone(phones[cid], t_change, prop in ('hand', 'ear'))
+            had = poses.ARMS[start.get('arms', 'down')].get('prop') in ('hand', 'ear'); has = prop in ('hand', 'ear')
+            rest_ph = phones[cid][1]
+            if had != has and kind == 'blend' and rest_ph.location.y > -50:   # 拿起/放下：手先伸到放着的手机那里，到了再换（原来手机从桌上瞬移到手里，2026-11-23 规则审查）
+                sc.frame_set(t_change); rp = rest_ph.matrix_world.translation.copy()
+                sh = rig.matrix_world @ rig.pose.bones['upperarm01.R'].head
+                if (rp - sh).length < 0.85:
+                    poses.apply_state(rig, dict(start if has else new_l, look=tuple(rp)), None)
+                    poses._two_bone(rig, 'R', rp + Vector((0, 0, 0.05)), Vector((0, 0, -1)) - (rig.matrix_world.to_3x3() @ Vector((1, 0, 0))) * 0.6)
+                    poses.key(rig, t_change)
+            show_phone(phones[cid], t_change, has)
             hand_ev[cid].append((f0, grips(start))); hand_ev[cid].append((t_change, grips(new)))
         # 1b) 生活小动作：不说话的人在较长的镜头里做一次自己的习惯动作；说长句的人换一种说话手势（各有性格）
         for cid, rig in rigs.items():

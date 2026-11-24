@@ -234,6 +234,7 @@ def apply_state(rig, st, frame=None, lag=0):
     place_hands()
     if support is not None:
         settle_on(rig, support, kind, st.get('base', 'stand'))
+        if kind == 'seat' and 'step' in (support[1] or '').lower(): legs_on_step(rig, Rb, support[0])   # 坐在台阶上：脚踩下一级台阶
         place_hands()                                                 # 坐稳后高度变了，再落一次手
         if kind == 'seat' and SUPPORT_ON: clear_space(rig, zmin_rel=0.25, radius=(0.75 if st.get('base') == 'slump' else 0.34))   # 趴桌：前倾的头和上身也要查（林晓胖，头伸进桌后书架 14cm）   # 坐着：上身/头别钻进书架、桌上隔板
     elif st.get('base', 'stand') in ('stand', 'crouch', 'stand_rest') and SUPPORT_ON: clear_space(rig)
@@ -382,6 +383,25 @@ def clear_space(rig, iters=4, zmin_rel=None, radius=0.27):
         M = rig.matrix_world @ root.matrix; M.translation += push
         root.matrix = rig.matrix_world.inverted() @ M; root.scale = (1, 1, 1)
         bpy.context.view_layer.update()
+
+def legs_on_step(rig, Rb, seat_z, drop=0.15, reach=0.42):
+    """坐在台阶上：膝盖抬高、脚踩在下一级台阶上（台阶每级只低 15cm，按坐椅子的姿势小腿会插进下一级，2026-11-23 规则审查）"""
+    M = rig.matrix_world; pb = rig.pose.bones
+    fwd = Rb @ Vector((0, -1, 0)); fwd.z = 0; fwd.normalize(); up = Vector((0, 0, 1))
+    for side in ('L', 'R'):
+        if pb.get('upperleg01.' + side) is None: continue
+        S = M @ pb['upperleg01.' + side].head; E0 = M @ pb['lowerleg01.' + side].head; W0 = M @ pb['foot.' + side].head
+        ankle_h = (M @ rig.data.bones['foot.' + side].head_local).z - M.translation.z
+        target = Vector((S.x, S.y, 0)) + fwd * reach; target.z = seat_z - drop + ankle_h
+        a, b = (E0 - S).length, (W0 - E0).length
+        d = target - S; dist = min(d.length, (a + b) * 0.98); dn = d.normalized()
+        ca = max(-1, min(1, (a * a + dist * dist - b * b) / (2 * a * dist)))
+        pole = fwd + up * 0.8; perp = pole - dn * pole.dot(dn)
+        perp = perp.normalized() if perp.length > 1e-5 else up
+        knee = S + dn * (a * ca) + perp * (a * math.sqrt(1 - ca * ca)); foot = S + dn * dist
+        for n_ in ('upperleg01.', 'upperleg02.'): aim(rig, n_ + side, (knee - S).normalized())
+        for n_ in ('lowerleg01.', 'lowerleg02.'): aim(rig, n_ + side, (foot - knee).normalized())
+        aim(rig, 'foot.' + side, (fwd - up * 0.3).normalized())
 
 def settle_on(rig, support, kind, base='sit'):
     """实测：摆好姿势后找出落在家具上方的身体/衣服最低点，整个人上下平移到正好压在面上（软垫允许陷 1 cm）"""
