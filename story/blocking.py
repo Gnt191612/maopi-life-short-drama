@@ -42,7 +42,7 @@ SCN = {
     's02_03': {'lin': S(face=-60, arms='gesture'), 'chen': S(arms='desk')},
     's02_04': {'lin': Wk(pos=(5.6, -0.9, 0), face=150, arms='tray')},
     's02_05': {'lin': S(pos=(5.7, -0.9, 0), face=120, arms='down')},
-    's02_06': {'lin': S(pos=(5.5, -0.62, 0), face=180, arms='desk')},   # 站在窗边桌左侧、手能放到桌面（原来站在椅子的位置，碰不到桌子，特写只拍到椅背和垂着的手，2026-11-23）
+    's02_06': {'lin': S(pos=(5.92, -0.66, 0), face=180, arms='desk')},   # 桌子正前方、椅子左边（5.5 时桌子在身体侧面，手够不到桌面，特写拍到地板，2026-11-24）   # 站在窗边桌左侧、手能放到桌面（原来站在椅子的位置，碰不到桌子，特写只拍到椅背和垂着的手，2026-11-23）
     's02_07': {'lin': S(pos=(5.9, -1.2, 0), face=160, base='crouch', arms='phone')},
     's02_08': {'chen': S(arms='desk')},
     's02_08c': {'lin': S(pos=(-1.62, -4.25, 0), face=-90, base='crouch', arms='down')},   # 离陈瑶 0.5m（原来 0.2m，蹲下凑过去时两人身体互相嵌进去，2026-11-23）
@@ -139,7 +139,7 @@ SCN = {
  # ---------------- 第五幕 · 深夜宿舍 / 给妈妈打电话 ----------------
  's09': dict(side=1,
    init={'lin': dict(at='lin_desk_seat', base='sit', arms='selfie'),
-         'chen': dict(at='chen_bed', face=180, base='sit_bed', arms='phone')},
+         'chen': dict(at='chen_bed', face=180, base='sit_bed', arms='phone2')},   # 双手拿低一点（单手举着手机正好挡住脸，2026-11-24 全片检查）
    init_home_nt={'mom': dict(at='sofa_seat', face=180, base='sit', arms='phone_ear')},
    phones={'lin': (-1.30, -0.1, 0.76)},
    beats={
@@ -158,7 +158,7 @@ SCN = {
    beats={
     's10_02': {'chen': S(pos=(-0.55, 0.1, 0), face=60, arms='pat', reach=(-0.1, -0.35, 1.35))},
     's10_03': {'zhou': S(pos=(0.6, 0.15, 0), face=-30, arms='gesture')},
-    's10_04b': {'zhou': S(arms='phone')},
+    's10_04b': {'zhou': S(arms='selfie')},   # 举起手机给大家看（低头看手机时只拍到头顶）
     's10_04c': {'zhou': S(arms='down')},
     's10_05': {'chen': S(pos=(-0.45, 0, 0), face=0, arms='down', reach=None), 'lin': S(arms='selfie'), 'zhou': S(pos=(0.45, 0, 0), face=0, arms='down')},
     's10_05b': {'lin': S(arms='phone')},

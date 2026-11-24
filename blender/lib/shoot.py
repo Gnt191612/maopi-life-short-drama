@@ -170,7 +170,8 @@ def place_camera(name, subj_pts, facing_yaw, kind, side, bounds, frame0, frame1,
             walls = sum(1 for n in hidden if _wall(n))
             score = (min(clear, dist) / dist - 0.04 * k - epen - (0.6 if k >= n_main else 0) - 0.01 * len(hidden) - 0.04 * walls
                      - ((1.0 if clear < 0.8 * dist else 0.5) if by_person else 0))   # 被别人挡住：前景一大块肩膀，尽量不用
-            zlim = max(2.4, tgt.z + 0.6)   # 机位高度：现实里三脚架/手持一般不超过 2.4m（拍上铺的人最多比他高 0.6m）
+            zlim = max(2.4, tgt.z + 0.6)
+            if kind in ('ECU', 'CU', 'MCU') and not lying and 'close-up of' not in e and 'close-up over' not in e and d.z * clear > 0.4: continue   # 人物近景不从头顶往下拍（只拍到头发，s10 周明远，2026-11-24）   # 机位高度：现实里三脚架/手持一般不超过 2.4m（拍上铺的人最多比他高 0.6m）
             if d.z > 1e-3 and tgt.z + d.z * clear > zlim: clear = max(0.3, (zlim - tgt.z) / d.z)
             if walls_ok and not any(_wall(n) for n in hidden): continue   # 没穿墙的和第一轮重复
             cands.append((score - (10 if walls_ok else 0), d, max(0.3, min(clear, dist)), hidden, walls_ok))
@@ -469,7 +470,7 @@ OBJ_CLOSE = {'phone': ('smartphone', 'phone screen', 'his phone', 'her phone', '
 def object_target(en, rigs, subj, phones):
     """剧本写的是物件特写（'close-up of …' 且说的是手机/手/桌面/脚）时，返回 (目标点函数, 所属角色骨架)；否则 None"""
     e = (en or '').lower()
-    if 'close-up of' not in e and 'close-up over' not in e: return None
+    if 'close-up of' not in e and 'close-up over' not in e and not ('close-up' in e and any(k in e for k in ('feet', 'foot', 'slipper'))): return None   # 「close-up at floor level: ... feet」也是物件特写（原来拍成后脑勺）
     who = subj[0] if subj else None
     if who is None: return None
     rig = rigs[who]
@@ -483,7 +484,16 @@ def object_target(en, rigs, subj, phones):
         if 'pillow' in e and rest is not None: return (lambda: rest.matrix_world.translation.copy()), None
         return wrist, rig
     if any(k in e for k in ('table', 'desk')):   # 桌面特写：对准手前方 20cm 的桌面（对准手腕时镜头被身子挡，拍到一大块外套，s02 窗边桌）
-        def on_table():
+        sc_ = bpy.context.scene; rh_ = rig.matrix_world @ rig.pose.bones['root'].head; best_ = None   # 对准离人最近的那张桌子的桌面（固定点）。原来对准手前方，手一离开桌面镜头就拍到地板（s02 窗边桌，2026-11-24）
+        for o in bpy.data.objects:
+            if o.type != 'MESH' or not o.name.startswith('furn_') or not any(k in o.name for k in ('table', 'desk')) or o.name.endswith(('_leg', 'leg.001', 'leg.002', 'leg.003')): continue
+            lo_, hi_ = _bbox(o)
+            if hi_[0] - lo_[0] < 0.3 or hi_[1] - lo_[1] < 0.3: continue
+            q_ = Vector((min(max(rh_.x, lo_[0] + 0.15), hi_[0] - 0.15), min(max(rh_.y, lo_[1] + 0.15), hi_[1] - 0.15), hi_[2]))
+            dd_ = (q_.xy - rh_.xy).length
+            if dd_ < 1.2 and (best_ is None or dd_ < best_[0]): best_ = (dd_, q_)
+        def on_table(b_=best_):
+            if b_ is not None: return (b_[1] + wrist()) * 0.5   # 桌面和手的中间：站着时手离桌面有半米，只对准桌面又拍不到手
             fd = face_dir(rig)[0]; fd.z = 0
             fd = fd.normalized() if fd.length > 1e-3 else Vector((0, -1, 0))
             return wrist() + fd * 0.2 - Vector((0, 0, 0.03))
@@ -887,7 +897,8 @@ def build_segment(seg_id, scene, set_name, beats):
             return False
         protect = {poses.LAST_SUPPORT.get(rigs[c].name) for c in rigs if state[c].get('base') in poses.SUPPORTED} - {None}
         protect |= touched_furniture(rigs, (f0 + f1) // 2)   # 手、前臂正撑着/搭着的桌子也不许移走（原来趴桌捂脸时书桌被机位当遮挡物移走，手肘撑在空气里，s03 林晓）
-        if bt['cam'] == 'cont' and cam_prev is not None and not walking and not faces_away(cam_prev) and not out_of_frame(cam_prev):
+        climbing = any(pl[0] == 'climb' for pl in plans.values())   # 爬梯子：人从上铺降到地面，原机位（上铺高度）会被床板挡住，重新找机位（s01 林晓下床时 2~3 秒只拍到床垫）
+        if bt['cam'] == 'cont' and cam_prev is not None and not walking and not climbing and not faces_away(cam_prev) and not out_of_frame(cam_prev):
             cam = cam_prev
             cam.keyframe_insert('location', frame=f1)
             for n in cam.get('hidden', []):   # 沿用机位时，之前移走的遮挡物在本拍也保持移走（原先会在拍子交界处冒回来挡住镜头）

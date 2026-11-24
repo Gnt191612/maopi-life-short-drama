@@ -65,7 +65,7 @@ SCENES = [
   b('s02_04', 'cont', [L], act='他快步走向靠窗的座位，一边走一边打量窗外的光线', dur=2.0),
   b('s02_05', 'cut', [L], en='medium shot by a window seat, sunlight on the wooden table, green trees outside, the same young man stands beside the table looking around with bright eyes, his face visible',
     act=['他环顾四周的光线和书架，眼睛一亮，小声惊喜地说话', '他满意地点头，把书放到桌上'], dur=1.5, line='A06'),
-  b('s02_06', 'cut', [L], en='close-up of the wooden window table: the same young man\'s hands set an open book at an angle, then place a latte with latte art and a pair of black glasses beside it',
+  b('s02_06', 'cut', [L], en='medium shot at the wooden window table: the same young man, standing beside it, sets an open book at an angle, then place a latte with latte art and a pair of black glasses beside it',
     act='一双手把书斜着摊开，放上一杯拉花咖啡，又把一副黑框眼镜摆正', dur=2.8),
   b('s02_07', 'cut', [L], en='medium close-up, the same young man crouches beside the table holding up his phone to frame the desk, frowning, his face clearly visible',
     act=['他半蹲着举手机取景，皱眉小声嘀咕', '他伸手把桌角的纸抽盒拿走，重新举起手机按下快门'], dur=1.5, line='A07', sfx=[(2.6, 'shutter')]),
