@@ -98,6 +98,12 @@ def hide_range(names, frame0, frame1, protect=()):
 
 HIDEABLE = ('furn_', 'prop_', 'ext_lamp', 'ext_trunk', 'ext_crown', 'ext_bike', 'ext_column', 'ext_bench', 'ext_bin', 'ext_sign', 'ext_hedge', 'ext_flower')
 
+FIXED = ('furn_shelf', 'furn_bookshelf', 'furn_post', 'furn_ladder', 'furn_rail', 'furn_bed_', 'furn_mattress', 'furn_quilt', 'furn_pillow',
+         'furn_desk', 'furn_sink', 'furn_cabinet', 'furn_wardrobe', 'furn_mirror')   # 固定在墙上/地上的家具不能临时移走（墙上书架、上床下桌的床架和梯子、书桌、洗手台），2026-11-23 用户：机位要符合现实
+
+def _movable(name):
+    return name.startswith(HIDEABLE) and not name.startswith(FIXED)
+
 def _wall(name):
     """房间的墙（不含地面、天花）：像真实片场的「活动墙」一样，挡在机位后面时可以临时拆掉"""
     if any(k in name for k in ('_glass_window', '_fabric_curtain', '_wood_door')): return True   # 窗玻璃、窗帘、门跟着墙一起拆（机位在墙外时它们挡在画面边上）
@@ -131,13 +137,13 @@ def place_camera(name, subj_pts, facing_yaw, kind, side, bounds, frame0, frame1,
     else: offs = [28 * side, 12 * side, 45 * side, 65 * side, 90 * side, 110 * side]   # 先 3/4 正面，挡住就逐步转向侧面（不越轴）
     if lying: offs = [abs(o) for o in offs]
     n_main = len(offs)
-    if 'from behind' not in e: offs = offs + [-o for o in offs[:3]]   # 最后的退路：越轴到另一侧（人在本拍里脸朝另一边时，同侧候选全都看不到脸）
+    if 'from behind' not in e: offs = offs + [-o for o in offs[:3]] + [150 * side, 180, -150 * side]   # 越轴、背后（面朝墙的人在房间里只能从背后拍）都是最后的退路；：越轴到另一侧（人在本拍里脸朝另一边时，同侧候选全都看不到脸）
     elev = 0.06 if kind in ('ECU', 'CU', 'MCU') else 0.18
     if 'floor level' in e: elev = -0.35
     if ('close-up of' in e or 'close-up over' in e) and any(k in e for k in OBJ_CLOSE['hands'] + OBJ_CLOSE['phone']): elev = 1.1 if any(k in e for k in ('table', 'desk')) else 0.55   # 桌面/手/手机特写（桌面特写近乎俯拍）：斜上方俯拍（平拍时身体挡在手前面，画面一大块外套）
     sc = bpy.context.scene; dg = bpy.context.evaluated_depsgraph_get()
     spread = 0.1 if kind in ('ECU', 'CU') else 0.25
-    def probe(p, d):
+    def probe(p, d, walls_ok=False):
         """沿视线收集挡在中间的家具/道具（可临时移走），遇到墙/地/天花/其他人则停下"""
         hidden, t = set(), 0.28
         while t < dist:
@@ -145,25 +151,27 @@ def place_camera(name, subj_pts, facing_yaw, kind, side, bounds, frame0, frame1,
             if not hit: return dist, hidden, False
             hd = (loc - p).length
             if obj.name.startswith(PASS_THRU): t = hd + 0.02; continue   # 手机不藏（原来把自拍手机的屏幕藏掉了）
-            if (obj.name.startswith(HIDEABLE) or _wall(obj.name)) and obj.name not in protect:
+            if (_movable(obj.name) or (walls_ok and _wall(obj.name))) and obj.name not in protect:   # 墙默认不穿：摄像机要在房间里（原来拆墙从墙外拍，桌子贴墙也能拍到正脸和桌下的腿，2026-11-23）
                 hidden.add(obj.name); t = hd + 0.02; continue
             if obj.parent is not None and obj.parent in own_rigs: t = hd + 0.02; continue   # 被摄主体自己的身体：穿过去（三人挤在一起时瞄准点在中间那人胸口里，原来一出发就撞上，所有机位都贴在她身上）
             person = bool(obj.name.split('_')[0] in CID.values() or (obj.parent is not None and obj.parent.name.endswith('_rig')))
             return hd - 0.12, hidden, person
         return dist, hidden, False
     cands = []
-    for k, o in enumerate(offs):   # 每个候选角度打 5 条射线（主体中心 + 上下左右），按视线通畅程度打分
-        for ev, epen in ((elev, 0.0), (elev + 0.18, 0.05), (elev + 0.6, 0.12)):   # 第三档高机位俯拍：床铺、桌面上的人和物件被前景挡住时的退路
+    for walls_ok in (False, True):   # 先只要房间里的机位；房间里实在没有合格的，才允许拆墙从墙外拍
+     for k, o in enumerate(offs):   # 每个候选角度打 5 条射线（主体中心 + 上下左右），按视线通畅程度打分
+      for ev, epen in ((elev, 0.0), (elev + 0.18, 0.05), (elev + 0.6, 0.12)):   # 第三档高机位俯拍：床铺、桌面上的人和物件被前景挡住时的退路
             a = math.radians(o)
             d = (face_dir * math.cos(a) + right * math.sin(a) + upv * ev).normalized()
             rgt = d.cross(Vector((0, 0, 1))).normalized() if abs(d.z) < 0.95 else Vector((1, 0, 0))
             clear, hidden, by_person = dist, set(), False
             for p in (tgt, tgt + rgt * spread, tgt - rgt * spread, tgt + Vector((0, 0, spread)), tgt - Vector((0, 0, spread))):
-                c_, h_, pr = probe(p, d); clear = min(clear, c_); hidden |= h_; by_person |= pr
+                c_, h_, pr = probe(p, d, walls_ok); clear = min(clear, c_); hidden |= h_; by_person |= pr
             walls = sum(1 for n in hidden if _wall(n))
             score = (min(clear, dist) / dist - 0.04 * k - epen - (0.6 if k >= n_main else 0) - 0.01 * len(hidden) - 0.04 * walls
                      - ((1.0 if clear < 0.8 * dist else 0.5) if by_person else 0))   # 被别人挡住：前景一大块肩膀，尽量不用
-            cands.append((score, d, max(0.3, min(clear, dist)), hidden))
+            if walls_ok and not any(_wall(n) for n in hidden): continue   # 没穿墙的和第一轮重复
+            cands.append((score - (10 if walls_ok else 0), d, max(0.3, min(clear, dist)), hidden, walls_ok))
     cands.sort(key=lambda c_: -c_[0])
     cam = bpy.data.objects.new(name, bpy.data.cameras.new(name)); bpy.context.scene.collection.objects.link(cam)
     fstop = {'ECU': 2.8, 'CU': 2.8, 'MCU': 2.8, 'MS': 4.0}.get(kind)   # 景深：对焦在主体脸上
@@ -183,18 +191,26 @@ def place_camera(name, subj_pts, facing_yaw, kind, side, bounds, frame0, frame1,
         bpy.context.view_layer.update()
         return pos, dd
     global _HIDE_ACC, _HIDE_ACC_PROTECT
-    FAIL_LOG.clear(); chosen = cands[0]; least = None
+    FAIL_LOG.clear(); chosen = cands[0]; least = None; least_in = None
     for c_ in cands:
+        if c_[4] and least_in is not None:   # 房间里的机位只是看不到正脸/稍微出画（面朝墙的人只能拍侧面、背影）：用它，不拆墙出去（2026-11-23 用户：机位要符合现实）
+            print('CAM INSIDE SOFT', name, '（房间里只拍得到侧面/背影，不出墙）', flush=True); chosen = least_in[1]; cam['outside'] = False; break
         aim_at(c_[1], c_[2])
         if validate is None: chosen = c_; break
         hid_ = [bpy.data.objects[n] for n in c_[3] if n in bpy.data.objects and not bpy.data.objects[n].hide_viewport]
         for o in hid_: o.hide_viewport = True                # 验证视线时按这个机位拆墙后的样子算（射线检测看 hide_viewport）
-        _HIDE_ACC, _HIDE_ACC_PROTECT = set(), set(protect)
+        _HIDE_ACC, _HIDE_ACC_PROTECT = set(), set(protect); _WALLS_OK[0] = c_[4]
         try: ok_ = validate(cam)
         finally: extra = _HIDE_ACC; _HIDE_ACC = None
         for o in hid_: o.hide_viewport = False
-        if ok_: chosen = (c_[0], c_[1], c_[2], set(c_[3]) | extra); break
-        if least is None or LAST_SEV[0] < least[0]: least = (LAST_SEV[0], (c_[0], c_[1], c_[2], set(c_[3]) | extra))
+        if ok_:
+            chosen = (c_[0], c_[1], c_[2], set(c_[3]) | extra)
+            cam['outside'] = bool(c_[4])
+            if c_[4]: print('CAM OUTSIDE ROOM', name, '（房间里没有合格机位，拆墙拍）', flush=True)
+            break
+        if least is None or (LAST_SEV[0], -c_[2]) < (least[0], -least[2]): least = (LAST_SEV[0], (c_[0], c_[1], c_[2], set(c_[3]) | extra), c_[2])   # 同样严重时选离人远的
+        if not c_[4] and LAST_SEV[0] <= 1 and c_[2] >= max(0.7, 0.45 * dist) and (least_in is None or c_[2] > least_in[0]):   # 房间内的退路：问题轻微、而且离人够远（挤在人和墙之间的缝里不算）
+            least_in = (c_[2], (c_[0], c_[1], c_[2], set(c_[3]) | extra))
     else:
         if least is not None: chosen = least[1]
         print('CAM FALLBACK', name, '（没有候选通过检查，用问题最轻的）', ' | '.join(FAIL_LOG[:6]), flush=True)
@@ -260,8 +276,9 @@ NO_HIDE = ('furn_bed_', 'furn_mattress_', 'furn_quilt_', 'furn_pillow_')   # 有
 PASS_THRU = ('prop_phonebody_', 'prop_screen_', 'prop_phone')
 NOT_OBSTRUCT = ('floor', 'ground', 'ceiling', 'ext_road', 'ext_grass', 'ext_path', 'ext_plaza')   # 地面、天花：出现在画面里不算挡
 
+_WALLS_OK = [True]   # 当前验证的候选机位是否允许拆墙（房间里的机位不许）
 def _hideable(name):
-    return _HIDE_ACC is not None and (name.startswith(HIDEABLE) or _wall(name)) and name not in _HIDE_ACC_PROTECT
+    return _HIDE_ACC is not None and (_movable(name) or (_WALLS_OK[0] and _wall(name))) and name not in _HIDE_ACC_PROTECT
 
 def _near_hand(rig, p, r=0.11):
     for s in ('L', 'R'):
@@ -414,7 +431,7 @@ def track_clear(cam, rig, f0, f1, protect=()):
                     hit, loc, _, _, obj, _ = sc.ray_cast(dg, o + d * t, d, distance=depth - t)
                     if not hit: break
                     nm = obj.name
-                    if (nm.startswith(HIDEABLE) or _wall(nm)) and nm not in protect and not nm.startswith(PASS_THRU):
+                    if (_movable(nm) or (cam.get('outside') and _wall(nm))) and nm not in protect and not nm.startswith(PASS_THRU):   # 摄像机在房间里就不拆墙
                         hidden.add(nm); t = (loc - o).length + 0.01; continue
                     break
         for n in hidden:   # 后面的帧按拆掉以后的样子继续查
@@ -440,7 +457,7 @@ def clear_est_view(cam, f0, f1, near=15.0):
             while t < near:
                 hit, loc, _, _, obj, _ = sc.ray_cast(dg, o + d * t, d, distance=near - t)
                 if not hit: break
-                if obj.name.startswith(HIDEABLE): hidden.add(obj.name); t = (loc - o).length + 0.05; continue
+                if _movable(obj.name): hidden.add(obj.name); t = (loc - o).length + 0.05; continue
                 break
     if hidden: hide_range(sorted(hidden), f0, f1); print('EST CLEAR', cam.name, len(hidden), flush=True)
 
