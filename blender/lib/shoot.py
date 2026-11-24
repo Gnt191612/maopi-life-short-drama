@@ -300,15 +300,16 @@ def _foreground(sc, dg, cam, cpos, depth, ignore=()):
         for j in range(3):
             u, v = 0.1 + 0.2 * i, 0.2 + 0.3 * j
             top = fr_[3].lerp(fr_[0], u); bot = fr_[2].lerp(fr_[1], u); pt = M @ bot.lerp(top, v)
-            d = (pt - cpos).normalized(); t = 0.02; n += 1
-            while t < depth:
-                hit, loc, _, _, obj, _ = sc.ray_cast(dg, cpos + d * t, d, distance=depth - t)
+            d = (pt - cpos).normalized(); t = 0.02; n += 1; dh = depth + 0.2   # 可移走的家具查到人跟前（紧挨着人的书架隔板原来漏掉，横在胸前）
+            while t < dh:
+                hit, loc, _, _, obj, _ = sc.ray_cast(dg, cpos + d * t, d, distance=dh - t)
                 if not hit: break
                 nm = obj.name
                 if nm.startswith(PASS_THRU) and (loc - cpos).length < 0.3: bad += 1; break
                 if nm.startswith(PASS_THRU): t = (loc - cpos).length + 0.01; continue
                 if any(k in nm for k in NOT_OBSTRUCT): break
                 if _hideable(nm): _HIDE_ACC.add(nm); t = (loc - cpos).length + 0.01; continue
+                if (loc - cpos).length > depth: break   # 不可移走的东西只查到 depth
                 if obj.parent is not None and obj.parent.type == 'ARMATURE':
                     hd_ = (loc - cpos).length
                     if hd_ < 0.3: bad += 1.0   # 镜头贴在（任何人的）身上：画面一大块衣服（手部特写镜头贴着林晓的肚子）
@@ -380,19 +381,20 @@ def shot_ok(cam, rigs, watch, subj, f0, f1, targets=None, moving=(), back=False)
     return True
 
 def touched_furniture(rigs, fr):
-    """本帧人物手腕/手肘/前臂中点 8cm 以内的家具（正撑着、搭着的桌面、柜台），机位不许移走"""
+    """本帧人物手腕/手肘/前臂压在上面的家具台面（正撑着、搭着的桌面、柜台），机位不许移走"""
     sc = bpy.context.scene; sc.frame_set(fr); pts = []
     for r in rigs.values():
         M = r.matrix_world; pb = r.pose.bones
-        for s in 'LR':
-            for b, end in (('wrist.' + s, 'head'), ('wrist.' + s, 'tail'), ('lowerarm01.' + s, 'head'), ('lowerarm02.' + s, 'head')):
-                bb_ = pb.get(b)
-                if bb_: pts.append(M @ (bb_.tail if end == 'tail' else bb_.head))
+        for s in 'LR':   # 手肘一定算；手腕只在前臂基本放平时算（捂脸时手抬到脸前，手腕旁边的书架隔板不算）
+            el, wr = pb.get('lowerarm01.' + s), pb.get('wrist.' + s)
+            if el is None or wr is None: continue
+            pe, pw = M @ el.head, M @ wr.head; pts.append(pe)
+            if pw.z < pe.z + 0.06: pts += [pw, pe.lerp(pw, 0.5)]
     out = set()
     for o in bpy.data.objects:
         if o.type != 'MESH' or not o.name.startswith('furn_'): continue
         lo, hi = _bbox(o)
-        if any(all(lo[i] - 0.08 < p[i] < hi[i] + 0.08 for i in range(3)) for p in pts): out.add(o.name)
+        if any(lo[0] - 0.05 < p[0] < hi[0] + 0.05 and lo[1] - 0.05 < p[1] < hi[1] + 0.05 and hi[2] - 0.04 < p[2] < hi[2] + 0.12 for p in pts): out.add(o.name)   # 只算压在台面上方的（书架在捂脸的手旁边不算，原来被保留下来挡住整张脸）
     return out
 
 def track_clear(cam, rig, f0, f1, protect=()):

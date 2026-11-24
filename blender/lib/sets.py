@@ -233,7 +233,14 @@ def dorm(time='am'):
             for dx in (-0.45, 0.45):
                 box('furn_post_%s' % who, (0.05, 0.05, 2.1), (x + dx, cy + dy, 0), 'metal', col)
         box('furn_desk_%s' % who, (0.6, 1.4, 0.04), (sx * (W / 2 - 0.3), cy + 0.25, 0.72), 'wood', col)
-        box('furn_shelf_%s' % who, (0.28, 1.4, 0.7), (sx * (W / 2 - 0.15), cy + 0.25, 0.9), 'wood', col)
+        # 桌上书架：开放式（背板 + 两侧板 + 三层隔板），书放在最下层隔板上。原来是 0.28×1.4×0.7 的实心方块、书嵌在里面，
+        # 侧后方看就是一大块方木挡在人脸前，云端也会当成柜子（2026-11-23）
+        bx = sx * (W / 2 - 0.15)
+        box('furn_shelf_%s' % who, (0.02, 1.4, 0.6), (sx * (W / 2 - 0.02), cy + 0.25, 1.0), 'wood', col)
+        for dy in (-0.69, 0.69):
+            box('furn_shelfside_%s' % who, (0.28, 0.02, 0.6), (bx, cy + 0.25 + dy, 1.0), 'wood', col)
+        for z in (1.0, 1.3, 1.58):
+            box('furn_shelfboard_%s' % who, (0.28, 1.4, 0.02), (bx, cy + 0.25, z), 'wood', col)
         books('furn_%s' % who, 10, (sx * (W / 2 - 0.15), cy - 0.3, 1.02), col, along='y')
         for k in range(4):   # 梯子：靠过道、床头一侧
             box('furn_ladder_%s' % who, (0.04, 0.4, 0.03), (x - sx * 0.47, cy - 0.75, 0.35 + k * 0.4), 'metal', col)
