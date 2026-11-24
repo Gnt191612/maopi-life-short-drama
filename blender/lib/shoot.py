@@ -811,7 +811,7 @@ def build_segment(seg_id, scene, set_name, beats):
                     for fr_, w_ in ((f0, 0.5), ((f0 + f1) // 2, 1.0), (f1, 1.5)): sc.frame_set(fr_); acc += face_dir(rigs[subj[0]])[0] * w_   # 偏向结尾：转头/转身的拍子，观众要看的是转过来之后的脸（s09 林晓回头）
                     sc.frame_set(f0); acc.z *= 0.3
                     if acc.length > 1.5: yaw = acc.normalized()
-                watch = [speaker] if speaker in rigs else subj[:1]
+                watch = [speaker] if speaker in subj else subj[:1]   # 说话人不在画面里（反应镜头）：查画面里的人的脸（原来查画外的说话人，周明远低头只拍到头顶，s10）
                 movers = [s_ for s_ in subj if s_ in walking]
                 sc.frame_set(f0); hp0 = {s_: poses.head_pos(rigs[s_]) for s_ in subj}
                 sc.frame_set(f1)
@@ -857,6 +857,7 @@ def build_segment(seg_id, scene, set_name, beats):
         life.inertia(rig)
         life.add_idle(rig, seed)
         life.talk_motion(rig, talk_spans.get(cid, []), seed + 7)
+        life.phone_motion(rig, hand_ev[cid], f - 1, seed + 13)   # 拿手机的手轻微转动、挪动
         life.blinks(rig, 1, f - 1, seed)
         last = None
         for fr, (gr, gl) in sorted(hand_ev[cid]):

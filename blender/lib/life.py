@@ -104,3 +104,25 @@ def talk_motion(rig, spans, seed):
                 m.amplitude = amp; m.phase_multiplier = 2 * math.pi / (period * (1.6 if idx == 2 else 1.0)); m.phase_offset = rnd.uniform(0, 6.28)
                 m.use_restricted_range = True; m.frame_start = f0; m.frame_end = f1
                 m.blend_in = min(8, (f1 - f0) // 3); m.blend_out = min(10, (f1 - f0) // 3)
+
+def phone_motion(rig, hand_events, f_end, seed):
+    """拿着手机时手不完全定住：手腕缓慢转动（看屏幕、划动）、前臂偶尔挪一下。原来躺着举手机看 7 秒一动不动（s03 林晓，2026-11-23）。
+    hand_events：[(帧, (右手握, 左手握)), ...]（shoot 里的 hand_ev），握着的时段就是拿手机的时段"""
+    rnd = random.Random(seed)
+    ev = sorted(hand_events)
+    for side_i, side in ((0, 'R'), (1, 'L')):
+        spans, start = [], None
+        for fr, grips in ev:
+            g = grips[side_i]
+            if g and start is None: start = fr
+            elif not g and start is not None: spans.append((start, fr)); start = None
+        if start is not None: spans.append((start, f_end))
+        for f0, f1 in spans:
+            if f1 - f0 < 24: continue
+            for bone, amp, per, idx in (('wrist.' + side, rnd.uniform(0.03, 0.045), rnd.uniform(1.8, 2.6), 1), ('wrist.' + side, 0.02, rnd.uniform(2.6, 3.4), 3),
+                                        ('lowerarm01.' + side, rnd.uniform(0.015, 0.025), rnd.uniform(3.0, 4.2), 1)):
+                for fc in _fcurves(rig, bone):
+                    if fc.array_index != idx: continue
+                    m = fc.modifiers.new('FNGENERATOR'); m.function_type = 'SIN'; m.use_additive = True
+                    m.amplitude = amp; m.phase_multiplier = 2 * math.pi / (per * FPS); m.phase_offset = rnd.uniform(0, 6.28)
+                    m.use_restricted_range = True; m.frame_start = f0; m.frame_end = f1; m.blend_in = 10; m.blend_out = 10
