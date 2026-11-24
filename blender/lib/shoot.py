@@ -776,6 +776,9 @@ def build_segment(seg_id, scene, set_name, beats):
             poses.apply_state(rig, dict(st, arms=act_, look=lk), fa + tr, lag=LAG)
             poses.apply_state(rig, dict(st, arms=act_, look=lk), fb, lag=LAG)
             poses.apply_state(rig, dict(st, look=lk), min(f1 - LAG, fb + tr), lag=LAG)
+        for cid, rig in rigs.items():   # 挥手的人：手来回摆
+            st_w = plans[cid][1] if cid in plans else state[cid]
+            if st_w.get('arms') == 'wave': life.wave(rig, f0 + LAG, f1 - LAG, sum(map(ord, bt['id'] + cid)))
         # 2) 口型
         for off, lid, y in audio_plan(bt):
             if not y: continue

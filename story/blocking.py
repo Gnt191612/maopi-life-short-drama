@@ -42,7 +42,7 @@ SCN = {
     's02_03': {'lin': S(face=-60, arms='gesture'), 'chen': S(arms='desk')},
     's02_04': {'lin': Wk(pos=(5.6, -0.9, 0), face=150, arms='tray')},
     's02_05': {'lin': S(pos=(5.7, -0.9, 0), face=120, arms='down')},
-    's02_06': {'lin': S(pos=(6.0, -0.75, 0), face=180, arms='desk')},
+    's02_06': {'lin': S(pos=(5.5, -0.62, 0), face=180, arms='desk')},   # 站在窗边桌左侧、手能放到桌面（原来站在椅子的位置，碰不到桌子，特写只拍到椅背和垂着的手，2026-11-23）
     's02_07': {'lin': S(pos=(5.9, -1.2, 0), face=160, base='crouch', arms='phone')},
     's02_08': {'chen': S(arms='desk')},
     's02_08c': {'lin': S(pos=(-1.62, -4.25, 0), face=-90, base='crouch', arms='down')},   # 离陈瑶 0.5m（原来 0.2m，蹲下凑过去时两人身体互相嵌进去，2026-11-23）

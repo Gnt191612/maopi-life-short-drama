@@ -132,3 +132,14 @@ def phone_motion(rig, hand_events, f_end, seed):
                     m = fc.modifiers.new('FNGENERATOR'); m.function_type = 'SIN'; m.use_additive = True
                     m.amplitude = amp; m.phase_multiplier = 2 * math.pi / (per * FPS); m.phase_offset = rnd.uniform(0, 6.28)
                     m.use_restricted_range = True; m.frame_start = f0; m.frame_end = f1; m.blend_in = 10; m.blend_out = 10
+
+def wave(rig, f0, f1, seed, side='R'):
+    """挥手：举起的前臂和手腕左右来回摆（约半秒一个来回）。原来手举起来定在那里 3 秒，像举手回答问题（s02 陈瑶，2026-11-23）"""
+    if f1 - f0 < 12: return
+    rnd = random.Random(seed); per = FPS * rnd.uniform(0.5, 0.65); ph = rnd.uniform(0, 6.28)
+    for bone, amp, idx in (('lowerarm01.' + side, 0.16, 3), ('wrist.' + side, 0.10, 3)):
+        for fc in _fcurves(rig, bone):
+            if fc.array_index != idx: continue
+            m = fc.modifiers.new('FNGENERATOR'); m.function_type = 'SIN'; m.use_additive = True
+            m.amplitude = amp; m.phase_multiplier = 2 * math.pi / per; m.phase_offset = ph
+            m.use_restricted_range = True; m.frame_start = f0; m.frame_end = f1; m.blend_in = 6; m.blend_out = 6
