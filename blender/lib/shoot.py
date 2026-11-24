@@ -379,6 +379,22 @@ def shot_ok(cam, rigs, watch, subj, f0, f1, targets=None, moving=(), back=False)
             if fg > 0.34: return _fail('前景遮挡 %.2f' % fg, fr)
     return True
 
+def touched_furniture(rigs, fr):
+    """本帧人物手腕/手肘/前臂中点 8cm 以内的家具（正撑着、搭着的桌面、柜台），机位不许移走"""
+    sc = bpy.context.scene; sc.frame_set(fr); pts = []
+    for r in rigs.values():
+        M = r.matrix_world; pb = r.pose.bones
+        for s in 'LR':
+            for b, end in (('wrist.' + s, 'head'), ('wrist.' + s, 'tail'), ('lowerarm01.' + s, 'head'), ('lowerarm02.' + s, 'head')):
+                bb_ = pb.get(b)
+                if bb_: pts.append(M @ (bb_.tail if end == 'tail' else bb_.head))
+    out = set()
+    for o in bpy.data.objects:
+        if o.type != 'MESH' or not o.name.startswith('furn_'): continue
+        lo, hi = _bbox(o)
+        if any(all(lo[i] - 0.08 < p[i] < hi[i] + 0.08 for i in range(3)) for p in pts): out.add(o.name)
+    return out
+
 def track_clear(cam, rig, f0, f1, protect=()):
     """跟拍镜头会跟着人转：在开头/四分之一/中间/四分之三/结尾按镜头实际朝向打 7×4 条视线，挡在人前面的墙、家具本拍移走。
     原来只按初始朝向拆墙，转过去以后最后几帧对着一面墙，画面一片灰（s01 林晓走去洗手台，2026-11-23）"""
@@ -804,6 +820,7 @@ def build_segment(seg_id, scene, set_name, beats):
                     if v.z <= 0 or not (0.06 < v.x < 0.94 and 0.06 < v.y < 0.86): return True   # 头顶要留出空间（头心在 0.86 以上，头顶就被切了）
             return False
         protect = {poses.LAST_SUPPORT.get(rigs[c].name) for c in rigs if state[c].get('base') in poses.SUPPORTED} - {None}
+        protect |= touched_furniture(rigs, (f0 + f1) // 2)   # 手、前臂正撑着/搭着的桌子也不许移走（原来趴桌捂脸时书桌被机位当遮挡物移走，手肘撑在空气里，s03 林晓）
         if bt['cam'] == 'cont' and cam_prev is not None and not walking and not faces_away(cam_prev) and not out_of_frame(cam_prev):
             cam = cam_prev
             cam.keyframe_insert('location', frame=f1)
