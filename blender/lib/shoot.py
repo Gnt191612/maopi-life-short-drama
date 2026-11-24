@@ -90,7 +90,10 @@ def hide_range(names, frame0, frame1, protect=()):
     """在 frame0..frame1 内临时移走挡镜头的家具（前后恢复）"""
     for n in sorted(with_resting(names, protect)):
         ob = bpy.data.objects[n]
+        fc = ob.animation_data.action.fcurves.find('hide_render') if ob.animation_data and ob.animation_data.action else None
+        before_hidden = fc is not None and fc.evaluate(frame0 - 1) >= 0.5
         for fr, v in ((frame0 - 1, False), (frame0, True), (frame1 + 1, False)):
+            if fr == frame0 - 1 and before_hidden: continue   # 上一个镜头也藏着它：不在它的最后一帧插「显示」键（原来相邻两镜藏同一面墙时，上一镜最后一帧墙冒出来、画面一片灰，2026-11-23）
             ob.hide_render = v; ob.keyframe_insert('hide_render', frame=fr)
 
 HIDEABLE = ('furn_', 'prop_', 'ext_lamp', 'ext_trunk', 'ext_crown', 'ext_bike', 'ext_column', 'ext_bench', 'ext_bin', 'ext_sign', 'ext_hedge', 'ext_flower')
@@ -375,6 +378,36 @@ def shot_ok(cam, rigs, watch, subj, f0, f1, targets=None, moving=(), back=False)
             fg = _foreground(sc, dg, cam, cpos, depth, [rigs[s_] for s_ in subj])
             if fg > 0.34: return _fail('前景遮挡 %.2f' % fg, fr)
     return True
+
+def track_clear(cam, rig, f0, f1, protect=()):
+    """跟拍镜头会跟着人转：在开头/四分之一/中间/四分之三/结尾按镜头实际朝向打 7×4 条视线，挡在人前面的墙、家具本拍移走。
+    原来只按初始朝向拆墙，转过去以后最后几帧对着一面墙，画面一片灰（s01 林晓走去洗手台，2026-11-23）"""
+    sc = bpy.context.scene; hidden = set()
+    for fr in sorted({f0, f0 + (f1 - f0) // 4, (f0 + f1) // 2, f0 + 3 * (f1 - f0) // 4, f1}):
+        sc.frame_set(fr); bpy.context.view_layer.update(); dg = bpy.context.evaluated_depsgraph_get()
+        M = cam.matrix_world; o = M.translation; vf = cam.data.view_frame(scene=sc)
+        depth = max(0.5, (poses.head_pos(rig) - o).length - 0.3)
+        for i in range(7):
+            for j in range(4):
+                u, v = 0.05 + 0.15 * i, 0.1 + 0.27 * j
+                top = vf[3].lerp(vf[0], u); bot = vf[2].lerp(vf[1], u); pt = M @ bot.lerp(top, v)
+                d = (pt - o).normalized(); t = 0.02
+                while t < depth:
+                    hit, loc, _, _, obj, _ = sc.ray_cast(dg, o + d * t, d, distance=depth - t)
+                    if not hit: break
+                    nm = obj.name
+                    if (nm.startswith(HIDEABLE) or _wall(nm)) and nm not in protect and not nm.startswith(PASS_THRU):
+                        hidden.add(nm); t = (loc - o).length + 0.01; continue
+                    break
+        for n in hidden:   # 后面的帧按拆掉以后的样子继续查
+            ob = bpy.data.objects.get(n)
+            if ob: ob.hide_viewport = True
+    for n in hidden:
+        ob = bpy.data.objects.get(n)
+        if ob: ob.hide_viewport = False
+    if hidden:
+        hide_range(sorted(hidden), f0, f1, protect); cam['hidden'] = sorted(set(cam.get('hidden', [])) | with_resting(hidden, protect))
+        print('TRACK CLEAR', cam.name, len(hidden), flush=True)
 
 def clear_est_view(cam, f0, f1, near=15.0):
     """空镜机位：在画面里均匀打 9×5 条视线，近处（near 米内）挡住视线的可移走物件在本拍隐藏"""
@@ -828,6 +861,7 @@ def build_segment(seg_id, scene, set_name, beats):
                     con = cam.constraints.new('TRACK_TO'); con.target = rigs[movers[0]]; con.up_axis = 'UP_Y'   # 保持画面水平（DAMPED_TRACK 会让镜头歪，s10 结尾三人走远时画面倾斜）
                     con.subtarget = 'neck01'   # 跟拍瞄脖子（原来走路的人瞄 spine01，人走近时头被切出画面，s07 林晓）
                     con.track_axis = 'TRACK_NEGATIVE_Z'; con.influence = 0.9; cam['move'] = 'track'
+                    track_clear(cam, rigs[movers[0]], f0, f1, protect)
         if cam is not cam_prev:
             m = sc.timeline_markers.new(bt['id'], frame=f0); m.camera = cam
         cam_prev = cam
