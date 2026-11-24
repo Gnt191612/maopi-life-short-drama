@@ -38,6 +38,12 @@ def add_idle(rig, seed):
             if fc.array_index != 1: continue           # 绕局部 X：挺胸/含胸
             m = fc.modifiers.new('FNGENERATOR'); m.function_type = 'SIN'; m.use_additive = True
             m.amplitude = amp; m.phase_multiplier = 2 * math.pi / period; m.phase_offset = rnd.uniform(0, 6.28)
+    ph_shift = rnd.uniform(0, 6.28); per = FPS * rnd.uniform(7.0, 10.0)
+    for bone, amp, idx in (('spine05', 0.012, 3), ('spine03', 0.008, 3), ('neck01', -0.008, 3)):   # 重心慢慢左右移：腰以上 7~10 秒一次轻微侧摆、头反向一点保持平衡（原来上身始终笔直对称，2026-11-23）
+        for fc in _fcurves(rig, bone):
+            if fc.array_index != idx: continue
+            m = fc.modifiers.new('FNGENERATOR'); m.function_type = 'SIN'; m.use_additive = True
+            m.amplitude = amp; m.phase_multiplier = 2 * math.pi / per; m.phase_offset = ph_shift
 
 def inertia(rig):
     """惯性：手臂、头颈的每段过渡用「回弹」缓动——到位时略冲过头再回来（幅度与动作大小成正比，静止段不受影响）。
