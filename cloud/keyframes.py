@@ -74,7 +74,9 @@ def make_kf(td, tid, task, src_name, out):
         look = '；'.join(LOOK[c] for c in chars if c in LOOK)
         # 图生图：8 步采样从第 3 步开始（保留白模构图，只重绘质感）；不加人物描述——从头重画时会拉远镜头、多画出一个人（2026-11-22 试片）
         start, swap = plan(task)
-        base = comfy_run.run(WF_REAL, 'kfbase_' + tid, {'10.image': first_frame(td, tid, src_name), '21.start_at_step': start})
+        # 只加一句性别/体型提示（2026-11-25：s09 深夜特写里二转三把林晓画成了短发女生，换脸也没改回来；完整外貌描述会拉远镜头、多画出人，所以只取第一小句）
+        pre = ('画面中的人物是' + '、'.join(LOOK[c].split('，')[0] for c in chars if c in LOOK) + '，不要改变人物的性别和人数。') if chars else ''
+        base = comfy_run.run(WF_REAL, 'kfbase_' + tid, {'10.image': first_frame(td, tid, src_name), '21.start_at_step': start}, prefix=pre)
         if not base: print('KF FAIL base', tid, flush=True); return
         cur = base
         for c in swap:   # 逐个角色换脸（多人镜头：用外貌描述指明换的是哪一个）
