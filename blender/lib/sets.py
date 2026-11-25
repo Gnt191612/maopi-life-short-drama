@@ -301,6 +301,24 @@ def lib():
     for y in (-4, -1.5, 1, 3.5):   # 西墙书架
         box('furn_bookshelf', (0.4, 2.2, 2.3), (-W / 2 + 0.25, y, 0), 'wood', col)
         for z in (0.4, 0.95, 1.5, 2.05): books('furn_libbooks%d' % int(z * 10 + y * 100), 30, (-W / 2 + 0.35, y - 1.0, z), col, along='y')
+    # 南北墙原来是空白墙面：二转三照着白模画成空房间，视频又自己补出书架，镜头之间背景来回跳（2026-11-25 用户定为严重失真，重做这一场）
+    # → 南北墙都立满开放式书架（侧板、背板、层板、书），每张长桌放两盏台灯
+    def shelf_unit(nm, cx, cy, wall, w=2.0, d=0.3, h=2.3):   # wall=+1：墙在 +y 一侧
+        by = cy + wall * (d / 2 - 0.01)
+        box(nm + '_back', (w, 0.02, h), (cx, by, 0), 'wood', col)
+        for sx in (-1, 1): box(nm + '_side', (0.03, d, h), (cx + sx * w / 2, cy, 0), 'wood', col)
+        for k, z in enumerate((0.02, 0.5, 0.98, 1.46, 1.94, 2.27)):
+            box(nm + '_plank', (w, d, 0.025), (cx, cy, z), 'wood', col)
+            if z < 2.2: books('%s_b%d' % (nm, k), 34, (cx - w / 2 + 0.05, cy + wall * (d / 2 - 0.11), z + 0.025), col, along='x')
+    for i, x in enumerate((-5.5, -3.3, -1.1, 1.1, 3.3, 5.5)):
+        shelf_unit('furn_bookshelf_n%d' % i, x, D / 2 - 0.16, +1)
+    for i, x in enumerate((-1.6, 0.6, 2.8, 5.0)):   # 南墙避开门（x -5.3~-3.7）
+        shelf_unit('furn_bookshelf_s%d' % i, x, -D / 2 + 0.16, -1)
+    for i, y in enumerate((-3.5, 0, 3.5)):
+        for j, x in enumerate((-3.5, 1.0)):
+            for dx in (-0.9, 0.9):
+                cyl('prop_desklamp_%d%d%d' % (i, j, dx > 0), 0.012, 0.36, (x + dx, y, 0.75), 'metal', col)
+                box('prop_desklamp_shade_%d%d%d' % (i, j, dx > 0), (0.28, 0.12, 0.07), (x + dx, y - 0.04, 1.08), (0.12, 0.35, 0.22), col)
     table('furn_windowtable', (1.4, 0.7), (W / 2 - 0.6, 0.0, 0), col)   # 靠窗座位
     chair('furn_windowchair', (W / 2 - 0.6, -0.6, 0), math.pi, col)
     light('light_sun', 'SUN', (10, 0, 6), 4.0, (1, 0.95, 0.85), (50, 0, 100))
