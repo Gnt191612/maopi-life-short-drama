@@ -32,7 +32,21 @@ def first_frame(td, tid):
     dst = os.path.join(INP, 'kfsrc_%s.png' % tid)
     if os.path.exists(src): shutil.copy(src, dst)
     else: subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', os.path.join(td, 'beauty.mp4'), '-frames:v', '1', dst], check=True)
+    flatten_dark(dst)
     return os.path.basename(dst)
+
+def flatten_dark(path, radius=6, lo=70, hi=100):
+    """深色区域（黑裤子、深色卫衣）的褶皱明暗抹平：白模布料的褶皱暗纹会被二转三画成斑马纹/迷彩（2026-11-24 试跑：陈瑶黑裤子变斑马裤）。
+    只动亮度低于 hi 的像素，越暗越平；褶皱和布纹交给写实化重画。"""
+    try:
+        from PIL import Image, ImageFilter
+        import numpy as np
+        im = Image.open(path).convert('RGB'); a = np.asarray(im).astype(np.float32)
+        b = np.asarray(im.filter(ImageFilter.GaussianBlur(radius))).astype(np.float32)
+        m = np.clip((hi - a.mean(2)) / (hi - lo), 0, 1)[..., None]
+        Image.fromarray((a * (1 - m) + b * m).astype(np.uint8)).save(path)
+    except Exception as e:
+        print('flatten_dark skip', e, flush=True)
 
 def main():
     pack = sys.argv[1]; pre = sys.argv[2:]
