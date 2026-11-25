@@ -27,8 +27,8 @@ def plan(task):
     swap = [] if any(k in en for k in NOFACE) else chars                     # 看不到脸的镜头不换脸
     return start, swap
 
-def first_frame(td, tid):
-    src = os.path.join(td, 'first.png')
+def first_frame(td, tid, src_name='first.png'):
+    src = os.path.join(td, src_name)
     dst = os.path.join(INP, 'kfsrc_%s.png' % tid)
     if os.path.exists(src): shutil.copy(src, dst)
     else: subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', os.path.join(td, 'beauty.mp4'), '-frames:v', '1', dst], check=True)
@@ -57,15 +57,25 @@ def main():
     for tid in man['tasks']:
         if pre and not any(tid.startswith(p) for p in pre): continue
         if my is not None and tid not in my: continue
-        out = os.path.join(OUTK, tid + '.png')
-        if os.path.exists(out): continue
         td = os.path.join(pack, tid); task = json.load(open(os.path.join(td, 'task.json'), encoding='utf-8'))
+        jobs = [(tid, 'first.png', os.path.join(OUTK, tid + '.png'))]
+        ap_ = os.path.join(td, 'anchors.json')   # 锚点模式：每个锚点帧（白模 anchor_####.png）也出一张写实图 kf/<id>@####.png（2026-11-25）
+        if os.path.exists(ap_):
+            jobs += [('%s@%04d' % (tid, a), 'anchor_%04d.png' % a, os.path.join(OUTK, '%s@%04d.png' % (tid, a)))
+                     for a in json.load(open(ap_))[1:] if os.path.exists(os.path.join(td, 'anchor_%04d.png' % a))]
+        for jid, src_name, out in jobs:
+            make_kf(td, jid, task, src_name, out)
+    print('KEYFRAMES DONE', flush=True)
+
+def make_kf(td, tid, task, src_name, out):
+    if True:
+        if os.path.exists(out): return
         chars = task.get('characters', [])
         look = '；'.join(LOOK[c] for c in chars if c in LOOK)
         # 图生图：8 步采样从第 3 步开始（保留白模构图，只重绘质感）；不加人物描述——从头重画时会拉远镜头、多画出一个人（2026-11-22 试片）
         start, swap = plan(task)
-        base = comfy_run.run(WF_REAL, 'kfbase_' + tid, {'10.image': first_frame(td, tid), '21.start_at_step': start})
-        if not base: print('KF FAIL base', tid, flush=True); continue
+        base = comfy_run.run(WF_REAL, 'kfbase_' + tid, {'10.image': first_frame(td, tid, src_name), '21.start_at_step': start})
+        if not base: print('KF FAIL base', tid, flush=True); return
         cur = base
         for c in swap:   # 逐个角色换脸（多人镜头：用外貌描述指明换的是哪一个）
             ref = 'canonface_%s.jpg' % c if os.path.exists(os.path.join(INP, 'canonface_%s.jpg' % c)) else 'canon_%s.jpg' % c
@@ -75,7 +85,6 @@ def main():
             nxt = comfy_run.run(WF_SWAP, 'kfswap_%s_%s' % (tid, c), {'3.image': ref, '10.image': 'kfcur_%s.png' % tid, '39.text': SWAP.format(who=who)})
             if nxt: cur = nxt
         shutil.copy(cur, out); print('KF OK', tid, chars, flush=True)
-    print('KEYFRAMES DONE', flush=True)
 
 if __name__ == '__main__':
     main()

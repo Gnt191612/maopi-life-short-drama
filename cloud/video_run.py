@@ -31,7 +31,30 @@ def prompt_of(task):
     desc = task.get('prompt', '').split('. photorealistic')[0]
     return '%s. %s%s. Natural, subtle realistic motion, same people throughout, stable face identity.' % (desc, ('People: ' + who + '. ') if who else '', STYLE_EN)
 
-def run_chunk(tid, k, img, ctl, nfr, task, seed):
+def flf_patch(end_img):
+    """图生视频 → 首尾帧控制：WanImageToVideo 换成 WanFirstLastFrameToVideo，尾帧另开一个 LoadImage，
+    首帧那条预处理链（缩放等）照抄一份给尾帧（2026-11-25 用户：跑偏的镜头用白模锚点帧拉回来）"""
+    def p(api):
+        for nid, nd in list(api.items()):
+            if nd['class_type'] != 'WanImageToVideo': continue
+            ins = nd['inputs']; nd['class_type'] = 'WanFirstLastFrameToVideo'
+            cv = ins.pop('clip_vision_output', None); ins.pop('ref_pad_image', None)
+            if cv is not None: ins['clip_vision_start_image'] = cv
+            api['9001'] = {'class_type': 'LoadImage', 'inputs': {'image': end_img}}
+            src = ins.get('start_image'); cur = ['9001', 0]
+            chain = []
+            while isinstance(src, list) and src[0] in api and api[src[0]]['class_type'] != 'LoadImage':
+                chain.append(src)
+                src = next((v for kk, v in api[src[0]]['inputs'].items() if isinstance(v, list) and kk in ('image', 'images', 'pixels', 'input_image')), None)
+            for j, (cid_, out_) in enumerate(reversed(chain)):   # 从 LoadImage 往下，逐个复制预处理节点
+                nn = '%d' % (9100 + j); api[nn] = json.loads(json.dumps(api[cid_]))
+                for kk, v in api[nn]['inputs'].items():
+                    if isinstance(v, list) and kk in ('image', 'images', 'pixels', 'input_image'): api[nn]['inputs'][kk] = cur
+                cur = [nn, out_]
+            ins['end_image'] = cur
+    return p
+
+def run_chunk(tid, k, img, ctl, nfr, task, seed, end_img=None):
     sets = {}
     def put(key, val):
         if M.get(key): sets[M[key]] = val
@@ -43,7 +66,18 @@ def run_chunk(tid, k, img, ctl, nfr, task, seed):
         api = comfy_run.convert(M['workflow'], tuple(M.get('enable', [])))
         miss = [s for s in sets if s.split('.')[0] not in api]
         print('DRY', tid, k, json.dumps(sets, ensure_ascii=False)[:600], '缺节点:', miss, flush=True); return None
-    return comfy_run.run(M['workflow'], 'v_%s_%02d' % (tid, k), sets, timeout=M.get('timeout', 2400), enable=tuple(M.get('enable', [])))
+    return comfy_run.run(M['workflow'], 'v_%s_%02d' % (tid, k), sets, timeout=M.get('timeout', 2400), enable=tuple(M.get('enable', [])), patch=flf_patch(end_img) if end_img else None)
+
+def anchor_kf(tid, task, a):
+    return os.path.join(KF, tid + '.png') if a == task['frames'][0] else os.path.join(KF, '%s@%04d.png' % (tid, a))
+
+def anchors_of(td, tid, task):
+    """有 anchors.json（本地 make_anchors.py 生成）且每个锚点的写实关键帧都在时才用锚点模式"""
+    p = os.path.join(td, 'anchors.json')
+    if not os.path.exists(p) or os.environ.get('V11_NO_ANCHOR'): return None
+    anc = json.load(open(p))
+    if len(anc) < 2 or not all(os.path.exists(anchor_kf(tid, task, a)) for a in anc): log('锚点关键帧不全，按普通图生视频', tid); return None
+    return anc
 
 def main():
     man = json.load(open(os.path.join(args.pack, 'manifest.json'), encoding='utf-8'))
@@ -59,6 +93,17 @@ def main():
         seed = 1234 + sum(map(ord, tid)); t0 = time.time()
         img_name = 'vimg_%s_00.png' % tid; shutil.copy(kf, os.path.join(INP, img_name))
         chunks, chunk_n, done, k = [], [], 0, 0
+        anc = anchors_of(td, tid, task)
+        if anc:   # 锚点模式：每段首尾都是白模锚点帧的写实图（相邻段共用锚点），视频每 2~3 秒被拉回白模的位置和姿势
+            for k, (a, b) in enumerate(zip(anc, anc[1:])):
+                nfr = frames4(round((b - a) / 24.0 * FPS) + 1)
+                s_img, e_img = 'vimg_%s_a%04d.png' % (tid, a), 'vimg_%s_a%04d.png' % (tid, b)
+                shutil.copy(anchor_kf(tid, task, a), os.path.join(INP, s_img)); shutil.copy(anchor_kf(tid, task, b), os.path.join(INP, e_img))
+                res = run_chunk(tid, k, s_img, None, nfr, task, seed, end_img=e_img)
+                if args.dry: break
+                if not res: log('生成失败', tid, '锚点段', k); chunks = []; break
+                chunks.append(res); chunk_n.append(nfr)
+            done = need; log('锚点模式', tid, '%d 段' % len(chunks), anc)
         while done < need:
             nfr = frames4(need - done + (1 if k else 0))                 # 续接段的第一帧与上一段最后一帧重合
             ctl = None

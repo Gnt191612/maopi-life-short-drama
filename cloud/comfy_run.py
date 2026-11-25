@@ -65,10 +65,11 @@ def convert(name, enable=()):
         if any(isinstance(v, list) and v[0] not in api for v in nd['inputs'].values()): api.pop(nid)
     return api
 
-def run(name, out_name, sets=None, prefix='', timeout=900, enable=()):
+def run(name, out_name, sets=None, prefix='', timeout=900, enable=(), patch=None):
     api = convert(name, enable)
     for key, val in (sets or {}).items():
         nid, inp = key.split('.', 1); api[nid]['inputs'][inp] = val
+    if patch: patch(api)   # 改工作流结构（如图生视频 → 首尾帧控制）
     if prefix:   # 加在「转为真实照片」那条提示词前面（二转三工作流用）
         for nd in api.values():
             for k in ('prompt', 'text'):
