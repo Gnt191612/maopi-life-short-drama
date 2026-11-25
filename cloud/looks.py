@@ -25,7 +25,10 @@ NAME = {'lin': '林晓', 'chen': '陈瑶', 'zhou': '周明远', 'wang': '王老�
 STYLE_EN = ('photorealistic live-action film still, shot on a cinema camera, natural lighting, realistic skin texture, '
             'contemporary China, 2020s')
 NEG_EN = ('cartoon, anime, 3d render, cgi, video game, doll, plastic skin, blurry, deformed face, extra fingers, extra people, '
-          'text, watermark, subtitles, flickering, low quality, oversaturated')
+          'text, watermark, subtitles, flickering, low quality, oversaturated, '
+          # 2026-11-25 全片检查：食堂镜头末尾凭空冒出露肩上衣、水手服的女生；红色发光眼睛；凭空多出路人；镜头中途换房间
+          'revealing clothing, cleavage, cosplay, sailor uniform, sexy, glowing eyes, red eyes, sudden new person appears, '
+          'scene change, teleport, different room, morphing face, changing clothes')
 
 # 人物库优先（characters/<cid>/character.py 的 look / look_en）：本地直接读；云端读 session.ps1 上传的 looks_gen.json
 def _load_lib():
