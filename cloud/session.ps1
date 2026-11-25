@@ -12,8 +12,13 @@ param([Parameter(Mandatory = $true)][string]$SshHost, [Parameter(Mandatory = $tr
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path $PSScriptRoot -Parent
 $Key = Join-Path $env:USERPROFILE '.ssh\xiangongyun_ed25519'
-$Opt = @('-i', $Key, '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=accept-new', '-o', 'ServerAliveInterval=30')
-function Rx([string]$cmd) { & ssh.exe @Opt -p $Port $SshHost $cmd }
+$Opt = @('-i', $Key, '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=accept-new', '-o', 'ServerAliveInterval=15', '-o', 'ServerAliveCountMax=3', '-o', 'ConnectTimeout=20')
+function Rx([string]$cmd, [int]$Sec = 180) {
+    # 每次远程命令都有硬超时（2026-11-25：盯进度的 ssh 卡在断掉的连接上一整夜，云端 08:05 跑完却没被发现，GPU 空等，差点被平台自动关机）
+    $j = Start-Job -ScriptBlock { param($o, $p, $h, $c) & ssh.exe @o -p $p $h $c } -ArgumentList (,$Opt), $Port, $SshHost, $cmd
+    if (Wait-Job $j -Timeout $Sec) { $r = Receive-Job $j; Remove-Job $j -Force; return $r }
+    Stop-Job $j; Remove-Job $j -Force; Write-Host "!! 远程命令 $Sec 秒没返回，已放弃这次（下一轮重试）" -ForegroundColor Yellow; return @()
+}
 $T0 = Get-Date
 Push-Location $Root
 try {
