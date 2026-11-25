@@ -580,6 +580,9 @@ def object_target(en, rigs, subj, phones):
             return wrist() + fd * 0.2 - Vector((0, 0, 0.03))
         return on_table, rig
     if any(k in e for k in OBJ_CLOSE['hands']): return wrist, rig
+    if any(k in e for k in ('notice', 'a4 paper', 'poster')):   # 通知/海报特写：对准那张纸（原来对准人脸，s04_02 拍成人脸大特写、又不换脸，写实化画出一个女生，2026-11-24）
+        nt = next((o for o in bpy.data.objects if o.name.startswith('prop_notice')), None)
+        if nt is not None: return (lambda: nt.matrix_world.translation.copy()), None
     return None
 
 FIXED_ID = {'lin': 1, 'chen': 2, 'zhou': 3, 'wang': 4, 'mom': 5, 'classA': 6, 'classB': 7}   # 每个角色在全片里的固定遮罩编号
