@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """握手机特写检查：角色摆出拿手机的姿势，从三个方向拍右手特写 → build/review/handphone_<cid>.png（拼图由调用方做）
 blender -b --factory-startup -P blender/tests/hand_phone.py -- <cid> [arms ...]"""
 import os, sys
@@ -16,8 +16,8 @@ sc = bpy.context.scene
 rig = shoot.append_cast(cid)
 realism.apply_hdri('dorm_am')
 held = shoot.make_phone(cid + '_held'); held.parent = rig; held.parent_type = 'BONE'; held.parent_bone = 'wrist.R'
-shoot.setup_held_phone(held, rig) if hasattr(shoot, 'setup_held_phone') else None
-if not hasattr(shoot, 'setup_held_phone'):
+shoot.setup_held_phone(held, rig) if hasattr(shoot, 'setup_held_phone') and not os.environ.get('HP_Y') else None
+if not hasattr(shoot, 'setup_held_phone') or os.environ.get('HP_Y'):
     hz = float(os.environ.get('HP_Z', '0.03')); hinf = float(os.environ.get('HP_INF', '0.85'))
     held.location = (0.0, float(os.environ.get('HP_Y', '0.06')), hz)
     held.rotation_euler = tuple(float(v) for v in os.environ.get('HP_ROT', '0,0,0').split(','))
@@ -29,10 +29,18 @@ sc.render.engine = 'BLENDER_EEVEE_NEXT'; sc.render.resolution_x = sc.render.reso
 out = os.path.join(config.ROOT, 'build', 'review', 'handphone'); os.makedirs(out, exist_ok=True)
 for i, a in enumerate(ARMS):
     poses.apply_state(rig, dict(pos=(0, 0, 0), yaw=0, base='stand', arms=a), frame=i + 1)
-    life.hands(rig, i + 1, True, a in ('phone2',))
+    life.hands(rig, i + 1, True, bool(poses.ARMS[a].get('support')))
 for i, a in enumerate(ARMS):
     sc.frame_set(i + 1); bpy.context.view_layer.update()
     scr_ = next(o for o in bpy.data.objects if o.name.startswith('prop_screen_') and '_held' in o.name); nrm = (scr_.matrix_world.to_3x3() @ Vector((0, 0, 1))).normalized(); hp_ = poses.head_pos(rig); print('SCREENDOT', a, round(nrm.dot((hp_ - scr_.matrix_world.translation).normalized()), 2))
+    body_ = next(o for o in rig.children if o.type == 'MESH' and o.name.endswith('_body')); ph_ = next(o for o in bpy.data.objects if o.name.startswith('prop_phonebody_') and '_held' in o.name)
+    ev_ = body_.evaluated_get(bpy.context.evaluated_depsgraph_get()); m_ = ev_.to_mesh(); inv_ = ph_.matrix_world.inverted() @ body_.matrix_world
+    lo_ = [min(c[k] for c in ph_.bound_box) for k in range(3)]; hi_ = [max(c[k] for c in ph_.bound_box) for k in range(3)]
+    s_ = ph_.scale; qs_ = [inv_ @ v.co for v in m_.vertices]; qs_ = [Vector((q.x * s_.x, q.y * s_.y, q.z * s_.z)) for q in qs_]; lo_ = [lo_[k] * s_[k] for k in range(3)]; hi_ = [hi_[k] * s_[k] for k in range(3)]   # 机身是缩放过的单位立方体，换回米; ev_.to_mesh_clear()
+    ins_ = [q for q in qs_ if all(lo_[k] < q[k] < hi_[k] for k in range(3))]
+    near_ = [q for q in qs_ if all(lo_[k] - 0.003 < q[k] < hi_[k] + 0.003 for k in range(2)) and lo_[2] - 0.004 < q[2] < lo_[2]]   # 贴在背面 4mm 以内的点
+    print('INSIDE', a, len(ins_), 'max_depth_mm', round(1000 * max([min(q[2] - lo_[2], hi_[2] - q[2]) for q in ins_] or [0]), 1), 'back_contact', len(near_))
+    if os.environ.get('HP_NORENDER'): continue
     w = rig.matrix_world @ rig.pose.bones['wrist.R'].tail
     for j, off in enumerate((Vector((0, -0.35, 0.05)), Vector((-0.3, -0.15, 0.1)), Vector((0.15, 0.25, 0.25)))):
         cam.location = w + off; cam.rotation_euler = (w - cam.location).to_track_quat('-Z', 'Y').to_euler()

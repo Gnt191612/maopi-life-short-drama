@@ -41,6 +41,87 @@ def append_cast(cid):
 
 make_phone = phone_ui.make_phone   # 每个角色一部手机：机身 + 屏幕面（prop_screen_<cid>）+ 屏幕界面
 
+def setup_held_phone(held, rig=None):
+    """手机贴在右手掌心：手腕骨局部轴（实测）——+Y 指向手指、−X 是掌心朝向、+Z 是食指/拇指一侧。
+    手机竖着：长边沿食指→小指方向（+Z 为手机顶端），屏幕朝掌心外（−X），四指横托在背面、指尖到手机另一侧边，拇指搭在屏幕上。
+    （2026-11-24 用户：四指以内一半在背面、一半在侧面，拇指在正面操作；原来手机按固定偏移挂着，插在手掌里/横在指缝间）
+    骨骼父级的原点在骨骼尾端（腕骨长 3.9cm），所以 Y 要减去骨长"""
+    held.location = (-0.032, 0.13 - 0.039, 0.035)   # grip_search.py 搜出来：手指贴合背面、几乎不穿模
+    held.rotation_mode = 'XYZ'
+    held.rotation_euler = Matrix(((0, 0, -1), (-1, 0, 0), (0, 1, 0))).to_euler('XYZ')
+    for c in list(held.constraints): held.constraints.remove(c)
+    if rig is not None: fit_held_phone(held, rig)
+
+def fit_held_phone(held, rig, gap=0.0006):
+    """按这个角色自己的手型校准握手机（2026-11-24：各角色手大小不同，固定偏移下陈瑶 5 个点、林晓 46 个点插进手机；
+    用户：四指一半在背面、一半在侧面，背面的四指要贴合不穿模，拇指在正面操作）：
+    1) 四指和手掌落在手机投影里的点，沿屏幕方向（腕骨 −X）推/拉手机，让背面刚好贴着手指；
+    2) 还插在手机里的指尖，那根手指末两节逐步少弯 4°，直到不穿模 → rig['grip_ovr']；
+    3) 拇指转过来搭在屏幕上（三轴搜索：不穿模、指肚离屏幕最近、伸进屏幕约 1.5cm）→ rig['thumb_rot']。
+    结果按角色缓存在 build/cache/grip_<cid>.json（手型、握法参数变了自动重算）"""
+    body = next((o for o in rig.children if o.type == 'MESH' and o.name.endswith('_body')), None)
+    if body is None: return
+    import numpy as np, itertools, math
+    W, H, T = phone_ui.W, phone_ui.H, phone_ui.T
+    cid = rig.name.replace('_rig', '')
+    key = [life.GRIP, life.GRIP_THUMB, list(held.location), W, H, T, len(body.data.vertices), 2]
+    cache = os.path.join(config.ROOT, 'build', 'cache', 'grip_%s.json' % cid)
+    try:
+        cc = json.load(open(cache, encoding='utf-8'))
+        if cc['key'] == json.loads(json.dumps(key)):
+            held.location.x = cc['x']; rig['grip_ovr'] = cc['ovr']; rig['thumb_rot'] = cc['thumb']
+            rig['phone_c'] = tuple(held.location[i] + (rig.pose.bones['wrist.R'].length if i == 1 else 0) for i in range(3)); return
+    except Exception: pass
+    pb = rig.pose.bones
+    names = {g.index: g.name for g in body.vertex_groups if g.name in pb}   # 只看骨骼权重组（还有 Left/Right 之类整侧标记组，权重都是 1）
+    ev = body.evaluated_get(bpy.context.evaluated_depsgraph_get()); m = ev.to_mesh()   # 评估后的网格（遮罩修改器删了辅助几何）顶点数和原网格不同
+    grp = []
+    for v in m.vertices:
+        gs = [x for x in v.groups if x.group in names]; grp.append(names[max(gs, key=lambda x: x.weight).group] if gs else '')
+    ev.to_mesh_clear(); grp = np.array(grp)
+    handR = np.array([g.endswith('.R') and g.startswith(('finger', 'metacarpal', 'wrist')) for g in grp])
+    four = handR & ~np.array([g.startswith('finger1-') for g in grp]); ttip = grp == 'finger1-3.R'
+    def sample():
+        bpy.context.view_layer.update()
+        ev = body.evaluated_get(bpy.context.evaluated_depsgraph_get()); m = ev.to_mesh()
+        co = np.empty(len(m.vertices) * 3, np.float32); m.vertices.foreach_get('co', co); co = co.reshape(-1, 3); ev.to_mesh_clear()
+        Mb = np.array(body.matrix_world, np.float32); wv = co @ Mb[:3, :3].T + Mb[:3, 3]
+        Wi = np.array((rig.matrix_world @ pb['wrist.R'].matrix).inverted(), np.float32)
+        q = wv @ Wi[:3, :3].T + Wi[:3, 3] - (np.array(held.location, np.float32) + np.array((0, pb['wrist.R'].length, 0), np.float32))
+        return -q[:, 1], q[:, 2], -q[:, 0]   # 手机局部：X=-Y_w, Y=+Z_w, Z(屏幕)=-X_w
+    def inside(px, py, pz, mask, mg=0.0):
+        return mask & (np.abs(px) < W / 2 + mg) & (np.abs(py) < H / 2 + mg) & (np.abs(pz) < T / 2 + mg * 0.3)
+    def set_thumb(ax, ay, az, b2):
+        pb['finger1-1.R'].rotation_euler = (math.radians(ax), math.radians(ay), math.radians(az))
+        for n in ('finger1-2.R', 'finger1-3.R'): pb[n].rotation_euler = (math.radians(b2), 0, 0)
+    rig['grip_ovr'] = {}; rig['thumb_rot'] = [-60, 0, 0, 0]
+    life.hands(rig, None, True, False); set_thumb(-60, 0, 0, 0)             # 先把拇指让开
+    px, py, pz = sample()
+    foot = four & (np.abs(px) < W / 2) & (np.abs(py) < H / 2) & (pz > -T / 2 - 0.03) & (pz < T / 2)
+    if foot.any(): held.location.x -= float(np.max(pz[foot])) + T / 2 + gap   # 正数 = 推离手掌；负数 = 拉近去贴住手指
+    ovr = {}
+    for _ in range(12):
+        px, py, pz = sample(); ins = inside(px, py, pz, four, 0.001)
+        bad = {g.split('-')[0] for g in grp[ins] if g.startswith('finger')}
+        if not bad: break
+        for fg in bad:
+            for j in (2, 3): n = '%s-%d.R' % (fg, j); ovr[n] = ovr.get(n, life.GRIP[j - 1]) - 4; pb[n].rotation_euler = (math.radians(ovr[n]), 0, 0)
+    best = None
+    for th in itertools.product(range(-10, 41, 10), range(-40, 31, 10), range(-40, 21, 10), (0, 15, 30)):
+        set_thumb(*th); px, py, pz = sample()
+        if inside(px, py, pz, handR, 0.0003).any(): continue
+        t = ttip & (np.abs(px) < W / 2 - 0.004) & (np.abs(py) < H / 2)
+        if not t.any(): continue
+        sc = abs(float(np.min(pz[t])) - T / 2 - 0.001) * 1000 + abs(float(np.mean(px[t])) - (W / 2 - 0.015)) * 100
+        if best is None or sc < best[0]: best = (sc, list(th))
+    rig['grip_ovr'] = ovr; rig['thumb_rot'] = best[1] if best else [-60, 0, 0, 0]
+    life.hands(rig, None); bpy.context.view_layer.update()
+    rig['phone_c'] = tuple(held.location[i] + (pb['wrist.R'].length if i == 1 else 0) for i in range(3))
+    print('PHONE FIT', cid, 'x', round(held.location.x, 4), 'ovr', ovr, 'thumb', rig['thumb_rot'][:], flush=True)
+    try:
+        os.makedirs(os.path.dirname(cache), exist_ok=True)
+        json.dump(dict(key=key, x=held.location.x, ovr=ovr, thumb=list(rig['thumb_rot'])), open(cache, 'w', encoding='utf-8'))
+    except Exception as e: print('grip cache skip', e)
 def show_phone(pair, frame, in_hand):
     held, rest = pair
     for o, vis in ((held, in_hand), (rest, not in_hand)):
@@ -691,7 +772,7 @@ def build_segment(seg_id, scene, set_name, beats):
     talk_spans = {}
     for cid, rig in rigs.items():   # 手上一部（挂手骨）+ 放下的一部（固定位置），按拿起/放下切换显示
         held = make_phone(cid + '_held'); held.parent = rig; held.parent_type = 'BONE'; held.parent_bone = 'wrist.R'
-        held.location = (0.0, 0.07, 0.04)   # 手机贴在掌心一侧、手指轻握在背面。原来位置在手背一侧、再被「对准脸」约束转动，手机板直接插在手掌里（2026-11-23 用户指出）；去掉约束后屏幕仍朝脸（实测夹角余弦 0.95）
+        setup_held_phone(held, rig)
         rest = make_phone(cid + '_rest'); rest.location = B.get('phones', {}).get(cid, (0, -60, -10))
         phones[cid] = (held, rest)
     state = {cid: dict(init.get(cid, dict(pos=(0, 0, 0), yaw=0, base='stand', arms='down'))) for cid in rigs}
@@ -709,7 +790,7 @@ def build_segment(seg_id, scene, set_name, beats):
     TURN = 6                                   # 走路拐弯时的转身帧数
     def grips(st):
         a = st.get('arms', 'down'); prop = poses.ARMS[a].get('prop')
-        return (prop in ('hand', 'ear', 'tray') or a == 'cup', a in ('phone2', 'phone_up', 'tray'))
+        return (prop in ('hand', 'ear', 'tray') or a == 'cup', a in ('phone_up', 'tray') or bool(poses.ARMS[a].get('support')))   # 左手只在真的托着东西时握
     def heading(p0, p1, fallback):
         d = Vector(p1[:2]) - Vector(p0[:2])
         return math.degrees(math.atan2(-d.x, d.y)) + 180 if d.length > 0.05 else fallback

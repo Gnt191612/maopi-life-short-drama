@@ -52,7 +52,7 @@ DOWN_R = (V(-0.12, 0.02, -1), V(-0.05, -0.15, -1))
 ARMS = {
  'down':       dict(R=DOWN_R),
  'phone':      dict(R=(V(-0.15, -0.35, -0.92), V(0.25, -0.75, 0.6)), L=DOWN_R, head=V(0, -0.4, 0.92), prop='hand'),          # 单手拿手机看
- 'phone2':     dict(R=(V(-0.12, -0.35, -0.93), V(0.32, -0.8, 0.5)), head=V(0, -0.45, 0.9), prop='hand', support=True),   # 双手托住手机两侧、拇指在屏幕上（原来右手横捏手机、左手悬空，2026-11-24 试跑）
+ 'phone2':     dict(R=(V(-0.12, -0.35, -0.93), V(0.32, -0.8, 0.5)), L=DOWN_R, head=V(0, -0.45, 0.9), prop='hand'),   # 单手拿低一点看（用户：单手握手机更常见，不用都改双手，2026-11-24；需要双手时加 support=True）
  'phone_up':   dict(R=(V(-0.1, -0.45, 0.2), V(0.2, 0.1, 1)), L=(V(0.1, -0.45, 0.2), V(-0.2, 0.1, 1)), prop='hand'),          # 躺着举在脸上方
  'selfie':     dict(R=(V(-0.35, -0.85, 0.3), V(-0.15, -0.95, 0.25)), L=DOWN_R, prop='hand', head=V(0, -0.12, 0.99)),   # 举起手机时抬头平视（原来默认低头，只拍到头顶）
  'phone_ear':  dict(R=(V(-0.55, -0.15, -0.8), V(0.25, 0.05, 1)), L=DOWN_R, prop='ear'),
@@ -241,18 +241,38 @@ def apply_state(rig, st, frame=None, lag=0):
         if kind == 'seat' and SUPPORT_ON: clear_space(rig, zmin_rel=0.25, radius=(0.75 if st.get('base') == 'slump' else 0.34))   # 趴桌：前倾的头和上身也要查（林晓胖，头伸进桌后书架 14cm）   # 坐着：上身/头别钻进书架、桌上隔板
     elif st.get('base', 'stand') in ('stand', 'crouch', 'stand_rest') and SUPPORT_ON: clear_space(rig)
     if a.get('hand'): body_hands(rig, Rb, a['hand'], a.get('pole'), a.get('wrist'))
+    if st.get('arms') in ('phone', 'phone2', 'selfie', 'phone_up'): orient_phone_hand(rig, Rb)   # 屏幕正对眼睛
     if a.get('support'): support_phone(rig, Rb)   # 双手拿手机：右手握着，左手托住手机另一侧
     if st.get('arms') == 'pat': pat_shoulder(rig, Rb, st.get('reach'))   # 拍肩：手真正落在旁边那个人的肩膀上（原来只是把胳膊伸直指向一个固定点，人一动手就悬在半空/床架边，2026-11-24 试跑）   # 身体定位以后再摆手（坐稳/推开之后身体位置才确定）
     if frame is not None: key(rig, frame, lag)
 
+PHONE_C = Vector((-0.032, 0.13, 0.035))   # 手机中心在右手腕骨局部的位置（与 shoot.setup_held_phone 一致）
+
+def _set_wrist(rig, side, xw, yw, zw):
+    """把腕骨转到给定的世界朝向（X/Y/Z 三根轴），位置不变"""
+    pb = rig.pose.bones['wrist.' + side]; W = rig.matrix_world @ pb.matrix
+    R = Matrix((xw, yw, zw)).transposed().to_quaternion()
+    pb.matrix = rig.matrix_world.inverted() @ Matrix.LocRotScale(W.translation, R, Vector((1, 1, 1)))
+    pb.scale = (1, 1, 1); bpy.context.view_layer.update()
+
+def orient_phone_hand(rig, Rb):
+    """右手转到屏幕正对眼睛：掌心朝向（腕骨 −X）指向眼睛，手机顶端（+Z）朝上"""
+    pb = rig.pose.bones
+    eye = rig.matrix_world @ pb['head'].tail.lerp(pb['head'].head, 0.45)
+    c = (rig.matrix_world @ pb['wrist.R'].matrix) @ Vector(rig.get('phone_c', PHONE_C))
+    s = (eye - c).normalized(); u = Rb @ Vector((0, 0, 1)); u = (u - s * u.dot(s)).normalized()
+    _set_wrist(rig, 'R', -s, u.cross(-s), u)
+
 def support_phone(rig, Rb):
-    """左手托住右手里手机的另一侧：手机中心按 shoot 里挂手机的偏移（手腕骨局部 (0, 0.07, 0.04)）算"""
-    pb = rig.pose.bones; Mw = rig.matrix_world @ pb['wrist.R'].matrix
-    c = Mw @ Vector((0, 0.07, 0.04))
-    left = Rb @ Vector((1, 0, 0)); up = Rb @ Vector((0, 0, 1)); fwd = Rb @ Vector((0, -1, 0))
-    hd = rig.matrix_world @ pb['head'].head; n = (hd - c).normalized()   # 屏幕朝向眼睛，手机背面在反方向
-    _two_bone(rig, 'L', c + left * 0.06 - up * 0.05 - n * 0.045, -up * 1.2 + left * 0.5)
-    aim(rig, 'wrist.L', (-left * 0.55 + up * 0.75 - n * 0.3).normalized())   # 手指朝右上、贴着手机背面
+    """双手拿手机：左手在右手后面一起托住手机背面（四指一前一后叠着），拇指搭在屏幕上"""
+    pb = rig.pose.bones; W = rig.matrix_world @ pb['wrist.R'].matrix
+    c = W @ Vector(rig.get('phone_c', PHONE_C)); s = -(W.to_3x3() @ Vector((1, 0, 0))).normalized()   # 屏幕朝向
+    u = (W.to_3x3() @ Vector((0, 0, 1))).normalized()                      # 手机顶端方向
+    r = u.cross(s)                                                          # 左手手指方向（朝身体右侧）
+    # 左手掌心贴手机背面、在右手四指后面一层；手掌偏下、手指伸向右手那边
+    tgt = c - s * 0.050 - u * 0.03 - r * 0.13   # 左手掌心隔着右手四指（厚约 1.6cm）贴在手机背面
+    _two_bone(rig, 'L', tgt, -(Rb @ Vector((0, 0, 1))) * 1.2 + (Rb @ Vector((1, 0, 0))) * 0.5)
+    _set_wrist(rig, 'L', s, u.cross(s), u)   # 左手掌心（+X）朝屏幕方向，手指（+Y）= u×s 指向身体右侧
 def pat_shoulder(rig, Rb, hint=None):
     """拍肩：找离 hint（或自己）最近的另一个人，手腕落在他靠近自己一侧的肩膀上方 6cm、手肘朝下"""
     me = rig.matrix_world @ rig.pose.bones['upperarm01.R'].head
