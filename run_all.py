@@ -38,14 +38,16 @@ def segment(seg_id, n_frames):
     n_frames = real_frames(n_frames)
     done = len(glob.glob(os.path.join(out, 'beauty_*.png')))
     if done >= n_frames and os.path.exists(os.path.join(config.SHOTS, seg_id + '.blend')): return True
-    for f in glob.glob(os.path.join(out, '*.png')): os.remove(f)
+    partial = bool(os.environ.get('V11_RENDER_BEATS'))   # 局部补拍：只渲部分镜头，不能清空其它帧，也不能按总帧数判失败（11-25：原来每段都重跑了一遍）
+    if not partial:
+        for f in glob.glob(os.path.join(out, '*.png')): os.remove(f)
     t0 = time.time()
     with open(os.path.join(config.LOGS, 'blender_%s.log' % seg_id), 'w', encoding='utf-8') as lf:
         r = subprocess.run([BL, '-b', '--factory-startup', '-P', os.path.join(config.BLENDER_SCRIPTS, 'shoot_segment.py'), '--', seg_id],
                            stdout=lf, stderr=lf, env=config.blender_env())
     n = len(glob.glob(os.path.join(out, 'beauty_*.png'))); n_frames = real_frames(n_frames)
     log('segment', seg_id, 'rc=%d' % r.returncode, 'frames %d/%d' % (n, n_frames), '%.0fs' % (time.time() - t0))
-    return r.returncode == 0 and n >= n_frames
+    return r.returncode == 0 and (partial or n >= n_frames)
 
 def load_wav(p, sr=48000):
     r = subprocess.run([FF, '-v', 'error', '-i', p, '-f', 'f32le', '-ac', '1', '-ar', str(sr), '-'], capture_output=True, check=True)

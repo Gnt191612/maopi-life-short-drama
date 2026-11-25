@@ -858,7 +858,14 @@ def build_segment(seg_id, scene, set_name, beats):
                 sb_, nb_ = start.get('base', 'stand'), new.get('base', 'stand')
                 seatish = lambda b_: poses.SUPPORTED.get(b_) == 'seat'
                 fw = Vector((math.sin(math.radians(new['yaw'])), -math.cos(math.radians(new['yaw'])), 0))
-                poses.apply_state(rig, start, f0, lag=LAG)
+                e_ = (bt.get('en') or '').lower()
+                pre_ = (('close-up of' in e_ or 'close-up over' in e_) and any(k in e_ for k in OBJ_CLOSE['hands'] + OBJ_CLOSE['phone'])
+                        and sb_ == nb_ and (Vector(start['pos'][:2]) - Vector(new['pos'][:2])).length < 0.05 and f0 > 20)
+                if pre_:   # 手/手机特写只换手臂姿势：在上一个镜头末尾就换好（剪在动作上），特写一开场手已就位。原来第一帧手臂正从自拍姿势落下、整条小臂横在镜头前，写实化首帧糊成一团（s01_12，2026-11-25）
+                    d_ = min(max(6, arg), 14)
+                    poses.apply_state(rig, start, f0 - d_ - 1); poses.apply_state(rig, new_l, f0 - 1); poses.apply_state(rig, new_l, f0)
+                else:
+                    poses.apply_state(rig, start, f0, lag=LAG)
                 if seatish(sb_) and nb_ == 'stand':
                     # 起身（按力学分阶段）：前倾、双手挪到膝盖上方撑住 -> 手撑腿蹬起（手按在腿上、手臂随身体升高伸直）
                     # -> 臀部离开椅面后松手，手臂靠惯性甩下（回弹缓动略过头再回来）-> 直起身略后仰 -> 站稳
@@ -871,10 +878,10 @@ def build_segment(seg_id, scene, set_name, beats):
                     p_ = Vector(new['pos']) + fw * 0.12
                     poses.apply_state(rig, dict(new_l, base='rise', pos=tuple(p_), arms=start.get('arms', 'down')), f0 + round((fe - f0) * 0.55), lag=LAG)
                     poses.apply_state(rig, dict(new_l, lean=-3), fe, lag=LAG); poses.apply_state(rig, new_l, fe + 9)
-                else:
+                elif not pre_:
                     poses.apply_state(rig, new_l, fe, lag=LAG)
                 poses.apply_state(rig, new_l, f1)
-                t_change = (f0 + fe) // 2
+                t_change = f0 + 1 if pre_ else (f0 + fe) // 2
             elif kind == 'climb':    # 挪到床边 -> 转身面向梯子 -> 双手扶梯一级级踩下来 -> 落地
                 prev_f = f0; poses.apply_state(rig, start, f0, lag=LAG)
                 for k_, (fr_, st_) in enumerate(arg):
