@@ -95,7 +95,7 @@ SCN = {
     's06_03': {'chen': S(pos=(-0.35, -0.6, 0), face=-90, arms='cup', reach=(-1.25, -0.45, 0.80))},
     's06_04': {'chen': S(pos=(-0.15, -0.05, 0), face=-120, base='sit', arms='gesture', reach=None)},
     's06_05': {'lin': Bl(0.8, base='sit', arms='desk')},
-    's06_07': {'lin': S(arms='cover_face'), 'chen': S(arms='pat', reach=(-0.85, -0.35, 1.25))},
+    's06_07': {'lin': S(arms='cover_face'), 'chen': S(pos=(-0.42, -0.62, 0), face=-120, base='stand', arms='pat', reach=(-0.85, -0.35, 1.25))},   # 先起身走到林晓身边再拍肩（原来坐在 0.9m 外的凳子上伸手，够不着，2026-11-24）
     's06_08': {'lin': Bl(1.0, arms='phone'), 'chen': S(arms='down', reach=None)},
    }),
  # ---------------- 第三幕 · 夜晚操场（含回忆） ----------------

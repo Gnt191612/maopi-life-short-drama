@@ -52,7 +52,7 @@ DOWN_R = (V(-0.12, 0.02, -1), V(-0.05, -0.15, -1))
 ARMS = {
  'down':       dict(R=DOWN_R),
  'phone':      dict(R=(V(-0.15, -0.35, -0.92), V(0.25, -0.75, 0.6)), L=DOWN_R, head=V(0, -0.4, 0.92), prop='hand'),          # 单手拿手机看
- 'phone2':     dict(R=(V(-0.12, -0.3, -0.94), V(0.3, -0.85, 0.42)), head=V(0, -0.45, 0.9), prop='hand'),                       # 双手打字
+ 'phone2':     dict(R=(V(-0.12, -0.35, -0.93), V(0.32, -0.8, 0.5)), head=V(0, -0.45, 0.9), prop='hand', support=True),   # 双手托住手机两侧、拇指在屏幕上（原来右手横捏手机、左手悬空，2026-11-24 试跑）
  'phone_up':   dict(R=(V(-0.1, -0.45, 0.2), V(0.2, 0.1, 1)), L=(V(0.1, -0.45, 0.2), V(-0.2, 0.1, 1)), prop='hand'),          # 躺着举在脸上方
  'selfie':     dict(R=(V(-0.35, -0.85, 0.3), V(-0.15, -0.95, 0.25)), L=DOWN_R, prop='hand', head=V(0, -0.12, 0.99)),   # 举起手机时抬头平视（原来默认低头，只拍到头顶）
  'phone_ear':  dict(R=(V(-0.55, -0.15, -0.8), V(0.25, 0.05, 1)), L=DOWN_R, prop='ear'),
@@ -240,9 +240,34 @@ def apply_state(rig, st, frame=None, lag=0):
         place_hands()                                                 # 坐稳后高度变了，再落一次手
         if kind == 'seat' and SUPPORT_ON: clear_space(rig, zmin_rel=0.25, radius=(0.75 if st.get('base') == 'slump' else 0.34))   # 趴桌：前倾的头和上身也要查（林晓胖，头伸进桌后书架 14cm）   # 坐着：上身/头别钻进书架、桌上隔板
     elif st.get('base', 'stand') in ('stand', 'crouch', 'stand_rest') and SUPPORT_ON: clear_space(rig)
-    if a.get('hand'): body_hands(rig, Rb, a['hand'], a.get('pole'), a.get('wrist'))   # 身体定位以后再摆手（坐稳/推开之后身体位置才确定）
+    if a.get('hand'): body_hands(rig, Rb, a['hand'], a.get('pole'), a.get('wrist'))
+    if a.get('support'): support_phone(rig, Rb)   # 双手拿手机：右手握着，左手托住手机另一侧
+    if st.get('arms') == 'pat': pat_shoulder(rig, Rb, st.get('reach'))   # 拍肩：手真正落在旁边那个人的肩膀上（原来只是把胳膊伸直指向一个固定点，人一动手就悬在半空/床架边，2026-11-24 试跑）   # 身体定位以后再摆手（坐稳/推开之后身体位置才确定）
     if frame is not None: key(rig, frame, lag)
 
+def support_phone(rig, Rb):
+    """左手托住右手里手机的另一侧：手机中心按 shoot 里挂手机的偏移（手腕骨局部 (0, 0.07, 0.04)）算"""
+    pb = rig.pose.bones; Mw = rig.matrix_world @ pb['wrist.R'].matrix
+    c = Mw @ Vector((0, 0.07, 0.04))
+    left = Rb @ Vector((1, 0, 0)); up = Rb @ Vector((0, 0, 1)); fwd = Rb @ Vector((0, -1, 0))
+    hd = rig.matrix_world @ pb['head'].head; n = (hd - c).normalized()   # 屏幕朝向眼睛，手机背面在反方向
+    _two_bone(rig, 'L', c + left * 0.06 - up * 0.05 - n * 0.045, -up * 1.2 + left * 0.5)
+    aim(rig, 'wrist.L', (-left * 0.55 + up * 0.75 - n * 0.3).normalized())   # 手指朝右上、贴着手机背面
+def pat_shoulder(rig, Rb, hint=None):
+    """拍肩：找离 hint（或自己）最近的另一个人，手腕落在他靠近自己一侧的肩膀上方 6cm、手肘朝下"""
+    me = rig.matrix_world @ rig.pose.bones['upperarm01.R'].head
+    ref = Vector(hint) if hint is not None else me
+    best = None
+    for o in bpy.data.objects:
+        if o is rig or o.type != 'ARMATURE' or not o.name.endswith('_rig') or o.pose.bones.get('upperarm01.L') is None: continue
+        for s in 'LR':
+            p = o.matrix_world @ o.pose.bones['upperarm01.' + s].head
+            d = (p - me).length + 0.5 * (p - ref).length
+            if (p - me).length < 1.3 and (best is None or d < best[0]): best = (d, p)
+    if best is None: return
+    up = Rb @ Vector((0, 0, 1)); left = Rb @ Vector((1, 0, 0))
+    _two_bone(rig, 'R', best[1] + Vector((0, 0, 0.06)), -up * 1.2 - left * 0.4)
+    aim(rig, 'wrist.R', ((best[1] - me).normalized() * 0.5 + Vector((0, 0, -0.8))).normalized())   # 手掌朝下按在肩上
 def body_anchor(rig, name, Rb):
     """身体部位的世界坐标（随当前姿势）：头顶、眼睛、下巴、耳朵、后颈、胸口、小腹、胯部"""
     M = rig.matrix_world; pb = rig.pose.bones
