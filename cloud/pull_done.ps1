@@ -7,7 +7,7 @@ $R = Split-Path $PSScriptRoot -Parent   # 仓库根目录（原来写死 D:\v11�
 $log = "$R\build\logs\pull_done.log"
 function L($m) { Add-Content $log -Encoding utf8 -Value ("{0:MM-dd HH:mm:ss} {1}" -f (Get-Date), $m) }
 $Key = Join-Path $env:USERPROFILE '.ssh\xiangongyun_ed25519'
-$Opt = @('-i', $Key, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=20')
+$Opt = @('-i', $Key, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=20', '-o', 'ServerAliveInterval=15', '-o', 'ServerAliveCountMax=3')   # 连接断了 45 秒内自动退出（11-25：一条 ssh 卡了 4 小时，取回全停）
 $dst = "$R\build\cloud_out\pulled\real"; New-Item -ItemType Directory -Force $dst | Out-Null
 $dst2 = "$R\build\cloud_out\pulled_rerun\real"; New-Item -ItemType Directory -Force $dst2 | Out-Null
 $RERUN0 = [DateTimeOffset]::new([datetime]'2026-11-25 08:40').ToUnixTimeSeconds()
