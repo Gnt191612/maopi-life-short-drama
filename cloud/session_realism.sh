@@ -49,6 +49,10 @@ case $STAGE in
   *) echo "未知阶段 $STAGE" ;;
 esac
 RC=$?; [ $RC = 124 ] && echo "!! 超时被中止（防止空烧钱）"
-cd $OUT && tar -czf /root/v11_result_$STAGE.tgz --exclude=vtmp --exclude='real/*/frame_*' probe.* kf real intro_hd*.gif video_progress.log comfy.log 2>/dev/null   # 逐帧 PNG 不传（本地从 mp4 还原，省下载时间）
+if [ -n "$PRE" ]; then   # 只跑部分镜头时只打包这些镜头的结果（其余镜头本地已经逐步取回，2026-11-25 用户：拍完尽快关机）
+  cd $OUT && tar -czf /root/v11_result_$STAGE.tgz $(for p in $PRE; do ls -d real/$p*.mp4 kf/$p*.png 2>/dev/null; done) video_progress.log comfy.log 2>/dev/null
+else
+  cd $OUT && tar -czf /root/v11_result_$STAGE.tgz --exclude=vtmp --exclude='real/*/frame_*' probe.* kf real intro_hd*.gif video_progress.log comfy.log 2>/dev/null
+fi   # 逐帧 PNG 不传（本地从 mp4 还原，省下载时间）
 echo "[$(date +%T)] 阶段 $STAGE 结束 rc=$RC，结果 /root/v11_result_$STAGE.tgz ($(du -h /root/v11_result_$STAGE.tgz | cut -f1))"
 touch $OUT/DONE_$STAGE
