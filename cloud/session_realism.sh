@@ -35,8 +35,8 @@ case $STAGE in
          timeout 900 python3 keyframes.py $PACK ${PRE:-$FIRST}
          timeout 1800 python3 video_run.py $PACK --test --only ${PRE:-$FIRST} ;;
   video) timeout ${V11_VIDEO_MAX:-7200} python3 video_run.py $PACK ${PRE:+--only ${PRE// /,}} ;;
-  all)   timeout ${V11_KEYS_MAX:-3600} python3 keyframes.py $PACK $PRE
-         timeout ${V11_VIDEO_MAX:-7200} python3 video_run.py $PACK ${PRE:+--only ${PRE// /,}} ;;
+  all)   timeout ${V11_KEYS_MAX:-21600} python3 keyframes.py $PACK $PRE   # 原来 1 小时：11-25 补跑 65 个镜头时关键帧只做了 36 张就被强制结束，37 个镜头没有关键帧、视频阶段全部跳过
+         timeout ${V11_VIDEO_MAX:-43200} python3 video_run.py $PACK ${PRE:+--only ${PRE// /,}} ;;   # 原来 2 小时，补跑几十个镜头不够
   intro) # 只做片头：Claude 娘竖屏 720x1280 讲解版两个候选（扇子合着）
          INTRO_STYLE=talk INTRO_TAG=intro_hd INTRO_W=720 INTRO_H=1280 timeout 3000 python3 intro_video.py intro_green_portrait.png 19 7 ;;
   final) # 一次成片（11-22 用户：下次开机连 Claude 娘带正片全部解决）：片头竖屏精修 → 全片关键帧 → 全片视频
