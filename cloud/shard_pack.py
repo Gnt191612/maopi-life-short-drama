@@ -7,11 +7,16 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import shard
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PACK = os.path.join(ROOT, 'dist', 'cloud_pack')
-i, n = int(sys.argv[1]), int(sys.argv[2])
-mine = shard.assign(PACK, n)[0][i - 1]
+if sys.argv[1] == 'only':   # 试跑：python cloud/shard_pack.py only s02_01_0539,s09_01_0384 → 只带这几个镜头的素材（上行慢，不传全片）
+    pre = [x for x in sys.argv[2].split(',') if x]
+    mine = [t for t in json.load(open(os.path.join(PACK, 'manifest.json'), encoding='utf-8'))['tasks'] if any(t.startswith(p) for p in pre)]
+    i, n = 0, 0
+else:
+    i, n = int(sys.argv[1]), int(sys.argv[2])
+    mine = shard.assign(PACK, n)[0][i - 1]
 man = json.load(open(os.path.join(PACK, 'manifest.json'), encoding='utf-8'))
 need_refs = set()
-out = os.path.join(ROOT, 'dist', 'cloud_pack_s%dof%d.zip' % (i, n))
+out = os.path.join(ROOT, 'dist', 'cloud_pack_only.zip' if n == 0 else 'cloud_pack_s%dof%d.zip' % (i, n))
 with zipfile.ZipFile(out, 'w', zipfile.ZIP_STORED) as z:
     base = os.path.dirname(PACK)
     z.write(os.path.join(PACK, 'manifest.json'), os.path.relpath(os.path.join(PACK, 'manifest.json'), base))

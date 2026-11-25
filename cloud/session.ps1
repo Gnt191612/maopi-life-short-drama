@@ -31,6 +31,10 @@ try {
         $si, $sn = $Shard -split '/'; & python (Join-Path $Root 'cloud\shard_pack.py') $si $sn
         $zip = Join-Path $Root "dist\cloud_pack_s${si}of${sn}.zip"
     }
+    if ($Only -and -not $Shard -and $Stage -notin 'probe', 'intro') {   # 试跑几个镜头：只传这几个镜头的素材
+        & python (Join-Path $Root 'cloud\shard_pack.py') only $Only
+        $zip = Join-Path $Root 'dist\cloud_pack_only.zip'
+    }
     if ($Stage -notin 'probe', 'intro') {
         if (-not (Test-Path $zip)) { throw '没有 dist\cloud_pack.zip：先在本地跑 cloud\prep_trial.ps1' }
         $local = (Get-Item $zip).Length; $remote = (Rx "stat -c %s /root/v11_upload/cloud_pack.zip 2>/dev/null || echo 0") -as [long]
@@ -40,7 +44,9 @@ try {
         } else { Write-Host '    素材包已在云端（大小一致），跳过上传' }
     }
     if ($Stage -in 'final', 'intro') {   # 片头竖屏首帧 + 上次已出且规则没变的关键帧（省时间）
-        & scp.exe @Opt -P $Port (Join-Path $Root 'mascot\claude_girl\image\green_first_portrait.png') "${SshHost}:/root/ComfyUI/input/intro_green_portrait.png"
+        if ($Stage -eq 'intro' -or -not (Test-Path (Join-Path $Root 'build\cloud_out\intro_hd\intro_hd1.gif'))) {   # 本地已有片头（11-22 生成）就不再让云端重做（新实例上会白跑 40 分钟）
+            & scp.exe @Opt -P $Port (Join-Path $Root 'mascot\claude_girl\image\green_first_portrait.png') "${SshHost}:/root/ComfyUI/input/intro_green_portrait.png"
+        } else { Rx 'rm -f /root/ComfyUI/input/intro_green_portrait.png'; Write-Host '    片头本地已有，云端不再生成' }
         $kfs = Get-ChildItem (Join-Path $Root 'build\cloud_out\reuse_kf') -Filter *.png -ErrorAction SilentlyContinue
         if ($kfs -and $Stage -eq 'final') { Rx 'mkdir -p /root/v11_out/kf'; & scp.exe @Opt -P $Port @($kfs.FullName) "${SshHost}:/root/v11_out/kf/" }
     }
