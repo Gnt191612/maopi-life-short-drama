@@ -179,7 +179,7 @@ def hide_range(names, frame0, frame1, protect=()):
 
 HIDEABLE = ('furn_', 'prop_', 'ext_lamp', 'ext_trunk', 'ext_crown', 'ext_bike', 'ext_column', 'ext_bench', 'ext_bin', 'ext_sign', 'ext_hedge', 'ext_flower')
 
-FIXED = ('prop_notice', 'furn_counter', 'furn_window_sign', 'furn_cooler', 'furn_trayrack', 'furn_washbasin', 'furn_washmirror', 'furn_poster', 'furn_banner', 'furn_menuboard', 'furn_shelf', 'furn_bookshelf', 'furn_post', 'furn_ladder', 'furn_rail', 'furn_bed_', 'furn_mattress', 'furn_quilt', 'furn_pillow',
+FIXED = ('prop_notice', 'furn_blackboard', 'furn_backboard', 'furn_noticeboard', 'furn_clock', 'furn_pushdesk', 'furn_counter', 'furn_window_sign', 'furn_cooler', 'furn_trayrack', 'furn_washbasin', 'furn_washmirror', 'furn_poster', 'furn_banner', 'furn_menuboard', 'furn_shelf', 'furn_bookshelf', 'furn_post', 'furn_ladder', 'furn_rail', 'furn_bed_', 'furn_mattress', 'furn_quilt', 'furn_pillow',
          'furn_desk', 'furn_sink', 'furn_cabinet', 'furn_wardrobe', 'furn_mirror')   # 固定在墙上/地上的家具不能临时移走（墙上书架、上床下桌的床架和梯子、书桌、洗手台），2026-11-23 用户：机位要符合现实
 
 def _movable(name):

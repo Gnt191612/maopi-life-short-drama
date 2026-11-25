@@ -450,6 +450,21 @@ def classroom():
         rot = a - math.radians(90)
         chair('furn_circlechair_%s' % who, (x, y, 0), rot, col)
         marks[who + '_seat'] = (x, y, 0, math.degrees(rot))
+    # 西墙、南墙原来空白：视频自己补出窗户、海报，镜头之间背景来回跳（2026-11-25 衔接检查，同图书馆/食堂）
+    # → 围圈开班会时课桌推到墙边（西墙一排、南墙门右侧一排）；南墙后黑板报、西墙软木公告栏和宣传画、黑板上方挂钟
+    for k, y in enumerate((-2.7, -1.5, -0.3, 0.9, 2.1)):
+        table('furn_pushdesk_w%d' % k, (0.6, 1.1), (-W / 2 + 0.4, y, 0), col)
+    for k, x in enumerate((-1.6, -0.4, 0.8, 2.0, 3.2)):
+        table('furn_pushdesk_s%d' % k, (1.1, 0.6), (x, -D / 2 + 0.4, 0), col)
+    box('furn_backboard', (3.6, 0.04, 1.2), (0.8, -D / 2 + 0.08, 1.15), (0.2, 0.32, 0.25), col)
+    for k, (x, c_) in enumerate(((-0.4, (0.85, 0.4, 0.3)), (0.5, (0.9, 0.8, 0.4)), (1.5, (0.4, 0.6, 0.85)), (2.2, (0.95, 0.95, 0.9)))):
+        box('furn_backboard_paper%d' % k, (0.5, 0.01, 0.4), (x, -D / 2 + 0.105, 1.45 - (k % 2) * 0.5), c_, col)
+    box('furn_noticeboard', (0.03, 1.8, 1.0), (-W / 2 + 0.075, 0.0, 1.25), (0.65, 0.5, 0.32), col)
+    for k, y in enumerate((-0.5, 0.2, 0.6)):
+        box('furn_noticeboard_paper%d' % k, (0.01, 0.3, 0.4), (-W / 2 + 0.095, y, 1.45 - (k % 2) * 0.45), (0.95, 0.95, 0.9), col)
+    for k, y in enumerate((-2.6, 2.4)):
+        box('furn_poster%d' % k, (0.02, 0.6, 0.85), (-W / 2 + 0.075, y, 1.35), ((0.3, 0.5, 0.75), (0.8, 0.35, 0.25))[k], col)
+    cyl('furn_clock', 0.16, 0.04, (0, D / 2 - 0.08, 2.55), (0.95, 0.95, 0.95), col, rot=(math.radians(90), 0, 0))
     light('light_sun', 'SUN', (8, 0, 5), 3.5, (1, 0.93, 0.82), (45, 0, 110))
     light('light_fill', 'AREA', (0, 0, 3.1), 250, size=5)
     world((0.85, 0.85, 0.9), 0.6)
