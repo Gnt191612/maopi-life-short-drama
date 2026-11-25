@@ -44,8 +44,8 @@ case $STAGE in
          if [ -f /root/ComfyUI/input/intro_green_portrait.png ] && [ ! -f $OUT/intro_hd1.gif ] && [ "$SIDX" = "1" ]; then
            INTRO_STYLE=talk INTRO_TAG=intro_hd INTRO_W=720 INTRO_H=1280 timeout 2400 python3 intro_video.py intro_green_portrait.png 19 7
          fi
-         timeout ${V11_KEYS_MAX:-21600} python3 keyframes.py $PACK $PRE
-         timeout ${V11_VIDEO_MAX:-43200} python3 video_run.py $PACK ${PRE:+--only ${PRE// /,}} ;;
+         timeout ${V11_KEYS_MAX:-32400} python3 keyframes.py $PACK $PRE   # 单台跑全片：关键帧最多 9 小时
+         timeout ${V11_VIDEO_MAX:-61200} python3 video_run.py $PACK ${PRE:+--only ${PRE// /,}} ;;   # 视频最多 17 小时（总预算由本地 -MaxHours 控制）
   *) echo "未知阶段 $STAGE" ;;
 esac
 RC=$?; [ $RC = 124 ] && echo "!! 超时被中止（防止空烧钱）"
