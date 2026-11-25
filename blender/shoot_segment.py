@@ -27,6 +27,15 @@ shoot.setup_render(out)
 bpy.context.scene.frame_step = step
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(config.SHOTS, seg_id + '.blend'))
 print('SEGMENT BUILT', seg_id, 'frames', bpy.context.scene.frame_end, '%.0fs' % (time.time() - t0), flush=True)
-if not norender:
+only_beats = {b for b in os.environ.get('V11_RENDER_BEATS', '').split(',') if b}
+if not norender and only_beats:   # 局部补拍：只渲涉及这些拍的镜头（整段动画照样搭好，只是不渲其它帧；2026-11-24 用户：60 秒里只有 3 秒有问题就只重拍那 3 秒）
+    sc = bpy.context.scene; n_end = max(b['f1'] for b in timeline); bounds = [c[0] for c in cuts] + [n_end + 1]
+    for k in range(len(cuts)):
+        f0, f1 = bounds[k], bounds[k + 1] - 1
+        if f1 < f0 or not any(b['id'] in only_beats and b['f0'] <= f1 and b['f1'] >= f0 for b in timeline): continue
+        sc.frame_start, sc.frame_end = f0, f1; bpy.ops.render.render(animation=True)
+        print('RANGE RENDERED', seg_id, f0, f1, flush=True)
+    print('SEGMENT RENDERED', seg_id, '%.0fs' % (time.time() - t0), flush=True)
+elif not norender:
     bpy.ops.render.render(animation=True)
     print('SEGMENT RENDERED', seg_id, '%.0fs' % (time.time() - t0), flush=True)

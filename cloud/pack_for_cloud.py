@@ -41,11 +41,13 @@ def face_crop(c, im):
     h, w = im.shape[:2]
     cv2.imwrite(os.path.join(OUT, 'refs', 'canonface_%s.jpg' % c), im[max(0, y0):min(h, y1), max(0, x0):min(w, x1)], [cv2.IMWRITE_JPEG_QUALITY, 95])
 
+ONLY_BEATS = {b for b in os.environ.get('V11_RENDER_BEATS', '').split(',') if b}   # 和 shoot_segment.py 局部补拍用同一个变量
+
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
     segs = [s for s in S.segments() if not args or s[0] in args]
     if '--update' in sys.argv and os.path.isdir(OUT):   # 只重打给定片段（其余镜头任务保留），补拍个别片段后不用全部重打
-        for sid_ in {s[0] for s in segs}:
+        for sid_ in ({s[0] for s in segs} if not ONLY_BEATS else ()):   # 局部补拍时只重打涉及这些拍的镜头（下面逐个删）
             for d_ in glob.glob(os.path.join(OUT, sid_ + '_*')): shutil.rmtree(d_, ignore_errors=True)
     elif os.path.isdir(OUT): shutil.rmtree(OUT)
     os.makedirs(os.path.join(OUT, 'refs'), exist_ok=True)
@@ -69,7 +71,8 @@ def main():
             descs = [byid[b['id']].get('en') for b in bts if byid.get(b['id'], {}).get('en')]
             en = descs[0] if descs else last_en; last_en = en or last_en
             chars = sorted({CID[c] for b in bts for c in byid.get(b['id'], {}).get('chars', []) if c in CID})
-            tid = '%s_%04d' % (sid, f0); td = os.path.join(OUT, tid); os.makedirs(td)
+            if ONLY_BEATS and not any(b['id'] in ONLY_BEATS for b in bts): continue   # 局部补拍：其它镜头保留旧任务
+            tid = '%s_%04d' % (sid, f0); td = os.path.join(OUT, tid); shutil.rmtree(td, ignore_errors=True); os.makedirs(td)
             for kind in ('beauty', 'depth', 'pose'):
                 fr = [os.path.join(REN if kind != 'pose' else config.RENDERS, sid, '%s_%04d.png' % (kind, f)) for f in range(f0, f1 + 1)]
                 fr = [p for p in fr if os.path.exists(p)]
