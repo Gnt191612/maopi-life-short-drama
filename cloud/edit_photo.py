@@ -15,8 +15,17 @@ import time, urllib.request, urllib.parse
 for _ in range(300):
     time.sleep(3); h = comfy_run._get('/history/' + pid)
     if pid in h and h[pid].get('outputs'):
-        for o in h[pid]['outputs'].values():
-            for im in o.get('images', []):
+        # 工作流同时输出「前后对比图」（两张并排）和结果图：原来取第一张，取到的是对比图，视频里出现两个林母（2026-11-25）。
+        # 现在把所有输出都下载下来，挑宽高比最接近原图的那张（结果图）
+        from PIL import Image   # 云端系统 python 不一定有 cv2，用 PIL
+        w0, h0 = Image.open(os.path.join('/root/ComfyUI/input', src)).size; r0 = w0 / h0
+        cands = []
+        for k, o in enumerate(h[pid]['outputs'].values()):
+            for j, im in enumerate(o.get('images', [])):
+                if im.get('type') == 'temp' and any(x.get('type') != 'temp' for oo in h[pid]['outputs'].values() for x in oo.get('images', [])): continue
                 q = urllib.parse.urlencode({'filename': im['filename'], 'subfolder': im['subfolder'], 'type': im['type']})
-                p = os.path.join(comfy_run.OUT, name + '.png'); open(p, 'wb').write(urllib.request.urlopen(comfy_run.URL + '/view?' + q).read()); print('SAVED', p, flush=True); sys.exit(0)
+                p = os.path.join(comfy_run.OUT, '%s_c%d%d.png' % (name, k, j)); open(p, 'wb').write(urllib.request.urlopen(comfy_run.URL + '/view?' + q).read())
+                w1, h1 = Image.open(p).size; cands.append((abs(w1 / h1 - r0), p))
+        if cands:
+            best = min(cands)[1]; p = os.path.join(comfy_run.OUT, name + '.png'); os.replace(best, p); print('SAVED', p, 'from', len(cands), 'outputs', flush=True); sys.exit(0)
 print('FAIL', flush=True)
