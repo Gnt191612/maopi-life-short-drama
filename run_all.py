@@ -94,11 +94,19 @@ def previs(seg_ids, out_mp4):
     beat_t = {}                                        # 拍 -> (开始秒, 结束秒)，配乐按拍定位
     for sid in seg_ids:
         tl = json.load(open(os.path.join(config.SHOTS, sid + '_timeline.json'), encoding='utf-8'))
-        frames = sorted(glob.glob(os.path.join(config.RENDERS, sid, 'beauty_*.png')))
+        # 帧列表按时间轴（1..最后一拍的 f1）排，不按白模帧文件：局部补拍曾把部分片段的白模帧清掉，原来只认白模帧，
+        # 成片少了近 4 分钟（应 600 秒只合出 381 秒），配音字幕也跟着错位（2026-11-25）。写实帧优先，其次白模帧，都没有就沿用上一帧
+        n_end = max(b['f1'] for b in tl)
+        grey = {int(f[-8:-4]): f for f in glob.glob(os.path.join(config.RENDERS, sid, 'beauty_*.png'))}
+        real = {}
         if REAL_DIR:   # 云端写实化回来的画面（out/<镜头任务>/frame_####.png）优先，缺的帧用白模补
-            real = {}
             for f in glob.glob(os.path.join(REAL_DIR, sid + '_*', 'frame_*.png')): real[int(f[-8:-4])] = f
-            frames = [real.get(int(f[-8:-4]), f) for f in frames]
+        frames, last = [], None
+        for k in range(1, n_end + 1):
+            last = real.get(k) or grey.get(k) or last
+            if last is None: last = next((grey[x] for x in sorted(grey)), None) or next((real[x] for x in sorted(real)), None)
+            if last: frames.append(last)
+        if len(frames) < n_end: log('片段帧不全', sid, len(frames), n_end)
         lst += frames
         for b in tl:
             beat_t[b['id']] = (t + (b['f0'] - 1) / 24.0, t + b['f1'] / 24.0)
