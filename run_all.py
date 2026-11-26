@@ -100,7 +100,9 @@ def previs(seg_ids, out_mp4):
         grey = {int(f[-8:-4]): f for f in glob.glob(os.path.join(config.RENDERS, sid, 'beauty_*.png'))}
         real = {}
         if REAL_DIR:   # 云端写实化回来的画面（out/<镜头任务>/frame_####.png）优先，缺的帧用白模补
-            for f in glob.glob(os.path.join(REAL_DIR, sid + '_*', 'frame_*.png')): real[int(f[-8:-4])] = f
+            dirs = sorted(glob.glob(os.path.join(REAL_DIR, sid + '_*')), key=lambda d: (not d.endswith('_aligned'), d))   # 重对齐的旧画面先放，之后取回的新镜头覆盖它（cloud/realign.py）
+            for d in dirs:
+                for f in glob.glob(os.path.join(d, 'frame_*.png')): real[int(f[-8:-4])] = f
         frames, last = [], None
         for k in range(1, n_end + 1):
             last = real.get(k) or grey.get(k) or last

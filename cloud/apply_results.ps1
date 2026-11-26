@@ -1,0 +1,30 @@
+﻿# 云端结果一条命令替换进成片（本地）：
+#   powershell -ExecutionPolicy Bypass -File cloud\apply_results.ps1 -From build\cloud_out\pulled_next\real [-Only s02_01_0852,s03_02_0001]
+# 1) 把取回的 <任务id>.mp4 复制进 final_all\real，拆成逐帧（帧号 = 任务起始帧，和白模时间轴一致）
+# 2) 检查帧数是否等于 task.json 里的帧数（不一致说明白模时间轴改过、云端用的是旧素材，会提示）
+# 3) 多人镜头导出白模头部位置 → face_unify 逐帧统一五官
+# 4) make_final：先 realign（节奏调整过的片段自动重对齐），再合成成片
+param([Parameter(Mandatory = $true)][string]$From, [string]$Only = '', [switch]$NoFinal)
+$ErrorActionPreference = 'Continue'
+$R = Split-Path $PSScriptRoot -Parent; Set-Location $R
+$dst = Join-Path $R 'build\cloud_out\final_all\real'; $heads = Join-Path $R 'build\cloud_out\final_all\heads'
+$env:BLENDER_USER_RESOURCES = Join-Path $R '.tools\blender_user'; $env:PYTHONIOENCODING = 'utf-8'
+$ids = @()
+foreach ($m in Get-ChildItem $From -Filter *.mp4) {
+    $t = $m.BaseName; if ($Only -and ($Only -split ',') -notcontains $t) { continue }
+    $tj = Join-Path $R "dist\cloud_pack\$t\task.json"; if (-not (Test-Path $tj)) { Write-Host "跳过（没有这个任务）：$t"; continue }
+    $j = Get-Content $tj -Raw -Encoding utf8 | ConvertFrom-Json
+    if (Test-Path "$dst\$t") { Remove-Item "$dst\$t" -Recurse -Force }
+    Copy-Item $m.FullName "$dst\$t.mp4" -Force
+    & python cloud\pull_frames.py "$dst\$t.mp4" | Out-Null
+    $n = (Get-ChildItem "$dst\$t" -Filter frame_*.png).Count
+    if ($n -ne $j.n) { Write-Host "注意：$t 帧数 $n，任务应为 $($j.n)（白模时间轴可能改过，合成时会按时间轴截断或用白模补）" -ForegroundColor Yellow }
+    if (@($j.characters).Count -ge 2) {
+        & (Join-Path $R '.tools\blender\blender.exe') -b "build\shots\$($j.segment).blend" --factory-startup -P cloud\export_heads.py -- "$heads\$t.json" $j.frames[0] $j.frames[1] 2>$null | Out-Null
+    }
+    $ids += $t
+}
+if (-not $ids) { Write-Host '没有可替换的镜头'; exit }
+Write-Host ("替换 {0} 个镜头：{1}" -f $ids.Count, ($ids -join ' '))
+& python cloud\face_unify.py build\cloud_out\final_all @ids
+if (-not $NoFinal) { & powershell -NoProfile -ExecutionPolicy Bypass -File cloud\make_final.ps1 -Result (Join-Path $R 'build\cloud_out\final_all') }

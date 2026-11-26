@@ -38,7 +38,8 @@ try {
     & python blender\intro_compose.py
     Write-Host '[3/4] 正片（写实画面 + 配音字幕配乐）'
     $env:V11_PREVIEW = '1'      # 白模补位帧来自预览画质渲染目录（与打包时一致）
-    & python run_all.py --previs-only "--real=$Result\real"
+& python cloud\realign.py "$Result"   # 节奏调整过的片段按最新时间轴重对齐（第一次只建快照）
+        & python run_all.py --previs-only "--real=$Result\real"
     Write-Host '[4/4] 片头 + 正片'
     $film = 'build\final\v11_previs_full.mp4'; $out = 'build\final\毛坯人生，精装朋友圈_成片.mp4'
     & $FF -v error -y -i build\intro\intro.mp4 -i $film -filter_complex "[0:v]scale=1920:1080,setsar=1,fps=24[v0];[1:v]scale=1920:1080,setsar=1,fps=24[v1];[0:a]aresample=48000,aformat=channel_layouts=stereo[a0];[1:a]aresample=48000,aformat=channel_layouts=stereo[a1];[v0][a0][v1][a1]concat=n=2:v=1:a=1[v][a]" -map "[v]" -map "[a]" -c:v libx264 -crf 18 -pix_fmt yuv420p -c:a aac -b:a 192k $out

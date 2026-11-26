@@ -50,4 +50,4 @@ for ($i = 0; $i -lt 90; $i++) {
 foreach ($t in 's03_02_0001', 's02_01_0852', 's02_01_1021') { & scp.exe @O -P $Port "${SshHost}:/root/v11_out/real/$t.mp4" "$dst\" 2>$null }
 & scp.exe @O -P $Port "${SshHost}:/root/v11_out/kf/s02_01_0852.png" "${SshHost}:/root/v11_out/kf/s03_02_0001.png" "$dst\" 2>$null
 & python cloud\pull_frames.py (Get-ChildItem $dst -Filter *.mp4).FullName | Out-Null
-Write-Host "完成：$dst 里是待审查的镜头和改过的关键帧；审查合格后复制进 build\cloud_out\final_all\real，再跑 face_unify.py 和 make_final.ps1。记得去控制台关机。"
+Write-Host "完成：$dst 里是待审查的镜头和改过的关键帧；审查合格后运行：powershell -File cloud\apply_results.ps1 -From build\cloud_out\pulled_next\real（可加 -Only 只替换合格的）。记得去控制台关机。"
