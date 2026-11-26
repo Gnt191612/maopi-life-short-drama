@@ -122,6 +122,24 @@ def fit_held_phone(held, rig, gap=0.0006):
         os.makedirs(os.path.dirname(cache), exist_ok=True)
         json.dump(dict(key=key, x=held.location.x, ovr=ovr, thumb=list(rig['thumb_rot'])), open(cache, 'w', encoding='utf-8'))
     except Exception as e: print('grip cache skip', e)
+BED_BASES = ('lie', 'sit_bed', 'hug_knees')
+def on_bed(st):
+    """在床上（躺、坐床沿、抱膝）的人不穿鞋（用户 11-26：床上的角色一般是不穿鞋的）"""
+    return st.get('base') in BED_BASES or (st.get('base') != 'stand' and len(st.get('pos', ())) > 2 and st['pos'][2] > 0.5 and 'sit' not in str(st.get('base')))
+
+def set_barefoot(rig, frame, bare):
+    """脱鞋/穿鞋：鞋子网格隐藏，同时关掉身体上「被鞋盖住的脚删掉」的遮罩修改器（不关的话脱了鞋就没有脚）"""
+    for c in rig.children:
+        if c.type != 'MESH': continue
+        if 'shoes' in c.name.lower():
+            c.hide_render = bare; c.hide_viewport = bare
+            c.keyframe_insert('hide_render', frame=frame); c.keyframe_insert('hide_viewport', frame=frame)
+        if c.name.endswith('_body'):
+            for m in c.modifiers:
+                if m.type == 'MASK' and 'shoes' in m.name.lower():
+                    m.show_render = not bare; m.show_viewport = not bare
+                    c.keyframe_insert('modifiers["%s"].show_render' % m.name, frame=frame); c.keyframe_insert('modifiers["%s"].show_viewport' % m.name, frame=frame)
+
 def show_phone(pair, frame, in_hand):
     held, rest = pair
     for o, vis in ((held, in_hand), (rest, not in_hand)):
@@ -846,7 +864,7 @@ def build_segment(seg_id, scene, set_name, beats):
             looks[cid] = start.get('look')
             if cid not in plans:
                 poses.apply_state(rig, start, f0); poses.apply_state(rig, start, f1)
-                hand_ev[cid].append((f0, grips(start)))
+                hand_ev[cid].append((f0, grips(start))); set_barefoot(rig, f0, on_bed(start))
                 continue
             kind, new, arg = plans[cid]
             new_l = dict(new, look=start.get('look'))
@@ -926,6 +944,7 @@ def build_segment(seg_id, scene, set_name, beats):
                     poses.key(rig, t_change)
             show_phone(phones[cid], t_change, has)
             hand_ev[cid].append((f0, grips(start))); hand_ev[cid].append((t_change, grips(new)))
+            set_barefoot(rig, f0, on_bed(start)); set_barefoot(rig, max(f0, t_change), on_bed(new))   # 上床脱鞋、下床落地再穿上
         # 1b) 生活小动作：不说话的人在较长的镜头里做一次自己的习惯动作；说长句的人换一种说话手势（各有性格）
         for cid, rig in rigs.items():
             talking = cid == speaker
