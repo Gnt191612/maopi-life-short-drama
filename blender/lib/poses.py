@@ -53,7 +53,7 @@ ARMS = {
  'down':       dict(R=DOWN_R),
  'phone':      dict(R=(V(-0.15, -0.35, -0.92), V(0.25, -0.75, 0.6)), L=DOWN_R, head=V(0, -0.4, 0.92), prop='hand'),          # 单手拿手机看
  'phone2':     dict(R=(V(-0.12, -0.35, -0.93), V(0.32, -0.8, 0.5)), L=DOWN_R, head=V(0, -0.45, 0.9), prop='hand'),   # 单手拿低一点看（用户：单手握手机更常见，不用都改双手，2026-11-24；需要双手时加 support=True）
- 'phone_up':   dict(R=(V(-0.3, -0.9, -0.1), V(0.55, -0.35, 0.7)), L=(V(0.3, -0.9, -0.1), V(-0.55, -0.35, 0.7)), prop='hand'),   # 躺着举在脸正上方：大臂朝天花板、小臂收回到脸的上方（原来两手伸到头顶后面、手机在头顶外，2026-11-24 关键帧检查）          # 躺着举在脸上方
+ 'phone_up':   dict(R=(V(-0.3, -0.9, -0.1), V(0.55, -0.35, 0.7)), L=DOWN_R, prop='hand'),   # 左手放身侧（原来也举着空拳，像在比划，11-26）   # 躺着举在脸正上方：大臂朝天花板、小臂收回到脸的上方（原来两手伸到头顶后面、手机在头顶外，2026-11-24 关键帧检查）          # 躺着举在脸上方
  'selfie':     dict(R=(V(-0.35, -0.85, 0.3), V(-0.15, -0.95, 0.25)), L=DOWN_R, prop='hand', head=V(0, -0.12, 0.99)),   # 举起手机时抬头平视（原来默认低头，只拍到头顶）
  'phone_ear':  dict(R=(V(-0.55, -0.15, -0.8), V(0.25, 0.05, 1)), L=DOWN_R, prop='ear'),
  'brush':      dict(R=(V(-0.2, -0.5, -0.85), V(0.45, -0.45, 0.75)), L=(V(0.55, -0.15, 0.6), V(-0.35, 0.2, 0.9)), head=V(0, -0.25, 0.97)),
@@ -261,7 +261,18 @@ def orient_phone_hand(rig, Rb):
     eye = rig.matrix_world @ pb['head'].tail.lerp(pb['head'].head, 0.45)
     c = (rig.matrix_world @ pb['wrist.R'].matrix) @ Vector(rig.get('phone_c', PHONE_C))
     s = (eye - c).normalized(); u = Rb @ Vector((0, 0, 1))
-    if abs(u.z) < 0.5:   # 躺着：手机举在脸上方基本是水平的，侧面机位（上铺贴着天花板，镜头只能从侧面平拍）只看到一条薄边，写实化画成了一根黑棍（s03_01，2026-11-25）
+    if abs(u.z) < 0.5:   # 躺着：先定手机（脸正上方 30cm、屏幕朝眼睛、朝房间中间斜 35°），再反推手腕、用 IK 把手送过去握住。
+        # 原来是直接转手腕来斜手机，手机挂在腕骨外 13cm，一转就甩到拳头下面，看着像没拿着（用户 11-26 指出）
+        cp = eye + Vector((0, 0, 0.30)) - u * 0.03
+        sp = (eye - cp).normalized(); room = Vector((-cp.x, -cp.y, 0))
+        if room.length > 1e-3: room.normalize(); sp = (sp * math.cos(math.radians(35)) + room * math.sin(math.radians(35))).normalized()
+        up = (u - sp * u.dot(sp)).normalized(); xw = -sp; yw = up.cross(xw)
+        Rm = Matrix((xw, yw, up)).transposed()
+        wrist_head = cp - Rm @ Vector(rig.get('phone_c', PHONE_C))
+        _two_bone(rig, 'R', wrist_head, (Rb @ Vector((-1, 0, 0))) * 1.0 - u * 0.6)   # 手肘朝身体外侧、略朝脚
+        _set_wrist(rig, 'R', xw, yw, up)
+        return
+    if False:   # 躺着：手机举在脸上方基本是水平的，侧面机位（上铺贴着天花板，镜头只能从侧面平拍）只看到一条薄边，写实化画成了一根黑棍（s03_01，2026-11-25）
         room = Vector((-c.x, -c.y, 0))                       # 现实里人会把手机朝外侧斜一点：屏幕法线朝房间中间（机位所在一侧）倾 35°，侧面能看到手机背面
         if room.length > 1e-3:
             room.normalize(); s = (s * math.cos(math.radians(50)) + room * math.sin(math.radians(50))).normalized()   # 35° 时侧面仍只见一条边、写实化还是画成细棍（11-25 补跑），加到 50°：侧面机位能看到一部分亮着的屏幕

@@ -793,7 +793,7 @@ def build_segment(seg_id, scene, set_name, beats):
     TURN = 6                                   # 走路拐弯时的转身帧数
     def grips(st):
         a = st.get('arms', 'down'); prop = poses.ARMS[a].get('prop')
-        return (prop in ('hand', 'ear', 'tray') or a == 'cup', a in ('phone_up', 'tray') or bool(poses.ARMS[a].get('support')))   # 左手只在真的托着东西时握
+        return (prop in ('hand', 'ear', 'tray') or a == 'cup', a in ('tray',) or bool(poses.ARMS[a].get('support')))   # 左手只在真的托着东西时握
     def heading(p0, p1, fallback):
         d = Vector(p1[:2]) - Vector(p0[:2])
         return math.degrees(math.atan2(-d.x, d.y)) + 180 if d.length > 0.05 else fallback
