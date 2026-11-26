@@ -20,9 +20,9 @@ try {
             Get-ChildItem $r -Filter 'intro_hd*.gif' | Copy-Item -Destination $merged -Force
         }
         Write-Host ("合并 {0} 台结果 → {1}（{2} 个镜头视频）" -f $Result.Count, $merged, (Get-ChildItem "$merged\real" -Filter *.mp4).Count)
-        $Result = $merged
-    } else { $Result = (Resolve-Path $Result[0]).Path }
-    if (-not (Get-ChildItem $Result -Filter 'intro_hd*.gif' -ErrorAction SilentlyContinue)) { Get-ChildItem (Join-Path $Root 'build\cloud_out\intro_hd') -Filter 'intro_hd*.gif' | Copy-Item -Destination $Result -Force; Write-Host '    云端没做片头：用本地已有的片头' }
+        $Result = [string]$merged   # 参数是 string[]，直接赋值还是数组，后面 Copy-Item -Destination 会报错（11-25）
+    } else { $Result = [string](Resolve-Path $Result[0]).Path }
+    if (-not (Get-ChildItem $Result -Filter 'intro_hd*.gif' -ErrorAction SilentlyContinue)) { Get-ChildItem (Join-Path $Root 'build\cloud_out\intro_hd') -Filter 'intro_hd*.gif' | Copy-Item -Destination ([string]($Result -join "")) -Force; Write-Host '    云端没做片头：用本地已有的片头' }
     Write-Host '[1/4] 写实视频拆帧'
     & python cloud\mp4_frames.py "$Result\real"
     Write-Host '[2/4] 片头'
