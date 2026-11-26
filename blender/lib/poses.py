@@ -264,7 +264,7 @@ def orient_phone_hand(rig, Rb):
     if abs(u.z) < 0.5:   # 躺着：手机举在脸上方基本是水平的，侧面机位（上铺贴着天花板，镜头只能从侧面平拍）只看到一条薄边，写实化画成了一根黑棍（s03_01，2026-11-25）
         room = Vector((-c.x, -c.y, 0))                       # 现实里人会把手机朝外侧斜一点：屏幕法线朝房间中间（机位所在一侧）倾 35°，侧面能看到手机背面
         if room.length > 1e-3:
-            room.normalize(); s = (s * math.cos(math.radians(35)) + room * math.sin(math.radians(35))).normalized()
+            room.normalize(); s = (s * math.cos(math.radians(50)) + room * math.sin(math.radians(50))).normalized()   # 35° 时侧面仍只见一条边、写实化还是画成细棍（11-25 补跑），加到 50°：侧面机位能看到一部分亮着的屏幕
     u = (u - s * u.dot(s)).normalized()
     _set_wrist(rig, 'R', -s, u.cross(-s), u)
 
