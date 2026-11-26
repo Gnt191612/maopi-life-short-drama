@@ -15,7 +15,8 @@ $fetch8 = 's03_03_0001 s06_01_0178 s06_01_0446 s07_00_0469 s07_01_0023 s07_04_00
 foreach ($t in $fetch8) { & scp.exe @O -P $Port "${SshHost}:/root/v11_out/real/$t.mp4" "$dst\" 2>$null }
 Write-Host ("取回 {0} 个待审查镜头 → {1}" -f (Get-ChildItem $dst -Filter *.mp4).Count, $dst)
 # 上传脚本和人物库标准照（图2）
-& scp.exe @O -P $Port cloud\edit_ref.py cloud\comfy_run.py "${SshHost}:/root/v11_upload/scripts/"
+& python -c "import sys,json; sys.path.insert(0,'cloud'); import looks; json.dump(dict(look=looks.LOOK, look_en=looks.LOOK_EN, name=looks.NAME), open('cloud/looks_gen.json','w',encoding='utf-8'), ensure_ascii=False, indent=1)"
+& scp.exe @O -P $Port cloud\edit_ref.py cloud\comfy_run.py cloud\keyframes.py cloud\video_run.py cloud\looks.py cloud\looks_gen.json "${SshHost}:/root/v11_upload/scripts/"   # 最新的关键帧提示（性别、发型、衣着）、同学乙新服装都在这几个文件里
 & scp.exe @O -P $Port dist\cloud_pack\refs\canon_chen.jpg dist\cloud_pack\refs\canon_mom.jpg "${SshHost}:/root/ComfyUI/input/"
 & python cloud\slim_pack.py s03_02_0001,s02_01_0852,s02_01_1021,s02_01_0450,s03_01_0001,s03_01_0152,s01_01_0348,s01_01_0411,s03_01_0181 dist\slim_next.zip
 & scp.exe @O -P $Port dist\slim_next.zip "${SshHost}:/root/v11_upload/cloud_pack.zip"
