@@ -33,8 +33,10 @@ SCN = {
  's02': dict(side=-1,
    init={'chen': dict(pos=(-2.6, -4.3, 0), face=180, base='sit', arms='desk'),
          'lin': dict(at='entrance', face=180, base='stand', arms='tray'),
-         'zhou': dict(pos=(-4.4, 4.3, 0), face=0, base='sit', arms='desk')},          # 角落里埋头刷题的学长
-   extras={'lib': ['周明远']},
+         'zhou': dict(pos=(-4.4, 4.3, 0), face=0, base='sit', arms='desk'),          # 角落里埋头刷题的学长
+         'classA': dict(pos=(1.45, 0.8, 0), face=0, base='sit', arms='desk'),       # 背景：中间那张长桌看书的同学甲
+         'classB': dict(pos=(0.55, 2.7, 0), face=180, base='sit', arms='desk')},    # 背景：靠里长桌写作业的同学乙
+   extras={'lib': ['周明远', '同学甲', '同学乙']},   # 背景学生：白模里没有别的学生时，视频会照着林晓「复制」出一个长得像他的路人（s02_01_0450，2026-11-25）；摆上长相明显不同的同学甲、乙
    phones={'lin': (6.2, -0.2, 0.76)},
    beats={
     's02_01': {'lin': Wk(pos=(-4.2, -2.9, 0), face=150, arms='tray')},
