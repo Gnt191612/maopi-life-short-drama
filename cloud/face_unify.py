@@ -44,6 +44,19 @@ def enhance(img, face, blend=0.8):
     back = cv2.warpAffine(y.astype(np.float32), inv, (w, h)); m = cv2.warpAffine(MASK, inv, (w, h))[:, :, None]
     return (img * (1 - m) + back * m).clip(0, 255).astype(np.uint8)
 
+def assign_by_pos(faces, heads, w, h):
+    """按白模头部位置认人：检测到的脸和白模里同一帧各角色头部投影最近的配对（白模里谁在画面哪里是确定的）"""
+    pairs = []
+    for i, f in enumerate(faces):
+        cx, cy = (f.bbox[0] + f.bbox[2]) / 2 / w, (f.bbox[1] + f.bbox[3]) / 2 / h
+        for c, (x, y, _) in heads.items():
+            if c in REF: pairs.append((((cx - x) ** 2 + (cy - y) ** 2) ** 0.5, i, c))
+    pairs.sort(); used_f, used_c, out = set(), set(), {}
+    for d, i, c in pairs:
+        if i in used_f or c in used_c or d > 0.22: continue   # 视频跑偏太多（离白模位置超过画面 22%）的不按位置配
+        out[i] = c; used_f.add(i); used_c.add(c)
+    return out
+
 def assign(faces, chars):
     """贪心：相似度最高的一对先配，一个角色只给一张脸；明显不是本镜头角色的脸（路人、同学）不换"""
     pairs = []
@@ -56,7 +69,7 @@ def assign(faces, chars):
         out[i] = c; used_f.add(i); used_c.add(c)
     return out
 
-def process(tdir, tid):
+def process(tdir, tid, heads=None):
     tj = os.path.join(PACK, tid, 'task.json')
     chars = json.load(open(tj, encoding='utf-8')).get('characters', []) if os.path.exists(tj) else []
     if not chars or os.path.exists(os.path.join(tdir, '.unified')): return 0
@@ -68,7 +81,12 @@ def process(tdir, tid):
             if getattr(f, 'pose', None) is not None and abs(float(f.pose[1])) > 70: continue   # 接近正侧面不换（换出来容易错位）
             faces.append(f)
         if not faces: continue
-        for i, c in assign(faces, chars).items():
+        hd = (heads or {}).get(str(int(os.path.basename(p)[6:10])))
+        got = assign_by_pos(faces, hd, img.shape[1], img.shape[0]) if hd and len(chars) > 1 else {}
+        if len(got) < len(faces):   # 位置配不上的脸，再按长相在剩下的角色里配
+            rest = [k for k in range(len(faces)) if k not in got]; left = [c for c in chars if c not in got.values()]
+            for k, c in assign([faces[k] for k in rest], left).items(): got[rest[k]] = c
+        for i, c in got.items():
             img = swapper.get(img, faces[i], REF[c], paste_back=True)
             img = enhance(img, faces[i]); n += 1
         cv2.imwrite(p, img)
@@ -84,5 +102,6 @@ if __name__ == '__main__':
     for tdir in sorted(d for d in glob.glob(os.path.join(real, '*')) if os.path.isdir(d)):
         tid = os.path.basename(tdir)
         if pre and not any(tid.startswith(x) for x in pre): continue
-        print(tid, '换脸', process(tdir, tid), flush=True)
+        hp = os.path.join(sys.argv[1], 'heads', tid + '.json')
+        print(tid, '换脸', process(tdir, tid, json.load(open(hp)) if os.path.exists(hp) else None), flush=True)
     print('FACE UNIFY DONE', flush=True)
