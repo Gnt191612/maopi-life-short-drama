@@ -26,7 +26,7 @@ get() {   # get <子目录> <文件名>：本地任意位置已有就跳过；�
   mv -f $M/$sub/$f.part $M/$sub/$f && echo "装好 $M/$sub/$f（$(( $(date +%s) - t0 )) 秒）"
 }
 FREE=$(df -BG --output=avail /root | tail -1 | tr -dc 0-9); echo "/root 剩余 ${FREE}G"
-[ "$FREE" -ge 30 ] || { echo "磁盘剩余不足 30G，先按 disk_report 清理（需用户确认）"; exit 1; }
+[ "$FREE" -ge 10 ] || { echo "磁盘剩余不足 10G，先按 disk_report 清理（需用户确认）"; exit 1; }   # 每个文件下载前 get() 还会单独查空间；模型都在时不该被拦（11-27 TDTJ 系统盘 125G）
 V=$(cd /root/ComfyUI && python3 -c "import comfyui_version as v; print(v.__version__)" 2>/dev/null || echo 0)
 echo "ComfyUI 版本 $V"
 get diffusion_models minimax_h3_fl2va_pruned_int8_convrot.safetensors

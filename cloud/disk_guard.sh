@@ -1,7 +1,7 @@
 #!/bin/bash
 # 磁盘体检（每次开机后、每轮开跑前自动运行，2026-11-27）：系统盘超过阈值就先清理再继续，避免像 4B5F 那样堆到开不了机
-#   bash disk_guard.sh [最少剩余G=80] [最多已用G=400]
-MINFREE=${1:-80}; MAXUSED=${2:-400}; S=$(dirname "$0")
+#   bash disk_guard.sh [最少剩余G=15] [最多已用G=400]   # 11-27：原来要求剩余 80G 是按 1TB 大盘定的，TDTJ 系统盘只有 125G（剩 22G）被误拦；全片实际需要约 5G（逐帧 PNG 合成后即删）
+MINFREE=${1:-15}; MAXUSED=${2:-400}; S=$(dirname "$0")
 read USED FREE <<< $(df -BG --output=used,avail /root | tail -1 | tr -dc '0-9 \n')
 echo "系统盘已用 ${USED}G、剩余 ${FREE}G（底线：剩余 ≥ ${MINFREE}G、已用 ≤ ${MAXUSED}G）"
 if [ "$FREE" -lt "$MINFREE" ] || [ "$USED" -gt "$MAXUSED" ]; then

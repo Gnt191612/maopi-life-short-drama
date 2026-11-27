@@ -201,6 +201,7 @@ for tid in man['tasks']:
     od = os.path.join(OUT, tid); shutil.rmtree(od, ignore_errors=True); os.makedirs(od)
     for i, f in enumerate(frames[:n24]): shutil.move(f, os.path.join(od, 'frame_%04d.png' % (task['frames'][0] + i)))
     ff('-framerate', '24', '-start_number', str(task['frames'][0]), '-i', os.path.join(od, 'frame_%04d.png'), '-c:v', 'libx264', '-crf', '14', '-pix_fmt', 'yuv420p', os.path.join(OUT, tid + '.mp4'))
+    if os.path.exists(os.path.join(OUT, tid + '.mp4')): shutil.rmtree(od, ignore_errors=True)   # 逐帧 PNG 合成 mp4 后即删（每镜约 300MB，全片会塞满 125G 系统盘，11-27）
     for a in sorted(glob.glob(os.path.join(TMP, '%s_*_audio.*' % tid))):   # 原生语音：多段按顺序接起来，存成 <id>.speech.wav
         shutil.copy(a, os.path.join(OUT, '%s.speech%s' % (tid, os.path.splitext(a)[1]))); break
     for f in glob.glob(os.path.join(TMP, '%s_*' % tid)): os.remove(f)

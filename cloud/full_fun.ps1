@@ -44,8 +44,8 @@ PYC=$(ls /root/miniconda3/envs/comfyui/bin/python 2>/dev/null || command -v pyth
 OUT=/root/v11_out; S=/root/v11_upload/scripts; PACK=/root/v11cloud/cloud_pack; rm -f $OUT/DONE_FULL
 sed -i 's/\r$//' $S/*.sh /root/v11_upload/*.sh 2>/dev/null   # Windows 写的脚本是 CRLF，bash 读不了（11-27）
 for f in $S/*.sh /root/v11_upload/*.sh; do [ -f $f ] && { bash -n $f || { echo "SYNTAX_FAIL $f" > $OUT/DONE_FULL; exit; }; }; done
+bash $S/disk_guard.sh > $OUT/full_disk.log 2>&1 || { echo DISK_LOW > $OUT/DONE_FULL; exit; }   # 踩坑记录 62；必须在解压之前跑：它的自动清理会删上传的 zip（11-27 重跑时解压失败）
 rm -rf /root/v11cloud; mkdir -p /root/v11cloud; python3 -c "import zipfile; zipfile.ZipFile('/root/v11_upload/full_fun.zip').extractall('/root/v11cloud')"; cp -f $PACK/refs/*.jpg /root/ComfyUI/input/ 2>/dev/null
-bash $S/disk_guard.sh > $OUT/full_disk.log 2>&1 || { echo DISK_LOW > $OUT/DONE_FULL; exit; }   # 踩坑记录 62
 bash $S/setup___ENGINE__.sh > $OUT/full_setup.log 2>&1 || { echo SETUP_FAIL > $OUT/DONE_FULL; exit; }
 ( bash $S/lipsync.sh setup > $OUT/full_lipsetup.log 2>&1 ) &
 for i in __REKEY__; do rm -f $OUT/kf/$i.png $OUT/kf/$i@*.png $OUT/kfbase_$i*.png $OUT/kfswap_$i*.png; done
