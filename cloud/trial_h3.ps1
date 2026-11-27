@@ -32,12 +32,13 @@ if ($Step -eq 'trial') {
     & python cloud\slim_pack.py ($ids -replace ' ', ',') dist\slim_trial_h3.zip --no-anchors --pose
     & scp.exe @O -P $Port cloud\video_h3.py cloud\setup_h3.sh cloud\lipsync.sh cloud\keyframes.py cloud\comfy_run.py cloud\looks.py cloud\looks_gen.json cloud\shard.py "${SshHost}:/root/v11_upload/scripts/"
     & scp.exe @O -P $Port dist\slim_trial_h3.zip "${SshHost}:/root/v11_upload/cloud_pack.zip"
+    & scp.exe @O -P $Port -r dist\moss_trial cloud\tts_moss.py cloud\setup_moss.sh "${SshHost}:/root/v11_upload/"   # MOSS-TTSD 对话配音对比（用户 11-27 同意）
     $sh = @'
 OUT=/root/v11_out; S=/root/v11_upload/scripts; PACK=/root/v11cloud/cloud_pack; rm -f $OUT/DONE_TRIAL
 rm -rf /root/v11cloud; mkdir -p /root/v11cloud; python3 -c "import zipfile; zipfile.ZipFile('/root/v11_upload/cloud_pack.zip').extractall('/root/v11cloud')"
 cp -f $PACK/refs/*.jpg /root/ComfyUI/input/ 2>/dev/null
 bash $S/setup_h3.sh > $OUT/trial_setup.log 2>&1 || { echo SETUP_FAIL > $OUT/DONE_TRIAL; exit; }
-( bash $S/lipsync.sh setup > $OUT/trial_lipsetup.log 2>&1 ) &
+( bash $S/lipsync.sh setup > $OUT/trial_lipsetup.log 2>&1; bash /root/v11_upload/setup_moss.sh > $OUT/trial_mosssetup.log 2>&1 ) &   # 口型、对话配音环境和视频生成同时装
 i=s01_01_0577; rm -f $OUT/kf/$i.png $OUT/kf/$i@*.png $OUT/kfbase_$i*.png $OUT/kfswap_$i*.png
 cd $S && python3 keyframes.py $PACK $i > $OUT/trial_keys.log 2>&1
 curl -s -X POST -H "Content-Type: application/json" -d '{"unload_models":true,"free_memory":true}' http://127.0.0.1:8188/free >/dev/null
@@ -47,6 +48,7 @@ python3 video_h3.py $PACK --only s06_01_0626 --res __RES__ --ref-audio --out $OU
 python3 video_h3.py $PACK --only s06_01_0626 --res __RES__ --speech --out $OUT/h3_speech > $OUT/trial_h3_speech.log 2>&1   # H3 自己说台词（原生语音 + 口型），音色照参考配音
 wait
 curl -s -X POST -H "Content-Type: application/json" -d '{"unload_models":true,"free_memory":true}' http://127.0.0.1:8188/free >/dev/null
+( cd /root/v11_upload/moss_trial && . /root/moss/venv/bin/activate && python /root/v11_upload/tts_moss.py dialog.json $OUT/moss > $OUT/trial_moss.log 2>&1; deactivate )   # 视频做完、显存空出来再跑对话配音
 mkdir -p $OUT/fun && cp -f $OUT/h3/s06_01_0626.mp4 $OUT/fun/ 2>/dev/null; bash $S/lipsync.sh run $PACK s06_01_0626 > $OUT/trial_lips.log 2>&1
 echo OK > $OUT/DONE_TRIAL
 '@
@@ -68,6 +70,8 @@ echo OK > $OUT/DONE_TRIAL
     $sp = Get-ChildItem $dst -Filter 's06_01_0626.speech.*' | Select-Object -First 1   # 原生语音版：画面配 H3 自己的声音
     if ($sp -and (Test-Path "$dst\s06_01_0626_speech_v.mp4")) { $FF0 = & python -c "import config;print(config.FFMPEG)"; & $FF0 -v error -y -i "$dst\s06_01_0626_speech_v.mp4" -i $sp.FullName -map 0:v -map 1:a -c:v copy -c:a aac -shortest "$cmp0\s06_01_0626_H3原生语音.mp4"; & $FF0 -v error -y -i $sp.FullName -ar 16000 -ac 1 "$dst\s06_01_0626_h3voice.wav" }
     Get1 '/root/v11_out/kf/s01_01_0577.png' "$dst\kf_s01_01_0577.png"
+    Get1 '/root/v11_out/moss/s06_dialog.wav' "$dst\moss_s06_dialog.wav"; Get1 '/root/v11_out/moss/s06_dialog.json' "$dst\moss_s06_dialog.json"
+    if (Test-Path "$dst\moss_s06_dialog.wav") { Copy-Item dist\moss_trial\current_s06_dialog.wav "$cmp0\配音对比_现在的IndexTTS2.wav"; Copy-Item "$dst\moss_s06_dialog.wav" "$cmp0\配音对比_MOSS-TTSD对话.wav"; Write-Host "配音对比（第二幕宿舍陈瑶和林晓三句对话）：$cmp0\配音对比_*.wav" }
     (Ssh1 'grep -h 完成 /root/v11_out/h3_progress.log') | Out-File -Encoding utf8 "$dst\speed.txt"
     & scp.exe @O -P $Port "${SshHost}:/root/v11_out/trial_*.log" "$dst\" 2>$null
     Get-ChildItem $dst | Select-Object Name, Length | Format-Table -AutoSize
