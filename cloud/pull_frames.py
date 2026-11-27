@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""把指定的几个 real/<任务id>.mp4 拆成 real/<任务id>/frame_####.png（帧号 = 任务 id 末尾的起始帧）。pull_done.ps1 逐步取回时用。"""
+"""把指定的几个 real/<任务id>.mp4 拆成 real/<任务id>/frame_####.png（帧号 = 任务 id 末尾的起始帧）。apply_results.ps1 替换镜头时用。"""
 import os, sys, cv2
 for p in sys.argv[1:]:
     d = p[:-4]; os.makedirs(d, exist_ok=True); f0 = int(os.path.basename(d)[-4:])

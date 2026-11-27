@@ -1,4 +1,5 @@
 #!/bin/bash
+# 【备选】H3 效果不行时才用；现行方案见 docs/模型选型.md。
 # 装 Wan2.2 Fun Control 14B（写实化实例上运行，2026-11-27）：先在 ComfyUI/models 里找，已有就跳过，没有才从 Hugging Face（国内走 hf-mirror）下载
 # 来源：Comfy-Org 官方重新打包的仓库（ComfyUI 官方教程 docs.comfy.org/tutorials/video/wan/wan2-2-fun-control 用的同一批文件）
 #   diffusion_models  wan2.2_fun_control_high_noise_14B_fp8_scaled.safetensors  约 14.3 GB

@@ -1,4 +1,4 @@
-﻿# 全片重做（新方案，2026-11-27 准备；试跑经用户确认合格后才用）：Wan2.2 Fun Control 白模动作控制 + LatentSync 口型同步
+﻿# 全片重做（现行方案，2026-11-27；试跑经用户确认合格后才用）：默认 MiniMax H3 + Fun ControlNet 白模动作控制（-Engine fun 可换备选 Wan2.2 Fun Control）+ LatentSync 口型同步
 #   1) powershell -ExecutionPolicy Bypass -File cloud\full_fun.ps1 -Step start -Res 832x480     # 上传全片素材，在云端排好整条流程（不用盯）
 #   2) powershell -ExecutionPolicy Bypass -File cloud\full_fun.ps1 -Step pull                    # 本地后台：每 10 分钟取回一批，马上替换进 final_fun、统一人脸，直到云端全部完成
 #   3) powershell -ExecutionPolicy Bypass -File cloud\full_fun.ps1 -Step final                   # 备份旧成片 → 合成新成片 → 跑审查（跑偏拼图、角色对照、台词对齐）

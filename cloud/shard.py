@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """多实例并行：把镜头任务按时长均衡分成 N 份（贪心：从长到短，每次放进当前总时长最短的那份），结果确定可复现。
-环境变量 V11_SHARD="i/N"（i 从 1 开始）；不设 = 全部任务。keyframes.py / video_run.py 共用。
+环境变量 V11_SHARD="i/N"（i 从 1 开始）；不设 = 全部任务。keyframes.py 用。
 本地查看分配：python cloud/shard.py <cloud_pack 目录> N"""
 import os, sys, json
 

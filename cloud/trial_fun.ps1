@@ -1,4 +1,5 @@
-﻿# 新方案试跑（本地一条命令，2026-11-27）：Wan2.2 Fun Control 白模动作控制 + LatentSync 口型同步，3 个代表镜头
+﻿# 【备选】H3 效果不行时才用；现行方案见 docs/模型选型.md。
+# 新方案试跑（本地一条命令，2026-11-27）：Wan2.2 Fun Control 白模动作控制 + LatentSync 口型同步，3 个代表镜头
 #   powershell -ExecutionPolicy Bypass -File cloud\trial_fun.ps1 -Step report   # 开机后先跑：磁盘清单（只看不删）→ build\review\disk_report.txt
 #   powershell -ExecutionPolicy Bypass -File cloud\trial_fun.ps1 -Step trial    # 装模型、重做 0577 首帧、生成 3 个镜头、对口型、取回、做新旧对比
 # 镜头：s01_01_0577（宿舍全景多人+走动）、s02_01_1021（图书馆两人互动）、s06_01_0626（陈瑶说话特写，对口型）

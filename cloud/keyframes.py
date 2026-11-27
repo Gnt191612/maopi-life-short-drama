@@ -2,7 +2,7 @@
 """每个镜头的写实关键帧（写实化实例上运行，用的是 11-19 已验证的做法）：
   镜头首帧白模 →「Krea2 二转三」写实化（保构图、姿势、服装，提示词带出场角色外貌）
             →「Qwen2.1 人物替换」逐个角色换成标准长相（图1 = assets/identity/<cid>.png，图2 = 上一步照片）
-结果 /root/v11_out/kf/<任务id>.png，后面 video_run.py 用它当图生视频的首帧。约 1~2 分钟/镜头（4090D）。
+结果 /root/v11_out/kf/<任务id>.png，后面 video_h3.py 用它当参考图（写实首帧定场景、衣着、光线）。约 1~2 分钟/镜头（4090D）。
 用法：python3 keyframes.py <cloud_pack 目录> [任务id前缀 ...]"""
 import os, sys, json, shutil, subprocess
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

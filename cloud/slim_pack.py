@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""精简补跑包（本地）：只带云端真正用到的文件 —— task.json、first.png（关键帧来源）、anchors.json + anchor_*.png（锚点模式）、
+"""精简包（本地）：只带云端真正用到的文件 —— task.json、first.png（关键帧来源）、depth.mp4 / pose.mp4（白模动作控制，--pose）、voice.wav（口型）；锚点图只给已弃用的旧做法用（现行加 --no-anchors）、
 出场角色的长相参考图。白模 beauty/depth/pose 视频现在的图生视频工作流用不到，不传（2026-11-25：实例空闲快自动关机，要尽快开跑）。
 用法：python cloud/slim_pack.py <任务id,任务id,...> <输出 zip>"""
 import os, sys, json, zipfile

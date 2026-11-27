@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """角色外貌描述（写实化提示词用），与 2026-11-22 定稿的白模、标准长相照片（assets/identity/<cid>.png）一致。
-云端脚本（keyframes.py / video_run.py）和本地打包（pack_for_cloud.py）共用。改了白模造型要同步改这里。"""
+云端脚本（keyframes.py / video_h3.py）和本地打包（pack_for_cloud.py）共用。改了白模造型要同步改这里。"""
 
 LOOK = {
  'lin':    '一位20岁体型偏胖的中国男大学生（圆脸双下巴、身形宽厚敦实，明显比同龄人胖，卫衣和T恤完整盖住身体），圆脸，小眼睛，略有双下巴，黑色碎发短发，穿深灰色开襟连帽卫衣、里面深灰色T恤、深蓝色牛仔裤，憨厚腼腆',
@@ -30,7 +30,7 @@ NEG_EN = ('exposed belly, bare stomach, shirt riding up, cartoon, anime, 3d rend
           'revealing clothing, cleavage, cosplay, sailor uniform, sexy, glowing eyes, red eyes, sudden new person appears, '
           'scene change, teleport, different room, morphing face, changing clothes')
 
-# 人物库优先（characters/<cid>/character.py 的 look / look_en）：本地直接读；云端读 session.ps1 上传的 looks_gen.json
+# 人物库优先（characters/<cid>/character.py 的 look / look_en）：本地直接读；云端读 trial_h3.ps1 / full_fun.ps1 上传的 looks_gen.json
 def _load_lib():
     import os, json, glob, runpy
     here = os.path.dirname(os.path.abspath(__file__))

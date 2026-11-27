@@ -38,4 +38,4 @@ if (-not $SkipRender) {
 Write-Host '[打包] 骨架 + 镜头任务'
 Low 'python' (@('cloud\pack_for_cloud.py', '--pose') + ($Segs -split ',')) "$Logs\prep_pack.log" | Out-Null
 Get-Content "$Logs\prep_pack.log" -Tail 3 -Encoding utf8
-Write-Host ('本地准备完成，用时 {0:N0} 分钟。下一步：开写实化实例 → cloud\session.ps1 -Stage probe' -f ((Get-Date) - $T0).TotalMinutes)
+Write-Host ('本地准备完成，用时 {0:N0} 分钟。下一步：开写实化实例 → cloud\trial_h3.ps1 -Step report（见 docs/模型选型.md）' -f ((Get-Date) - $T0).TotalMinutes)

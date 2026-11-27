@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-"""片头 Claude 娘动起来（云端，Wan2.2 图生视频，节点映射同 video_map.json）：首帧 = 本地合成的「主楼广场 + Claude 娘立绘」。
+"""片头 Claude 娘动起来（云端，Wan2.2 图生视频，节点映射见 intro_map.json；只用于片头动画，正片已禁用图生视频）：首帧 = 本地合成的「主楼广场 + Claude 娘立绘」。
 输出 /root/v11_out/intro_v<k>.*。用法：python3 intro_video.py <首帧文件名（已在 ComfyUI/input）> [种子 ...]"""
 import sys, os, json
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import comfy_run
-M = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'video_map.json'), encoding='utf-8'))
+M = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'intro_map.json'), encoding='utf-8'))
 PROMPT = ('An anime-style girl with long flowing orange hair, a sunflower hair ornament and a white floral long dress stands in the center against a plain solid green screen background. She smiles warmly and gently at the camera and nods politely, then gracefully flicks open the folding fan in her hands '
           'and holds it up beside her shoulder, showing the fan to the camera. Her long hair and the hem of her dress sway softly in the morning breeze. '
           'She keeps her clean 2D anime illustration style throughout, the background stays a flat uniform chroma-key green with no objects. Static camera, gentle elegant movements.')

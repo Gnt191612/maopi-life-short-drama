@@ -72,18 +72,23 @@ powershell -ExecutionPolicy Bypass -File cloud\prep_trial.ps1 -Segs <要拍的�
 
 ## 四、云端写实化与成片
 
-**现行方案（2026-11-27）：[docs/模型选型.md](docs/模型选型.md)，一条命令试跑 cloud\trial_h3.ps1、全片 cloud\full_fun.ps1。** 下面是旧流程（图生视频），仅供参考：[cloud/写实化会话流程.md](cloud/写实化会话流程.md)。平台：仙宫云，社区镜像「Moss/Krea2 超写实人像 + Wan2.2/MiniMaxH3 图生视频」+ RTX 4090D（约 ¥1.89/时）。
+**现行方案（2026-11-27）：MiniMax H3 + 白模姿态/深度逐帧控制 + LatentSync 对口型，选型理由见 [docs/模型选型.md](docs/模型选型.md)。**
+平台：仙宫云，社区镜像「Moss/Krea2 超写实人像 + Wan2.2/MiniMaxH3」+ RTX 4090D 48G（约 ¥2.89/时）；SSH 地址在控制台「SSH」里看，本机密钥 ~/.ssh/xiangongyun_ed25519（公钥登记到平台）。
 ```powershell
-# 1) 本地（免费）：重拍全片 + 高清首帧 + 打包 dist/cloud_pack.zip
+# 1) 本地（免费）：重拍全片 + 高清首帧 + 打包
 powershell -ExecutionPolicy Bypass -File cloud\prep_trial.ps1 -SkipCast -Segs <全部片段>
-# 2) 控制台开机，SSH 地址在控制台「SSH」里看；本机密钥 ~/.ssh/xiangongyun_ed25519（公钥登记到平台）
-powershell -ExecutionPolicy Bypass -File cloud\session.ps1 -SshHost root@<主机> -Port <端口> -Stage probe     # 新镜像先探查节点
-powershell -ExecutionPolicy Bypass -File cloud\session.ps1 -SshHost root@<主机> -Port <端口> -Stage final -MaxHours 8
-#    或多台并行（时间按台数缩短、总花费基本不变）：cloud\run_multi.ps1 -Hosts "root@主机1:端口1","root@主机2:端口2" -Stage final
-# 3) 关机 → 本地合成成片
-powershell -ExecutionPolicy Bypass -File cloud\make_final.ps1 -Result build\cloud_out\final_<时间>    # 多台时传多个目录，自动合并
+# 2) 开机后：先看磁盘和镜像里的模型（只看不删），再试跑 3 个代表镜头，新旧并排确认效果
+powershell -ExecutionPolicy Bypass -File cloud\trial_h3.ps1 -Step report
+powershell -ExecutionPolicy Bypass -File cloud\trial_h3.ps1 -Step trial      # 结果在 build\review\trial_compare\
+# 3) 确认合格后全片：云端排好整条流程 → 本地后台边跑边取回替换 → 关机 → 合成 + 审查
+powershell -ExecutionPolicy Bypass -File cloud\full_fun.ps1 -Step start
+powershell -ExecutionPolicy Bypass -File cloud\full_fun.ps1 -Step pull
+powershell -ExecutionPolicy Bypass -File cloud\full_fun.ps1 -Step final
 ```
-成片：`build/final/毛坯人生，精装朋友圈_成片.mp4`。**云端按时计费：一个阶段跑完、下一步不是马上要跑就关机。**
+成片：`build/final/毛坯人生，精装朋友圈_成片.mp4`。审查工具：`drift_review.py`（跑偏）、`cast_sheet.py`（角色一致）、`dialog_audit.py`（台词对齐）、`av_sync_check.py`（口型与配音同步）。
+**云端按时计费：一个阶段跑完、下一步不是马上要跑就关机；关机时间跟着任务走，没做完不关。**
+
+已弃用的做法（图生视频、锚点模式、双参考编辑、旧的会话/取回/看门狗脚本）在 [cloud/_obsolete/](cloud/_obsolete/README.md)，只作教训保留，不要再用。
 
 ## 五、片头
 
