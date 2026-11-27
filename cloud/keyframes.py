@@ -24,7 +24,8 @@ def plan(task):
     en = task.get('prompt', '').lower(); chars = task.get('characters', [])
     start = int(os.environ.get('V11_KF_START', 3))
     if not chars: start = int(os.environ.get('V11_KF_START_EMPTY', 1))      # 无人外景/空镜：几乎从头重画，去掉卡通树和方块楼
-    swap = [] if any(k in en for k in NOFACE) else chars                     # 看不到脸的镜头不换脸
+    swap = [] if any(k in en for k in NOFACE) or task.get('noswap') else chars   # 看不到脸的镜头不换脸；noswap：两人挨得近时 Qwen 换脸会换错人（s02_01_1021 林晓被戴上眼镜、陈瑶被抹掉），交给本地 face_unify
+    if task.get('kf_start') is not None: start = int(task['kf_start'])
     return start, swap
 
 def first_frame(td, tid, src_name='first.png'):

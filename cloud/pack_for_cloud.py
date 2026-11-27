@@ -92,6 +92,7 @@ def main():
                         move=(cuts[k][2] if len(cuts[k]) > 2 else 'static'),
                         prompt='%s. Background: %s. %s. %s' % (en or 'a scene on a Chinese university campus', backgrounds.bg(set_name),
                                                               backgrounds.MOVE_EN.get(cuts[k][2] if len(cuts[k]) > 2 else 'static', ''), STYLE), refs=refs)
+            task.update(shot_prompts.EXTRA.get(tid, {}))
             json.dump(task, open(os.path.join(td, 'task.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
             tasks.append(task)
     for sid, jobs in hd_jobs.items():   # 高清首帧 1920×1080（预览帧放大后很糊，二转三会脑补出第二个人）

@@ -71,7 +71,8 @@ def assign(faces, chars):
 
 def process(tdir, tid, heads=None):
     tj = os.path.join(PACK, tid, 'task.json')
-    chars = json.load(open(tj, encoding='utf-8')).get('characters', []) if os.path.exists(tj) else []
+    tk = json.load(open(tj, encoding='utf-8')) if os.path.exists(tj) else {}
+    chars = tk.get('characters', []); bg = tk.get('bg_face')   # bg_face：没配上主角的脸换成这个背景人物（s02_01_0450 视频多画了一个和林晓很像的人，换成同学甲，避免看成两个林晓）
     if not chars or os.path.exists(os.path.join(tdir, '.unified')): return 0
     frames = sorted(glob.glob(os.path.join(tdir, 'frame_*.png'))); n = 0
     for p in frames:
@@ -85,7 +86,13 @@ def process(tdir, tid, heads=None):
         got = assign_by_pos(faces, hd, img.shape[1], img.shape[0]) if hd and len(chars) > 1 else {}
         if len(got) < len(faces):   # 位置配不上的脸，再按长相在剩下的角色里配
             rest = [k for k in range(len(faces)) if k not in got]; left = [c for c in chars if c not in got.values()]
-            for k, c in assign([faces[k] for k in rest], left).items(): got[rest[k]] = c
+            if len(chars) == 1 and not got and chars[0] in REF:   # 单人镜头：脸最大的是主角（多出来的路人往往站在后面），不按相似度，免得把主角让给长得像的路人
+                got[max(range(len(faces)), key=lambda k: faces[k].bbox[2] - faces[k].bbox[0])] = chars[0]
+            else:
+                for k, c in assign([faces[k] for k in rest], left).items(): got[rest[k]] = c
+        if bg in REF:
+            for k in range(len(faces)):
+                if k not in got: got[k] = bg
         for i, c in got.items():
             img = swapper.get(img, faces[i], REF[c], paste_back=True)
             img = enhance(img, faces[i]); n += 1
