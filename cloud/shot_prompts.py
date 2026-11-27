@@ -151,3 +151,13 @@ EN.update({
     's01_01_1484': 'medium shot in the dorm, the chubby young man in the dark grey hoodie stands still grinning at his phone, his thumb refreshing the screen again and again, absorbed only in the screen',
     's02_01_0158': 'medium close-up in the library: the chubby young man in the dark grey hoodie, at first with his back to the camera near the doorway, turns toward the camera, whispering and waving his hand dismissively, then points off to the side toward the window seats',   # 白模开头是背影，随后转身（11-27 核对）
 })
+# ===== 11-27 全片首帧审查（逐张对照白模）发现的问题，当场修 =====
+EN.update({
+    's01_01_0543': 'close-up at floor level: the chubby young man\'s feet in dark sneakers land on the dorm floor at the bottom of the bunk ladder, then he turns and hurries off',   # 白模穿的是鞋，原文「光脚趿拖鞋」和首帧矛盾
+    's01_01_0676': 'medium shot by the wall near the dorm door: the chubby young man in the dark grey hoodie brushes his teeth fast, foam in his mouth, his other hand fixing his messy hair',   # 白模首帧没有洗手台和镜子，不写
+})
+EXTRA.update({
+    's01_01_0174': dict(kf_hint='画面里只有陈瑶一个人坐在书桌前背单词；左边的书桌、椅子和床梯旁边都是空的，没有别人。'),   # 首帧左后方多出一个白衬衫背影
+    's01_01_0577': {'kf_hint': '这是真实的大学宿舍：画面里一共只有两个人——左边书桌前坐着戴圆框眼镜、穿白衬衫的清瘦男生陈瑶；后面站着体型明显偏胖、穿深灰色开襟连帽卫衣的林晓，刚从上铺下来拿毛巾和漱口杯。中间的过道是空的。真实的木头和金属床架，自然晨光，真实照片质感。', 'kf_start': 2},   # 首帧中间多出一个站着的白衬衫男生
+    's01_01_0896': dict(kf_hint='前面是林晓：深灰色开襟连帽卫衣，卫衣里面是深灰色圆领T恤；后面书桌前坐着穿白衬衫的陈瑶。'),   # 首帧林晓卫衣里变成了白衬衫（陈瑶的衣着串到他身上）
+})
