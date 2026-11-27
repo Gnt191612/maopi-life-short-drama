@@ -14,9 +14,11 @@ $dst = Join-Path $R 'build\cloud_out\trial_fun'; New-Item -ItemType Directory -F
 function Up($files, $to) { & scp.exe @O -P $Port @files "${SshHost}:$to" }
 
 if ($Step -eq 'report') {
-    Up @('cloud\disk_report.sh') '/root/disk_report.sh'
+    Up @('cloud\disk_report.sh', 'cloud\probe_h3.sh') '/root/'
+    & ssh.exe @O -p $Port $SshHost 'bash /root/probe_h3.sh > /dev/null 2>&1; cat /root/h3_probe.txt' | Out-File -Encoding utf8 build\review\h3_probe.txt   # MiniMax H3 是镜像里最新的视频模型，试跑前先看能不能做控制视频
     & ssh.exe @O -p $Port $SshHost 'bash /root/disk_report.sh > /dev/null 2>&1; cat /root/disk_report.txt' | Out-File -Encoding utf8 build\review\disk_report.txt
     Get-Content build\review\disk_report.txt -Encoding utf8
+    Write-Host '== MiniMax H3 情况'; Get-Content build\review\h3_probe.txt -Encoding utf8
     exit
 }
 if ($Step -eq 'trial') {
