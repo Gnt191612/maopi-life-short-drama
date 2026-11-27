@@ -12,9 +12,10 @@ if [ "$1" = setup ]; then
   PY=$(for P in /root/miniconda3/envs/comfyui/bin/python /root/ComfyUI/venv/bin/python /root/ComfyUI/.venv/bin/python /root/miniconda3/bin/python /opt/conda/bin/python /usr/local/bin/python3 /usr/bin/python3; do [ -x "$P" ] && $P -m pip --version >/dev/null 2>&1 && { echo $P; break; }; done; true)   # 新镜像没有 pip 命令：找一个带 pip 的 Python（11-27）
   [ -n "$PY" ] || { echo 'PY 为空：找不到带 pip 的 Python'; exit 1; }
   $PY -m pip install -q uv
-  [ -d venv ] || $PY -m uv venv -p 3.10 venv   # 官方要求 Python 3.10；uv 会自己下载这个版本   # 官方要求 Python 3.10（setup_env.sh）
+  [ -x venv/bin/python ] && venv/bin/python -c 'import sysconfig,os,sys; sys.exit(0 if os.path.exists(os.path.join(sysconfig.get_paths()["include"],"Python.h")) else 1)' || { rm -rf venv; $PY -m uv venv --python-preference only-managed -p 3.10 venv; }   # 官方要求 3.10；必须用 uv 自带的独立版（系统 python3.10 没有 Python.h，insightface 编译失败，11-27）   # 官方要求 Python 3.10（setup_env.sh）
   . venv/bin/activate
-  $PY -m uv pip install -p venv/bin/python -r requirements.txt huggingface_hub
+  grep -v 'download.pytorch.org' requirements.txt > requirements.mirror.txt   # pytorch.org 只有 0.3 MB/s；PyPI 上的 torch 2.5.1 Linux 版自带 CUDA
+  $PY -m uv pip install -p venv/bin/python -r requirements.mirror.txt huggingface_hub
   for f in whisper/tiny.pt latentsync_unet.pt; do mkdir -p checkpoints/$(dirname $f); [ -s checkpoints/$f ] && continue   # ModelScope 快（hf-mirror 约 0.4 MB/s，11-27 实测）
     wget -q -c -O checkpoints/$f "https://modelscope.cn/models/ByteDance/LatentSync-1.6/resolve/master/$f" || wget -q -c -O checkpoints/$f "$HF/ByteDance/LatentSync-1.6/resolve/main/$f"; done
   ls -la checkpoints checkpoints/whisper
