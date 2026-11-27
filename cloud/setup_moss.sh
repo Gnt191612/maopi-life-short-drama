@@ -3,6 +3,7 @@
 # 官方要求：Python 3.12、Transformers 5.0.0、pyproject 固定 torch==2.9.1+cu128（需要显卡驱动 >= 570，即 CUDA 12.8）
 # 预判：镜像驱动可能更老 → 按驱动支持的 CUDA 版本选 torch 下载源；系统没有 Python 3.12 → 用 uv 自动下载
 set -e
+export PIP_INDEX_URL=https://mirrors.cloud.tencent.com/pypi/simple UV_INDEX_URL=https://mirrors.cloud.tencent.com/pypi/simple UV_HTTP_TIMEOUT=300   # 云端访问 pypi.org / pytorch.org 只有 0.3～1.6 MB/s，腾讯镜像约 7 MB/s（11-27 实测）；PyPI 上的 Linux torch 自带 CUDA，不必走 pytorch.org
 HF=${HF_ENDPOINT:-https://hf-mirror.com}; R=/root/moss; mkdir -p $R /root/models; cd $R
 [ -d MOSS-TTS/.git ] || git clone --depth 1 https://github.com/OpenMOSS/MOSS-TTS.git
 CU=$(nvidia-smi | grep -o 'CUDA Version: [0-9.]*' | grep -o '[0-9.]*$'); echo "驱动支持 CUDA $CU"
@@ -13,14 +14,9 @@ $PY -m pip install -q uv
 [ -d venv ] || $PY -m uv venv -p 3.12 venv   # 官方要求 Python 3.12
 . venv/bin/activate
 PIP="$PY -m uv pip"
-if [ $IDX = cu128 ]; then
-  $PIP install --extra-index-url https://download.pytorch.org/whl/cu128 -e "MOSS-TTS[torch-runtime]"
-else
-  echo "驱动太旧，改装 cu124 的 torch（不用 pyproject 里固定的 2.9.1+cu128）"
-  $PIP install --index-url https://download.pytorch.org/whl/cu124 torch torchaudio
-  $PIP install "transformers==5.0.0" accelerate soundfile librosa einops safetensors
-  $PIP install --no-deps -e MOSS-TTS
-fi
+# pyproject 固定 torch==2.9.1+cu128（pytorch.org 才有这个标签）：改成 PyPI 上同版本的 torch 2.9.1（Linux 默认就是 cu128 版）
+printf "torch==2.9.1\ntorchaudio==2.9.1\n" > /root/moss/overrides.txt
+$PIP install --override /root/moss/overrides.txt -e "MOSS-TTS[torch-runtime]" || $PIP install --override /root/moss/overrides.txt -e MOSS-TTS
 $PIP install huggingface_hub
 $PIP install modelscope
 [ -f /root/models/MOSS-TTSD-v1.0/config.json ] || python -c "from modelscope import snapshot_download as s; s('openmoss/MOSS-TTSD-v1.0', local_dir='/root/models/MOSS-TTSD-v1.0')" \

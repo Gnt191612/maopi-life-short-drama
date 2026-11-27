@@ -4,6 +4,7 @@
 #   bash lipsync.sh run <cloud_pack> id1 id2 ...   # 输入 /root/v11_out/fun/<id>.mp4 + <pack>/<id>/voice.wav → /root/v11_out/lips/<id>.mp4
 # 顺序：video_fun.py（动作控制视频）→ 这里对口型 → 取回本地 face_unify 统一五官（inswapper 换脸保留嘴型动作）
 set -e
+export PIP_INDEX_URL=https://mirrors.cloud.tencent.com/pypi/simple UV_INDEX_URL=https://mirrors.cloud.tencent.com/pypi/simple UV_HTTP_TIMEOUT=300   # 云端访问 pypi.org / pytorch.org 只有 0.3～1.6 MB/s，腾讯镜像约 7 MB/s（11-27 实测）；PyPI 上的 Linux torch 自带 CUDA，不必走 pytorch.org
 LS=/root/latentsync; HF=${HF_ENDPOINT:-https://hf-mirror.com}
 if [ "$1" = setup ]; then
   [ -d $LS/.git ] || git clone --depth 1 https://github.com/bytedance/LatentSync.git $LS
