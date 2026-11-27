@@ -20,6 +20,7 @@ ap.add_argument('pack'); ap.add_argument('--only', default=''); ap.add_argument(
 ap.add_argument('--steps', type=int, default=20); ap.add_argument('--turbo', action='store_true')
 ap.add_argument('--pose', type=float, default=0.7); ap.add_argument('--depth', type=float, default=0.3)
 ap.add_argument('--ref-audio', action='store_true'); ap.add_argument('--speech', action='store_true'); ap.add_argument('--no-canon', action='store_true')
+ap.add_argument('--prec', choices=['int8', 'bf16', 'fp8'], default='int8');   # 主模型精度：int8_convrot（官方首推，需 torch cu130）/ bf16（最精细，40GB，48G 卡上较慢）/ fp8_scaled（没有 cu130 时的后备）
 ap.add_argument('--mode', choices=['fl', 'ref'], default='fl'); ap.add_argument('--pika', action='store_true'); ap.add_argument('--union', choices=['auto', '1', '2'], default='auto')
 ap.add_argument('--seed', type=int, default=20261127); ap.add_argument('--out', default='/root/v11_out/h3')
 ap.add_argument('--force', action='store_true'); ap.add_argument('--dry', action='store_true')
@@ -59,7 +60,9 @@ def widgets(cls, vals):   # 按 object_info 的控件顺序把模板里的控件
 
 # fl = 首帧模式（fl2va：写实首帧就是第一帧，构图和场景保持最强，分段时下一段用上一段最后一帧接上；默认）
 # ref = 参考图模式（ref2va：首帧和角色标准照只当参考，可加参考音频）
-UNET = pick('UNETLoader', 'unet_name', 'h3_fl2va_pruned_int8', 'h3_fl2va', 'h3*fl2v') if args.mode == 'fl' else pick('UNETLoader', 'unet_name', 'h3_ref2va_pruned_int8', 'minimax_h3_ref2va', 'h3*ref2v')
+_P = {'int8': 'int8_convrot', 'bf16': 'bf16', 'fp8': 'fp8_scaled'}[args.prec]   # pruned 版只重整了 AdaLN 调制结构，输出与官方等效，不降画质
+UNET = pick('UNETLoader', 'unet_name', 'h3_fl2va_pruned_' + _P, 'h3_fl2va_pruned_int8', 'h3_fl2va', 'h3*fl2v') if args.mode == 'fl' else pick('UNETLoader', 'unet_name', 'h3_ref2va_pruned_' + _P, 'h3_ref2va_pruned_int8', 'minimax_h3_ref2va', 'h3*ref2v')
+if _P not in UNET: log('注意：没找到 %s 精度的主模型，实际用的是 %s' % (_P, UNET))
 TE = pick('CLIPLoader', 'clip_name', 'minimax_h3', 'qwen3vl*h3')
 VVAE = pick('VAELoader', 'vae_name', 'h3_video_vae', 'minimax_h3*video')
 AVAE = pick('VAELoader', 'vae_name', 'h3_audio_vae', 'minimax_h3*audio')

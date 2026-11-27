@@ -45,6 +45,7 @@ curl -s -X POST -H "Content-Type: application/json" -d '{"unload_models":true,"f
 python3 video_h3.py $PACK --only ${IDS// /,} --res __RES__ --mode fl --out $OUT/h3 > $OUT/trial_h3.log 2>&1 || echo "H3 主版失败" >> $OUT/trial_h3.log   # 主版：首帧模式 20 步
 V="python3 video_h3.py $PACK --only s06_01_0626 --res __RES__"   # 对照版都用陈瑶说话特写，便于并排比较
 $V --mode fl --pika      --out $OUT/h3_pika   > $OUT/trial_h3_pika.log 2>&1     # + Pika H3 Flex 真实感 LoRA
+$V --mode fl --prec bf16 --out $OUT/h3_bf16   > $OUT/trial_h3_bf16.log 2>&1     # 全精度 bf16（看比 int8 好多少，效果优先）
 $V --mode ref            --out $OUT/h3_ref    > $OUT/trial_h3_ref.log 2>&1      # 参考图模式（首帧 + 陈瑶标准照只当参考）
 $V --mode fl --turbo     --out $OUT/h3_turbo  > $OUT/trial_h3_turbo.log 2>&1    # 4 步加速（看画质掉多少，决定全片用哪档）
 $V --mode fl --speech    --out $OUT/h3_speech > $OUT/trial_h3_speech.log 2>&1   # H3 自己说台词（原生语音 + 口型）
@@ -66,7 +67,7 @@ echo OK > $OUT/DONE_TRIAL
     }
     foreach ($t in ($ids -split ' ')) { Get1 "/root/v11_out/h3/$t.mp4" "$dst\" }
     Get1 '/root/v11_out/lips/s06_01_0626.mp4' "$dst\s06_01_0626_lips.mp4"
-    Get1 '/root/v11_out/h3_turbo/s06_01_0626.mp4' "$dst\s06_01_0626_turbo.mp4"; Get1 '/root/v11_out/h3_pika/s06_01_0626.mp4' "$dst\s06_01_0626_pika.mp4"; Get1 '/root/v11_out/h3_ref/s06_01_0626.mp4' "$dst\s06_01_0626_ref.mp4"
+    Get1 '/root/v11_out/h3_turbo/s06_01_0626.mp4' "$dst\s06_01_0626_turbo.mp4"; Get1 '/root/v11_out/h3_pika/s06_01_0626.mp4' "$dst\s06_01_0626_pika.mp4"; Get1 '/root/v11_out/h3_bf16/s06_01_0626.mp4' "$dst\s06_01_0626_bf16.mp4"; Get1 '/root/v11_out/h3_ref/s06_01_0626.mp4' "$dst\s06_01_0626_ref.mp4"
     Get1 '/root/v11_out/h3_audio/s06_01_0626.mp4' "$dst\s06_01_0626_refaudio.mp4"
     Get1 '/root/v11_out/h3_speech/s06_01_0626.mp4' "$dst\s06_01_0626_speech_v.mp4"; Get1 '/root/v11_out/h3_speech/s06_01_0626.speech.*' "$dst\"
     $sp = Get-ChildItem $dst -Filter 's06_01_0626.speech.*' | Select-Object -First 1   # 原生语音版：画面配 H3 自己的声音
@@ -86,7 +87,7 @@ $cmp = Join-Path $R 'build\review\trial_compare'; New-Item -ItemType Directory -
 $FF = & python -c "import config;print(config.FFMPEG)"
 $work = Join-Path $dst 'work'; Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue; New-Item -ItemType Directory -Force "$work\real", "$work\heads" | Out-Null
 $vers = @{}; foreach ($t in ($ids -split ' ')) { $vers[$t] = if (Test-Path "$dst\${t}_lips.mp4") { "$dst\${t}_lips.mp4" } else { "$dst\$t.mp4" } }
-$vers['s06_01_0626_turbo'] = "$dst\s06_01_0626_turbo.mp4"; $vers['s06_01_0626_pika'] = "$dst\s06_01_0626_pika.mp4"; $vers['s06_01_0626_ref'] = "$dst\s06_01_0626_ref.mp4"; $vers['s06_01_0626_refaudio'] = "$dst\s06_01_0626_refaudio.mp4"
+$vers['s06_01_0626_turbo'] = "$dst\s06_01_0626_turbo.mp4"; $vers['s06_01_0626_pika'] = "$dst\s06_01_0626_pika.mp4"; $vers['s06_01_0626_bf16'] = "$dst\s06_01_0626_bf16.mp4"; $vers['s06_01_0626_ref'] = "$dst\s06_01_0626_ref.mp4"; $vers['s06_01_0626_refaudio'] = "$dst\s06_01_0626_refaudio.mp4"
 foreach ($k in $vers.Keys) {
     if (-not (Test-Path $vers[$k])) { continue }
     $t = $k.Substring(0, 11); $j = Get-Content "dist\cloud_pack\$t\task.json" -Raw -Encoding utf8 | ConvertFrom-Json
@@ -100,7 +101,7 @@ $lab = { param($s) "scale=960:540,setsar=1,drawtext=fontfile='C\:/Windows/Fonts/
 foreach ($k in $vers.Keys) {
     $t = $k.Substring(0, 11); $old = "build\cloud_out\final_all\real\$t.mp4"; $new = "$work\real\$k.mp4"
     if (-not (Test-Path $new)) { Write-Host "缺 $k"; continue }
-    $name = @{ $t = '新：H3 动作控制'; 's06_01_0626_turbo' = '新：H3 turbo 4步'; 's06_01_0626_pika' = '新：H3+Pika 真实感'; 's06_01_0626_ref' = '新：H3 参考图模式'; 's06_01_0626_refaudio' = '新：H3 参考配音' }[$k]
+    $name = @{ $t = '新：H3 动作控制'; 's06_01_0626_turbo' = '新：H3 turbo 4步'; 's06_01_0626_pika' = '新：H3+Pika 真实感'; 's06_01_0626_bf16' = '新：H3 全精度 bf16'; 's06_01_0626_ref' = '新：H3 参考图模式'; 's06_01_0626_refaudio' = '新：H3 参考配音' }[$k]
     if (-not $name) { $name = '新：H3' }
     $vf = "[0:v]$(& $lab '旧：图生视频')[a];[1:v]$(& $lab $name)[b];[a][b]hstack"
     $voice = "dist\cloud_pack\$t\voice.wav"
