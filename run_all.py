@@ -55,6 +55,20 @@ def load_wav(p, sr=48000):
 
 def ts(t): return '%d:%02d:%05.2f' % (t // 3600, t % 3600 // 60, t % 60)
 
+def sub_text(s, maxc=24):
+    """字幕显示文字：去掉配音用的 [laughter] 一类标记；中文没有空格、libass 不会自动换行，长台词会冲出画面两边（2026-11-27 用户指出），
+    按每行不超过 maxc 字在标点处断行（找不到标点就硬断），用 \\N 连接"""
+    import re
+    s = re.sub(r'\s*\[[^\]]*\]\s*', '', s).strip()
+    out = []
+    while len(s) > maxc:
+        cut = max((i + 1 for i, ch in enumerate(s[:maxc + 1]) if ch in '，。！？；、…—：,.!?;'), default=0)
+        if cut < maxc // 2: cut = maxc
+        if len(s) - cut < 4: cut = len(s) - 4   # 别让最后一行只剩一两个字
+        out.append(s[:cut]); s = s[cut:]
+    out.append(s)
+    return '\\N'.join(x for x in out if x)
+
 def ff_path(p):
     """给 ffmpeg 滤镜参数用的路径（正斜杠、转义冒号）"""
     return p.replace('\\', '/').replace(':', '\\:')
@@ -125,9 +139,9 @@ def previs(seg_ids, out_mp4):
     for st, lid in events:
         w = load_wav(os.path.join(S.AUD, lid + '.wav')); i = int(st * sr); mix[i:i + len(w)] += w[:max(0, len(mix) - i)]
         if not lid.startswith('X'):
-            ass.append('Dialogue: 0,%s,%s,D,%s：%s' % (ts(st), ts(st + S.META[lid]['dur']), S.TEXT[lid][0], S.TEXT[lid][1]))
+            ass.append('Dialogue: 0,%s,%s,D,%s' % (ts(st), ts(st + S.META[lid]['dur']), sub_text('%s：%s' % S.TEXT[lid])))
     for st, sid, d in screens:   # 手机屏幕文字（正片由 Remotion 合成到手机上；预演以画面上方黄字示意）
-        ass.append('Dialogue: 0,%s,%s,P,【手机】%s：%s' % (ts(st), ts(st + d), S.SCREEN[sid][0], S.SCREEN[sid][1]))
+        ass.append('Dialogue: 0,%s,%s,P,%s' % (ts(st), ts(st + d), sub_text('【手机】%s：%s' % S.SCREEN[sid], 28)))
     mix += music_bed(beat_t, mix, sr)
     wp = os.path.join(tmp, 'mix.wav')
     with wave.open(wp, 'wb') as wf:

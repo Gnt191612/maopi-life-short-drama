@@ -50,6 +50,10 @@ EN = {
 
     's01_01_1016': 'close-up of the same chubby young man by the window looking down at his phone, typing, his face and mouth clearly visible in soft window light; he wears the same dark grey open zip hoodie with the hood resting behind his neck over a dark grey T-shirt, not a black jacket, not a white T-shirt',   # 11-27 用户指出：同一场戏里林晓穿成黑外套+白T恤（白模卫衣帽子被机位挡住）
     's02_01_1116': 'medium close-up, the same chubby young man now sits at the window table with the open book, his phone face-up beside the book; he wears the same dark grey open zip hoodie with the hood resting behind his neck over a dark grey T-shirt, not a black jacket, not a white T-shirt',   # 11-27 用户指出：同一场戏里林晓穿成黑外套+白T恤（白模卫衣帽子被机位挡住）
+    's01_01_0577': 'wide shot of the whole dorm room with bunk beds on both sides: in the back the chubby young man in the dark grey open hoodie has just climbed down the bunk ladder and grabs a toothbrush cup and towel from his desk; at the desk on the left sits the slim young man with glasses in a white shirt, glancing at him; real dorm room, real wood and metal, natural morning light',   # 11-27 用户/对齐审查：渲染失败（白模质感、人物错）
+    's05_01_0440': 'medium shot in a real busy university canteen with long white dining tables and red plastic stools: the young man in the navy track jacket walks up from the left with a food tray and pats the shoulder of the chubby young man in the dark grey hoodie on the right, grinning; real canteen, real food trays, natural light',   # 11-27 用户/对齐审查：渲染失败（白模质感、人物错）
+    's08_01_0288': 'medium close-up, the man in the light blue shirt and dark tie pulls a chair over and sits down in the circle, face visible; behind him on the left sits the slim young man with glasses in a white shirt',   # 11-27 用户/对齐审查：渲染失败（白模质感、人物错）
+    's10_00_0787': 'medium shot on a sunny campus lawn with real green trees, exactly three young men: on the left the slim young man with glasses in a white shirt; in the middle the chubby young man in the dark grey open hoodie looks down at his phone and types, then smiles; behind him on the right the thin young man with fluffy slightly curly black hair in an olive green knit sweater',   # 11-27 用户/对齐审查：渲染失败（白模质感、人物错）
 }
 EXTRA = {   # 写进 task.json 的额外字段：noswap = 关键帧不做 Qwen 换脸（两人挨得近时会换错人）
     's03_02_0001': dict(noswap=True),   # 林母：Qwen 按标准照换脸会把白模的短卷发换成长直发，和 s09 的短卷发对不上
@@ -58,11 +62,16 @@ EXTRA = {   # 写进 task.json 的额外字段：noswap = 关键帧不做 Qwen �
     's08_01_2657': dict(kf_hint='从左到右：左边坐着清瘦的周明远（蓬松卷发、橄榄绿毛衣），中间站着陈瑶（白衬衫、圆框眼镜），右边站着体型明显偏胖的林晓（深灰连帽卫衣）；画面里只有这三个学生，其他人都不胖。'),
     's01_01_1016': dict(kf_hint='林晓穿的是深灰色开襟连帽卫衣（帽子搭在脖子后面），里面是深灰色T恤，和前后镜头同一身衣服；不是黑色西装外套，里面也不是白T恤。'),
     's02_01_1116': dict(kf_hint='林晓穿的是深灰色开襟连帽卫衣（帽子搭在脖子后面），里面是深灰色T恤，和前后镜头同一身衣服；不是黑色西装外套，里面也不是白T恤。'),
+    's01_01_0577': {'kf_hint': '这是真实的大学宿舍：后面站着的是体型明显偏胖、穿深灰色开襟连帽卫衣的林晓，刚从上铺下来拿毛巾和漱口杯；左边书桌前坐着戴圆框眼镜、穿白衬衫的清瘦男生陈瑶。真实的木头和金属床架，自然晨光，不要3D渲染的质感。', 'kf_start': 2},
+    's05_01_0440': {'kf_hint': '这是真实的大学食堂：红色方块是食堂的红色塑料凳，白色长条是餐桌，远处有打饭窗口。左边是穿藏青色运动外套端着餐盘的男生，右边是体型明显偏胖、穿深灰卫衣的林晓。不要3D渲染的方块质感。', 'kf_start': 2},
+    's08_01_0288': {'kf_hint': '前面是穿浅蓝衬衫打深色领带的中年男老师；左后方坐着的是戴圆框眼镜、穿白衬衫的清瘦男生陈瑶（是年轻男生，不是女人）。'},
+    's10_00_0787': {'kf_hint': '真实的校园草坪和真实的绿树（不是卡通树）。左边是戴圆框眼镜、穿白衬衫的陈瑶，中间是体型明显偏胖、穿深灰开襟卫衣、低头看手机的林晓，右后方是清瘦卷发、穿橄榄绿毛衣的周明远；画面里只有这三个人。', 'kf_start': 2},
     's02_01_1021': dict(noswap=True),
     's02_01_0852': dict(noswap=True),
     's02_01_0450': dict(bg_face='classA'),   # 本地换脸：多出来的站立路人换成同学甲的脸
 }
 CHARS = {
+    's08_01_0288': ['wang', 'chen'],   # 白模左后方坐着陈瑶，原来只登记王老师 → 画成中年女人
     's02_01_0852': ['lin'],
     's07_00_0171': ['lin', 'zhou'],          # 白模开头周明远和林晓并排走，原来只写了林晓 → 画成两个林晓
     's10_00_0102': ['chen', 'lin', 'zhou'],  # 白模右边有周明远
