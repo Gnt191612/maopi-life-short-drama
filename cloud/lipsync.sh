@@ -8,13 +8,12 @@ LS=/root/latentsync; HF=${HF_ENDPOINT:-https://hf-mirror.com}
 if [ "$1" = setup ]; then
   [ -d $LS/.git ] || git clone --depth 1 https://github.com/bytedance/LatentSync.git $LS
   cd $LS
-  pip install -q uv 2>/dev/null || true
-  [ -d venv ] || { command -v uv >/dev/null && uv venv -p 3.10 venv || python3 -m venv venv; }   # 官方要求 Python 3.10（setup_env.sh）
+  PY=$(for P in /root/ComfyUI/venv/bin/python /root/ComfyUI/.venv/bin/python /root/miniconda3/bin/python /opt/conda/bin/python /usr/local/bin/python3 /usr/bin/python3; do [ -x "$P" ] && $P -m pip --version >/dev/null 2>&1 && { echo $P; break; }; done)   # 新镜像没有 pip 命令：找一个带 pip 的 Python（11-27）
+  $PY -m pip install -q uv
+  [ -d venv ] || $PY -m uv venv -p 3.10 venv   # 官方要求 Python 3.10；uv 会自己下载这个版本   # 官方要求 Python 3.10（setup_env.sh）
   . venv/bin/activate
-  pip install -q -r requirements.txt
-  pip install -q huggingface_hub
-  HF_ENDPOINT=$HF huggingface-cli download ByteDance/LatentSync-1.6 whisper/tiny.pt --local-dir checkpoints
-  HF_ENDPOINT=$HF huggingface-cli download ByteDance/LatentSync-1.6 latentsync_unet.pt --local-dir checkpoints
+  $PY -m uv pip install -p venv/bin/python -r requirements.txt huggingface_hub
+  HF_ENDPOINT=$HF venv/bin/python -c "from huggingface_hub import hf_hub_download as d; [d('ByteDance/LatentSync-1.6', f, local_dir='checkpoints') for f in ('whisper/tiny.pt', 'latentsync_unet.pt')]"
   ls -la checkpoints checkpoints/whisper
   echo LIPSYNC SETUP DONE; exit 0
 fi

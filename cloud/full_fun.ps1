@@ -34,6 +34,8 @@ if ($Step -eq 'start') {
     & scp.exe @O -P $Port dist\full_fun.zip "${SshHost}:/root/v11_upload/full_fun.zip"
     $sh = @'
 OUT=/root/v11_out; S=/root/v11_upload/scripts; PACK=/root/v11cloud/cloud_pack; rm -f $OUT/DONE_FULL
+sed -i 's/\r$//' $S/*.sh /root/v11_upload/*.sh 2>/dev/null   # Windows 写的脚本是 CRLF，bash 读不了（11-27）
+for f in $S/*.sh /root/v11_upload/*.sh; do [ -f $f ] && { bash -n $f || { echo "SYNTAX_FAIL $f" > $OUT/DONE_FULL; exit; }; }; done
 rm -rf /root/v11cloud; mkdir -p /root/v11cloud; python3 -c "import zipfile; zipfile.ZipFile('/root/v11_upload/full_fun.zip').extractall('/root/v11cloud')"; cp -f $PACK/refs/*.jpg /root/ComfyUI/input/ 2>/dev/null
 bash $S/disk_guard.sh > $OUT/full_disk.log 2>&1 || { echo DISK_LOW > $OUT/DONE_FULL; exit; }   # 踩坑记录 62
 bash $S/setup___ENGINE__.sh > $OUT/full_setup.log 2>&1 || { echo SETUP_FAIL > $OUT/DONE_FULL; exit; }

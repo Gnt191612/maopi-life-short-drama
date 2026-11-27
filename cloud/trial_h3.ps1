@@ -36,6 +36,8 @@ if ($Step -eq 'trial') {
     & scp.exe @O -P $Port -r dist\moss_trial cloud\tts_moss.py cloud\setup_moss.sh "${SshHost}:/root/v11_upload/"   # MOSS-TTSD 对话配音对比（用户 11-27 同意）
     $sh = @'
 OUT=/root/v11_out; S=/root/v11_upload/scripts; PACK=/root/v11cloud/cloud_pack; rm -f $OUT/DONE_TRIAL
+sed -i 's/\r$//' $S/*.sh /root/v11_upload/*.sh 2>/dev/null   # Windows 写的脚本是 CRLF，bash 读不了（11-27）
+for f in $S/*.sh /root/v11_upload/*.sh; do [ -f $f ] && { bash -n $f || { echo "SYNTAX_FAIL $f" > $OUT/DONE_TRIAL; exit; }; }; done
 rm -rf /root/v11cloud; mkdir -p /root/v11cloud; python3 -c "import zipfile; zipfile.ZipFile('/root/v11_upload/cloud_pack.zip').extractall('/root/v11cloud')"
 cp -f $PACK/refs/*.jpg /root/ComfyUI/input/ 2>/dev/null
 bash $S/disk_guard.sh > $OUT/trial_disk.log 2>&1 || { echo DISK_LOW > $OUT/DONE_TRIAL; exit; }   # 磁盘体检：不够就先清中间产物，仍不够就停下等用户（踩坑记录 62）
@@ -64,7 +66,7 @@ echo OK > $OUT/DONE_TRIAL
         Start-Sleep 120
         $r = (Ssh1 'cat /root/v11_out/DONE_TRIAL 2>/dev/null; tail -n 1 /root/v11_out/h3_progress.log 2>/dev/null; tail -n 1 /root/v11_out/trial_setup.log 2>/dev/null') -join ' | '
         Write-Host ("{0:HH:mm} {1}" -f (Get-Date), $r)
-        if ($r -match 'SETUP_FAIL|DISK_LOW|^OK') { break }
+        if ($r -match 'SETUP_FAIL|DISK_LOW|SYNTAX_FAIL|^OK') { break }
     }
     foreach ($t in ($ids -split ' ')) { Get1 "/root/v11_out/h3/$t.mp4" "$dst\" }
     Get1 '/root/v11_out/lips/s06_01_0626.mp4' "$dst\s06_01_0626_lips.mp4"
