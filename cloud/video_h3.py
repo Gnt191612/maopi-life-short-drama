@@ -61,7 +61,8 @@ def widgets(cls, vals):   # 按 object_info 的控件顺序把模板里的控件
 # fl = 首帧模式（fl2va：写实首帧就是第一帧，构图和场景保持最强，分段时下一段用上一段最后一帧接上；默认）
 # ref = 参考图模式（ref2va：首帧和角色标准照只当参考，可加参考音频）
 _P = {'int8': 'int8_convrot', 'bf16': 'bf16', 'fp8': 'fp8_scaled'}[args.prec]   # pruned 版只重整了 AdaLN 调制结构，输出与官方等效，不降画质
-UNET = pick('UNETLoader', 'unet_name', 'h3_fl2va_pruned_' + _P, 'h3_fl2va_pruned_int8', 'h3_fl2va', 'h3*fl2v') if args.mode == 'fl' else pick('UNETLoader', 'unet_name', 'h3_ref2va_pruned_' + _P, 'h3_ref2va_pruned_int8', 'minimax_h3_ref2va', 'h3*ref2v')
+_M = 'fl2va' if args.mode == 'fl' else 'ref2va'   # 先找 pruned 版（省显存），再找同精度的完整版（镜像自带 minimax_h3_fl2va_bf16），最后才退回 int8
+UNET = pick('UNETLoader', 'unet_name', 'minimax_h3_%s_pruned_%s' % (_M, _P), 'minimax_h3_%s_%s' % (_M, _P), 'minimax_h3_%s_pruned_int8' % _M, 'minimax_h3_%s' % _M)
 if _P not in UNET: log('注意：没找到 %s 精度的主模型，实际用的是 %s' % (_P, UNET))
 TE = pick('CLIPLoader', 'clip_name', 'minimax_h3', 'qwen3vl*h3')
 VVAE = pick('VAELoader', 'vae_name', 'h3_video_vae', 'minimax_h3*video')

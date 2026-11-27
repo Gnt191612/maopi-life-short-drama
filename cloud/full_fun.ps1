@@ -5,7 +5,7 @@
 # 云端流程：装模型（已有就跳过）→ 后台装口型环境 → 重做改过提示词的首帧 → 全片视频（已做好的跳过，断线/空闲关机后重跑接着做）→ 口型同步 49 个单人说话镜头 → DONE_FULL
 # 结果目录 build\cloud_out\final_fun（先复制一份旧版 final_all 当兜底：哪个镜头新版没做出来，暂时用旧版顶上并在报告里列出）
 param([ValidateSet('start', 'pull', 'final')][string]$Step = 'start', [string]$Res = '1344x768', [ValidateSet('h3', 'fun')][string]$Engine = 'h3', [string]$H3Args = '',   # Engine：h3 = MiniMax H3（11-27 选定，默认），fun = Wan2.2 Fun Control（备选）；H3Args 例如 '--turbo' 按试跑结论加
-      [string]$SshHost = 'root@4b5fw7589f8xzvy1.ssh.x-gpu.com', [int]$Port = 56493)
+      [string]$SshHost = 'root@tdtjxa8cdyzuands.ssh.x-gpu.com', [int]$Port = 49855)
 $ErrorActionPreference = 'Continue'
 $R = Split-Path $PSScriptRoot -Parent; Set-Location $R; $env:PYTHONIOENCODING = 'utf-8'
 $Key = Join-Path $env:USERPROFILE '.ssh\xiangongyun_ed25519'

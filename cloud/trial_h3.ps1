@@ -4,7 +4,7 @@
 # 镜头：s01_01_0577（宿舍全景多人走动）、s02_01_1021（图书馆两人互动）、s06_01_0626（陈瑶说话特写）
 # 对照版（都是 s06_01_0626）：turbo 4 步（看快 5 倍画质掉多少，决定全片用哪档）、带参考配音（看 H3 能不能自己对上口型，能的话省掉 LatentSync）
 # 结果：build\cloud_out\trial_h3\ ；对比视频 build\review\trial_compare\ （左旧右新，带配音）；每镜头用时 speed.txt（算全片花费）
-param([ValidateSet('report', 'trial', 'compare')][string]$Step = 'trial', [string]$SshHost = 'root@4b5fw7589f8xzvy1.ssh.x-gpu.com', [int]$Port = 56493,
+param([ValidateSet('report', 'trial', 'compare')][string]$Step = 'trial', [string]$SshHost = 'root@tdtjxa8cdyzuands.ssh.x-gpu.com', [int]$Port = 49855,
       [string]$Res = '1344x768')
 $ErrorActionPreference = 'Continue'
 $R = Split-Path $PSScriptRoot -Parent; Set-Location $R; $env:PYTHONIOENCODING = 'utf-8'

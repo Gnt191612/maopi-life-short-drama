@@ -1,7 +1,7 @@
 ﻿# 等云端某轮完成标记出现后取回指定镜头（本地后台运行；每条 ssh/scp 都有心跳和硬超时，不会卡死）
 #   powershell -File cloud\wait_fetch.ps1 -Flag DONE_R8 -Ids s07_00_0171,s10_00_0102 -Dst build\cloud_out\pulled_next\real8 [-Hours 6]
 param([Parameter(Mandatory = $true)][string]$Flag, [Parameter(Mandatory = $true)][string]$Ids, [Parameter(Mandatory = $true)][string]$Dst,
-      [double]$Hours = 6, [string]$SshHost = 'root@4b5fw7589f8xzvy1.ssh.x-gpu.com', [int]$Port = 56493)
+      [double]$Hours = 6, [string]$SshHost = 'root@tdtjxa8cdyzuands.ssh.x-gpu.com', [int]$Port = 49855)
 $R = Split-Path $PSScriptRoot -Parent; Set-Location $R
 $k = Join-Path $env:USERPROFILE '.ssh\xiangongyun_ed25519'
 $O = @('-i', $k, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=20', '-o', 'ServerAliveInterval=15', '-o', 'ServerAliveCountMax=3')
