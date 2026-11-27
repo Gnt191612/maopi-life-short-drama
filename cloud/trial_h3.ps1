@@ -30,6 +30,7 @@ if ($Step -eq 'trial') {
     & python -c "import sys,json; sys.path.insert(0,'cloud'); import looks; json.dump(dict(look=looks.LOOK, look_en=looks.LOOK_EN, name=looks.NAME), open('cloud/looks_gen.json','w',encoding='utf-8'), ensure_ascii=False, indent=1)"
     & python cloud\shot_audio.py s06_01_0260 s06_01_0446 s06_01_0626 | Out-Null
     & python cloud\slim_pack.py ($ids -replace ' ', ',') dist\slim_trial_h3.zip --no-anchors --pose
+    Ssh1 'mkdir -p /root/v11_upload/scripts /root/v11_out/kf /root/ComfyUI/input; pkill -f trial_h3.sh; pkill -f full_fun.sh; echo dirs' 60 | Out-Null   # 新实例没有这些目录（11-27 新建 TDTJ 时第一次上传失败）
     & scp.exe @O -P $Port cloud\video_h3.py cloud\h3_prompt.py cloud\disk_guard.sh cloud\cleanup_auto.sh cloud\setup_h3.sh cloud\lipsync.sh cloud\keyframes.py cloud\comfy_run.py cloud\looks.py cloud\looks_gen.json cloud\shard.py "${SshHost}:/root/v11_upload/scripts/"
     & scp.exe @O -P $Port dist\slim_trial_h3.zip "${SshHost}:/root/v11_upload/cloud_pack.zip"
     & scp.exe @O -P $Port -r dist\moss_trial cloud\tts_moss.py cloud\setup_moss.sh "${SshHost}:/root/v11_upload/"   # MOSS-TTSD 对话配音对比（用户 11-27 同意）
