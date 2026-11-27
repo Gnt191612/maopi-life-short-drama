@@ -88,7 +88,7 @@ def main():
             fb = os.path.join(REN, sid, 'beauty_%04d.png' % f0)   # 首帧（先放预览帧，下面再用高清单帧覆盖）
             if os.path.exists(fb): shutil.copy(fb, os.path.join(td, 'first.png'))
             hd_jobs.setdefault(sid, []).append((f0, td))
-            task = dict(id=tid, segment=sid, frames=[f0, f1], n=f1 - f0 + 1, beats=[b['id'] for b in bts], characters=chars,
+            task = dict(id=tid, segment=sid, set=set_name, frames=[f0, f1], n=f1 - f0 + 1, beats=[b['id'] for b in bts], characters=chars,
                         move=(cuts[k][2] if len(cuts[k]) > 2 else 'static'),
                         prompt='%s. Background: %s. %s. %s' % (en or 'a scene on a Chinese university campus', backgrounds.bg(set_name),
                                                               backgrounds.MOVE_EN.get(cuts[k][2] if len(cuts[k]) > 2 else 'static', ''), STYLE), refs=refs)

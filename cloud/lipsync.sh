@@ -8,7 +8,8 @@ LS=/root/latentsync; HF=${HF_ENDPOINT:-https://hf-mirror.com}
 if [ "$1" = setup ]; then
   [ -d $LS/.git ] || git clone --depth 1 https://github.com/bytedance/LatentSync.git $LS
   cd $LS
-  [ -d venv ] || python3 -m venv venv
+  pip install -q uv 2>/dev/null || true
+  [ -d venv ] || { command -v uv >/dev/null && uv venv -p 3.10 venv || python3 -m venv venv; }   # 官方要求 Python 3.10（setup_env.sh）
   . venv/bin/activate
   pip install -q -r requirements.txt
   pip install -q huggingface_hub

@@ -20,6 +20,7 @@ ap.add_argument('pack'); ap.add_argument('--only', default=''); ap.add_argument(
 ap.add_argument('--steps', type=int, default=20); ap.add_argument('--turbo', action='store_true')
 ap.add_argument('--pose', type=float, default=0.7); ap.add_argument('--depth', type=float, default=0.3)
 ap.add_argument('--ref-audio', action='store_true'); ap.add_argument('--speech', action='store_true'); ap.add_argument('--no-canon', action='store_true')
+ap.add_argument('--mode', choices=['fl', 'ref'], default='fl'); ap.add_argument('--pika', action='store_true'); ap.add_argument('--union', choices=['auto', '1', '2'], default='auto')
 ap.add_argument('--seed', type=int, default=20261127); ap.add_argument('--out', default='/root/v11_out/h3')
 ap.add_argument('--force', action='store_true'); ap.add_argument('--dry', action='store_true')
 args = ap.parse_args()
@@ -56,22 +57,24 @@ def widgets(cls, vals):   # 按 object_info 的控件顺序把模板里的控件
         if typ == 'INT' and (opt.get('control_after_generate') or nm in ('seed', 'noise_seed')): vi += 1
     return out
 
-UNET = pick('UNETLoader', 'unet_name', 'minimax_h3_ref2va', 'h3*ref2v', 'minimax_h3')
+# fl = 首帧模式（fl2va：写实首帧就是第一帧，构图和场景保持最强，分段时下一段用上一段最后一帧接上；默认）
+# ref = 参考图模式（ref2va：首帧和角色标准照只当参考，可加参考音频）
+UNET = pick('UNETLoader', 'unet_name', 'h3_fl2va_pruned_int8', 'h3_fl2va', 'h3*fl2v') if args.mode == 'fl' else pick('UNETLoader', 'unet_name', 'h3_ref2va_pruned_int8', 'minimax_h3_ref2va', 'h3*ref2v')
 TE = pick('CLIPLoader', 'clip_name', 'minimax_h3', 'qwen3vl*h3')
 VVAE = pick('VAELoader', 'vae_name', 'h3_video_vae', 'minimax_h3*video')
 AVAE = pick('VAELoader', 'vae_name', 'h3_audio_vae', 'minimax_h3*audio')
-PATCH = pick('ModelPatchLoader', 'name', 'h3_fun_controlnet', 'h3*controlnet')
-LORA = pick('LoraLoaderModelOnly', 'lora_name', 'h3_ref2v_turbo', 'h3*turbo') if args.turbo else None
+_u2 = [f for f in pool('ModelPatchLoader', 'name') if 'union_2' in f.lower()]   # Union 2.0（2026-09-22）注入层加倍，ComfyUI 0.38+；没有就用 1.0
+PATCH = (sorted(_u2, key=lambda f: ('int8' not in f, len(f)))[0] if _u2 and args.union != '1' else pick('ModelPatchLoader', 'name', 'h3_fun_controlnet_union_pruned_int8', 'h3_fun_controlnet', 'h3*controlnet'))
+if args.union == '2' and not _u2: sys.exit('缺少 ControlNet Union 2.0（先运行 setup_h3.sh）')
+LORA = (pick('LoraLoaderModelOnly', 'lora_name', 'h3_fl2v_turbo_4step', 'h3_fl2v_turbo') if args.mode == 'fl' else pick('LoraLoaderModelOnly', 'lora_name', 'h3_ref2v_turbo', 'h3*turbo')) if args.turbo else None
+PIKA = pick('LoraLoaderModelOnly', 'lora_name', 'pika_h3_flex_%s' % ('fl2va' if args.mode == 'fl' else 'ref2va'), 'pika_h3_flex') if args.pika else None   # Pika H3 Flex：真实感/清晰度后训练（2026-10-29），叠在 H3 上
 CLIP_T = 'minimax' if 'minimax' in pool('CLIPLoader', 'type') else pool('CLIPLoader', 'type')[0]
-for c in ('MiniMaxH3ReferenceToVideo', 'MiniMaxH3FunControlNetApply', 'ModelPatchLoader', 'LoadVideo', 'GetVideoComponents', 'SamplerCustomAdvanced', 'BasicGuider', 'KSamplerSelect', 'BasicScheduler', 'RandomNoise'): spec(c)
-log('节点和模型核对通过', UNET, TE, PATCH, LORA or '（不用 turbo）', '%dx%d' % (W, H), 'steps', 4 if args.turbo else args.steps)
+for c in (('MiniMaxH3ImageToVideo' if args.mode == 'fl' else 'MiniMaxH3ReferenceToVideo'), 'MiniMaxH3FunControlNetApply', 'ModelPatchLoader', 'LoadVideo', 'GetVideoComponents', 'SamplerCustomAdvanced', 'BasicGuider', 'KSamplerSelect', 'BasicScheduler', 'RandomNoise'): spec(c)
+log('节点和模型核对通过', args.mode, UNET, TE, PATCH, LORA or '（不用 turbo）', PIKA or '（不用 Pika）', '%dx%d' % (W, H), 'steps', 4 if args.turbo else args.steps)
 
-def prompt_of(task):
-    who = '; '.join(LOOK_EN[c] for c in task.get('characters', []) if c in LOOK_EN)
-    desc = task.get('prompt', '').split('. photorealistic')[0]
-    return ('%s. %sThe scene, clothing and lighting match <Picture 1> exactly; each person keeps the face of their reference photo. %s. '
-            'Shot on a cinema camera, natural skin texture, realistic motion that follows the control video exactly. No extra people, no text.') % (
-        desc, ('People: ' + who + '. ') if who else '', STYLE_EN)
+import h3_prompt   # 提示词按 MiniMax 官方写作规范生成（cloud/h3_prompt.py，docs/prompts/）
+def prompt_of(task, lines=None):
+    return h3_prompt.build(task, 'i2va' if args.mode == 'fl' else 'ref', lines, args.speech)
 
 def graph(refs, controls, n, prompt, seed, audio=None):
     A = {}; k = [0]
@@ -80,15 +83,19 @@ def graph(refs, controls, n, prompt, seed, audio=None):
         A[i] = {'class_type': cls, 'inputs': inp}; return i
     m = node('UNETLoader', vals=[UNET, 'default'])
     if LORA: m = node('LoraLoaderModelOnly', {'model': [m, 0]}, [LORA, 1.0])
+    if PIKA: m = node('LoraLoaderModelOnly', {'model': [m, 0]}, [PIKA, 1.0])
     clip = node('CLIPLoader', vals=[TE, CLIP_T, 'default']); vv = node('VAELoader', vals=[VVAE]); av = node('VAELoader', vals=[AVAE])
     patch = node('ModelPatchLoader', vals=[PATCH])
     for vid, w in controls:   # 每路控制视频套一层 ControlNet（姿态、深度）
         v = node('LoadVideo', vals=[vid, 'image']); fr = node('GetVideoComponents', {'video': [v, 0]})
         m = node('MiniMaxH3FunControlNetApply', {'model': [m, 0], 'model_patch': [patch, 0], 'vae': [vv, 0], 'control_video': [fr, 0]}, [w, 0.0, 1.0])
-    links = {'clip': [clip, 0], 'vae': [vv, 0], 'audio_vae': [av, 0]}
-    for j, r in enumerate(refs): links['ref_images.ref_image_%d' % j] = [node('LoadImage', vals=[r, 'image']), 0]
-    if audio: links['ref_audios.ref_audio_0'] = [node('LoadAudio', vals=[audio]), 0]
-    r2v = node('MiniMaxH3ReferenceToVideo', links, [prompt, W, H, n, 'match'])
+    if args.mode == 'fl':   # 首帧模式：refs[0] = 这一段的第一帧（第一段是写实首帧，后面是上一段最后一帧）
+        r2v = node('MiniMaxH3ImageToVideo', {'clip': [clip, 0], 'vae': [vv, 0], 'first_frame': [node('LoadImage', vals=[refs[0], 'image']), 0]}, [prompt, W, H, n])
+    else:
+        links = {'clip': [clip, 0], 'vae': [vv, 0], 'audio_vae': [av, 0]}
+        for j, r in enumerate(refs): links['ref_images.ref_image_%d' % j] = [node('LoadImage', vals=[r, 'image']), 0]
+        if audio: links['ref_audios.ref_audio_0'] = [node('LoadAudio', vals=[audio]), 0]
+        r2v = node('MiniMaxH3ReferenceToVideo', links, [prompt, W, H, n, 'match'])
     g = node('BasicGuider', {'model': [m, 0], 'conditioning': [r2v, 0]})
     smp = node('KSamplerSelect', vals=['res_multistep'])
     sig = node('BasicScheduler', {'model': [m, 0]}, ['simple', 4 if args.turbo else args.steps, 1.0])
@@ -156,12 +163,10 @@ for tid in man['tasks']:
     audio = None
     if args.ref_audio and os.path.exists(os.path.join(td, 'voice.wav')):
         audio = 'h3voice_%s.wav' % tid; shutil.copy(os.path.join(td, 'voice.wav'), os.path.join(INP, audio))
-    prompt = prompt_of(task)
-    if args.speech and os.path.exists(os.path.join(td, 'voice.json')):   # 台词写进提示词：H3 照着说、照着动嘴（时间点按白模时间轴）
-        vj = json.load(open(os.path.join(td, 'voice.json'), encoding='utf-8'))
-        prompt += ' ' + ' '.join('At %.1f seconds %s speaks in natural conversational Mandarin Chinese, saying: \u201c%s\u201d' % (v['start'], 'the person', v['text']) for v in vj) + \
-                  ' Realistic natural human voice with breathing and room tone, no background music.'
-        if not audio and os.path.exists(os.path.join(td, 'voice.wav')): audio = 'h3voice_%s.wav' % tid; shutil.copy(os.path.join(td, 'voice.wav'), os.path.join(INP, audio))
+    vj = os.path.join(td, 'voice.json'); vlines = json.load(open(vj, encoding='utf-8')) if os.path.exists(vj) else None
+    prompt = prompt_of(task, vlines)
+    if args.speech and vlines and not audio and os.path.exists(os.path.join(td, 'voice.wav')) and args.mode == 'ref':
+        audio = 'h3voice_%s.wav' % tid; shutil.copy(os.path.join(td, 'voice.wav'), os.path.join(INP, audio))
     frames, s, k, extra = [], 0, 0, []
     while s < n24 - 1 or not frames:
         n = grid(min(MAXF, n24 - s))
@@ -171,7 +176,8 @@ for tid in man['tasks']:
             seg = 'h3ctl_%s_%d_%02d.mp4' % (tid, j, k)
             ff('-ss', '%.4f' % (s / 24.0), '-i', p, '-vf', 'tpad=stop_mode=clone:stop_duration=16', '-frames:v', str(n), '-an', '-c:v', 'libx264', '-crf', '12', '-pix_fmt', 'yuv420p', os.path.join(INP, seg))
             segs.append((seg, w))
-        imgs = run(graph([first] + extra + canon, segs, n, prompt, args.seed, audio if k == 0 else None), '%s_%02d' % (tid, k))
+        refs = ([extra[0]] if extra else [first]) if args.mode == 'fl' else [first] + extra + canon   # 首帧模式：续接段的第一帧 = 上一段最后一帧
+        imgs = run(graph(refs, segs, n, prompt, args.seed, audio if k == 0 else None), '%s_%02d' % (tid, k))
         if args.dry: break
         if k: imgs = imgs[1:]
         frames += imgs; k += 1

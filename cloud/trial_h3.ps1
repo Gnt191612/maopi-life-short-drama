@@ -42,11 +42,13 @@ bash $S/setup_h3.sh > $OUT/trial_setup.log 2>&1 || { echo SETUP_FAIL > $OUT/DONE
 i=s01_01_0577; rm -f $OUT/kf/$i.png $OUT/kf/$i@*.png $OUT/kfbase_$i*.png $OUT/kfswap_$i*.png
 cd $S && python3 keyframes.py $PACK $i > $OUT/trial_keys.log 2>&1
 curl -s -X POST -H "Content-Type: application/json" -d '{"unload_models":true,"free_memory":true}' http://127.0.0.1:8188/free >/dev/null
-python3 video_h3.py $PACK --only ${IDS// /,} --res __RES__ > $OUT/trial_h3.log 2>&1 || echo "H3 主版失败" >> $OUT/trial_h3.log
-python3 video_h3.py $PACK --only s06_01_0626 --res __RES__ --turbo --out $OUT/h3_turbo > $OUT/trial_h3_turbo.log 2>&1
-python3 video_h3.py $PACK --only s06_01_0626 --res __RES__ --ref-audio --out $OUT/h3_audio > $OUT/trial_h3_audio.log 2>&1
-python3 video_h3.py $PACK --only s06_01_0626 --res __RES__ --speech --out $OUT/h3_speech > $OUT/trial_h3_speech.log 2>&1   # H3 自己说台词（原生语音 + 口型），音色照参考配音
-wait
+python3 video_h3.py $PACK --only ${IDS// /,} --res __RES__ --mode fl --out $OUT/h3 > $OUT/trial_h3.log 2>&1 || echo "H3 主版失败" >> $OUT/trial_h3.log   # 主版：首帧模式 20 步
+V="python3 video_h3.py $PACK --only s06_01_0626 --res __RES__"   # 对照版都用陈瑶说话特写，便于并排比较
+$V --mode fl --pika      --out $OUT/h3_pika   > $OUT/trial_h3_pika.log 2>&1     # + Pika H3 Flex 真实感 LoRA
+$V --mode ref            --out $OUT/h3_ref    > $OUT/trial_h3_ref.log 2>&1      # 参考图模式（首帧 + 陈瑶标准照只当参考）
+$V --mode fl --turbo     --out $OUT/h3_turbo  > $OUT/trial_h3_turbo.log 2>&1    # 4 步加速（看画质掉多少，决定全片用哪档）
+$V --mode fl --speech    --out $OUT/h3_speech > $OUT/trial_h3_speech.log 2>&1   # H3 自己说台词（原生语音 + 口型）
+$V --mode ref --ref-audio --out $OUT/h3_audio > $OUT/trial_h3_audio.log 2>&1    # 参考配音（看能否自己对上口型）wait
 curl -s -X POST -H "Content-Type: application/json" -d '{"unload_models":true,"free_memory":true}' http://127.0.0.1:8188/free >/dev/null
 ( cd /root/v11_upload/moss_trial && . /root/moss/venv/bin/activate && python /root/v11_upload/tts_moss.py dialog.json $OUT/moss > $OUT/trial_moss.log 2>&1; deactivate )   # 视频做完、显存空出来再跑对话配音
 mkdir -p $OUT/fun && cp -f $OUT/h3/s06_01_0626.mp4 $OUT/fun/ 2>/dev/null; bash $S/lipsync.sh run $PACK s06_01_0626 > $OUT/trial_lips.log 2>&1
@@ -64,14 +66,14 @@ echo OK > $OUT/DONE_TRIAL
     }
     foreach ($t in ($ids -split ' ')) { Get1 "/root/v11_out/h3/$t.mp4" "$dst\" }
     Get1 '/root/v11_out/lips/s06_01_0626.mp4' "$dst\s06_01_0626_lips.mp4"
-    Get1 '/root/v11_out/h3_turbo/s06_01_0626.mp4' "$dst\s06_01_0626_turbo.mp4"
+    Get1 '/root/v11_out/h3_turbo/s06_01_0626.mp4' "$dst\s06_01_0626_turbo.mp4"; Get1 '/root/v11_out/h3_pika/s06_01_0626.mp4' "$dst\s06_01_0626_pika.mp4"; Get1 '/root/v11_out/h3_ref/s06_01_0626.mp4' "$dst\s06_01_0626_ref.mp4"
     Get1 '/root/v11_out/h3_audio/s06_01_0626.mp4' "$dst\s06_01_0626_refaudio.mp4"
     Get1 '/root/v11_out/h3_speech/s06_01_0626.mp4' "$dst\s06_01_0626_speech_v.mp4"; Get1 '/root/v11_out/h3_speech/s06_01_0626.speech.*' "$dst\"
     $sp = Get-ChildItem $dst -Filter 's06_01_0626.speech.*' | Select-Object -First 1   # 原生语音版：画面配 H3 自己的声音
     if ($sp -and (Test-Path "$dst\s06_01_0626_speech_v.mp4")) { $FF0 = & python -c "import config;print(config.FFMPEG)"; & $FF0 -v error -y -i "$dst\s06_01_0626_speech_v.mp4" -i $sp.FullName -map 0:v -map 1:a -c:v copy -c:a aac -shortest "$cmp0\s06_01_0626_H3原生语音.mp4"; & $FF0 -v error -y -i $sp.FullName -ar 16000 -ac 1 "$dst\s06_01_0626_h3voice.wav" }
     Get1 '/root/v11_out/kf/s01_01_0577.png' "$dst\kf_s01_01_0577.png"
-    Get1 '/root/v11_out/moss/s06_dialog.wav' "$dst\moss_s06_dialog.wav"; Get1 '/root/v11_out/moss/s06_dialog.json' "$dst\moss_s06_dialog.json"
-    if (Test-Path "$dst\moss_s06_dialog.wav") { Copy-Item dist\moss_trial\current_s06_dialog.wav "$cmp0\配音对比_现在的IndexTTS2.wav"; Copy-Item "$dst\moss_s06_dialog.wav" "$cmp0\配音对比_MOSS-TTSD对话.wav"; Write-Host "配音对比（第二幕宿舍陈瑶和林晓三句对话）：$cmp0\配音对比_*.wav" }
+    foreach($k in 0,1,2){ Get1 "/root/v11_out/moss/s06_dialog_$k.wav" "$dst\moss_s06_dialog_$k.wav" }; Get1 '/root/v11_out/moss/s06_dialog.json' "$dst\moss_s06_dialog.json"
+    if (Test-Path "$dst\moss_s06_dialog_0.wav") { Copy-Item dist\moss_trial\current_s06_dialog.wav "$cmp0\配音对比_现在的IndexTTS2.wav"; foreach($k in 0,1,2){ if(Test-Path "$dst\moss_s06_dialog_$k.wav"){ Copy-Item "$dst\moss_s06_dialog_$k.wav" "$cmp0\配音对比_MOSS-TTSD对话_第$($k+1)版.wav" } }; Write-Host "配音对比（第二幕宿舍陈瑶和林晓三句对话）：$cmp0\配音对比_*.wav" }
     (Ssh1 'grep -h 完成 /root/v11_out/h3_progress.log') | Out-File -Encoding utf8 "$dst\speed.txt"
     & scp.exe @O -P $Port "${SshHost}:/root/v11_out/trial_*.log" "$dst\" 2>$null
     Get-ChildItem $dst | Select-Object Name, Length | Format-Table -AutoSize
@@ -81,7 +83,7 @@ $cmp = Join-Path $R 'build\review\trial_compare'; New-Item -ItemType Directory -
 $FF = & python -c "import config;print(config.FFMPEG)"
 $work = Join-Path $dst 'work'; Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue; New-Item -ItemType Directory -Force "$work\real", "$work\heads" | Out-Null
 $vers = @{}; foreach ($t in ($ids -split ' ')) { $vers[$t] = if (Test-Path "$dst\${t}_lips.mp4") { "$dst\${t}_lips.mp4" } else { "$dst\$t.mp4" } }
-$vers['s06_01_0626_turbo'] = "$dst\s06_01_0626_turbo.mp4"; $vers['s06_01_0626_refaudio'] = "$dst\s06_01_0626_refaudio.mp4"
+$vers['s06_01_0626_turbo'] = "$dst\s06_01_0626_turbo.mp4"; $vers['s06_01_0626_pika'] = "$dst\s06_01_0626_pika.mp4"; $vers['s06_01_0626_ref'] = "$dst\s06_01_0626_ref.mp4"; $vers['s06_01_0626_refaudio'] = "$dst\s06_01_0626_refaudio.mp4"
 foreach ($k in $vers.Keys) {
     if (-not (Test-Path $vers[$k])) { continue }
     $t = $k.Substring(0, 11); $j = Get-Content "dist\cloud_pack\$t\task.json" -Raw -Encoding utf8 | ConvertFrom-Json
@@ -95,7 +97,7 @@ $lab = { param($s) "scale=960:540,setsar=1,drawtext=fontfile='C\:/Windows/Fonts/
 foreach ($k in $vers.Keys) {
     $t = $k.Substring(0, 11); $old = "build\cloud_out\final_all\real\$t.mp4"; $new = "$work\real\$k.mp4"
     if (-not (Test-Path $new)) { Write-Host "缺 $k"; continue }
-    $name = @{ $t = '新：H3 动作控制'; 's06_01_0626_turbo' = '新：H3 turbo 4步'; 's06_01_0626_refaudio' = '新：H3 参考配音' }[$k]
+    $name = @{ $t = '新：H3 动作控制'; 's06_01_0626_turbo' = '新：H3 turbo 4步'; 's06_01_0626_pika' = '新：H3+Pika 真实感'; 's06_01_0626_ref' = '新：H3 参考图模式'; 's06_01_0626_refaudio' = '新：H3 参考配音' }[$k]
     if (-not $name) { $name = '新：H3' }
     $vf = "[0:v]$(& $lab '旧：图生视频')[a];[1:v]$(& $lab $name)[b];[a][b]hstack"
     $voice = "dist\cloud_pack\$t\voice.wav"
@@ -107,6 +109,6 @@ Get-ChildItem dist\cloud_pack -Directory -Filter 's06_01_0626_*' | Remove-Item -
 if (Test-Path "$dst\speed.txt") { Write-Host '== 每镜头用时'; Get-Content "$dst\speed.txt" -Encoding utf8 }
 Write-Host '== 音画同步（旧版 / H3+口型 / H3 参考配音）'
 & python cloud\av_sync_check.py build\cloud_out\final_all s06_01_0626 2>$null | Select-Object -First 1
-& python cloud\av_sync_check.py $work s06_01_0626 s06_01_0626_refaudio s06_01_0626_turbo 2>$null | Select-Object -First 3
+& python cloud\av_sync_check.py $work s06_01_0626 s06_01_0626_refaudio s06_01_0626_turbo s06_01_0626_pika s06_01_0626_ref 2>$null | Select-Object -First 3
 if (Test-Path "$cmp0\s06_01_0626_H3原生语音.mp4") { Write-Host "H3 原生语音版（声音和口型都是 H3 生成的）：$cmp0\s06_01_0626_H3原生语音.mp4" }
 Write-Host '试跑完成：看完对比视频再决定是否全片重做；记得关机（或等平台空闲 30 分钟自动关机）。'
