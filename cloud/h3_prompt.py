@@ -101,6 +101,13 @@ def build(task, mode='i2va', lines=None, speech=False):
         keep = ('People: %s. ' % people) if people else ''
     shot = '[Shot 1] Live-action, cinematic, %s. %s%s. %s, matching the camera movement of the scene. %s' % (
         size_of(desc), keep, desc[0].upper() + desc[1:], cam, LIFE)
+    # 画面里出现但不是主角的人（只露背影、肩膀、画面边缘）也要写清是谁：11-27 试片 0260 林晓背影没写进提示词，被画成长发、像女生
+    others = [c for c in task.get('others', []) if c not in chars and LOOK_EN.get(c)]
+    if others:
+        shot += ' Also in <Picture 1>, partly visible at the edge of the frame: %s; %s the same person, with the same hair and clothing, for the whole shot.' % (
+            '; '.join(LOOK_EN[c] for c in others),
+            'each stays' if len(others) > 1 else ('she stays' if others[0] in ('mom', 'classB') else 'he stays'))
+        shot += ' The shot contains exactly %d people.' % (len(chars) + len(others))
     # 首帧模式：背景只认首帧，不再用文字描述场景（11-27 试片教训：近景首帧只有白墙，文字写了「宿舍、上下铺、黄昏窗户」，模型中途把背景整个换成宿舍还镜像重复）
     if mode == 'i2va':
         shot += (' The background stays exactly as seen in <Picture 1> for the whole shot, softly out of focus, with the same walls, objects and light; '
