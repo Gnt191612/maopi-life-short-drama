@@ -85,6 +85,7 @@ def make_kf(td, tid, task, src_name, out):
             if keep: s += '（' + '，'.join(keep) + '）'
             return s
         pre = ('画面中的人物是' + '、'.join(tag(c) for c in chars if c in LOOK) + '，不要改变人物的性别、人数和衣着。') if chars else ''
+        pre += task.get('kf_hint', '')   # 按镜头的中文画面提示（谁在左谁在右、体型、人数）：二转三只读这句前缀，task.json 的英文 prompt 只在视频阶段用（11-27 查明）
         base = comfy_run.run(WF_REAL, 'kfbase_' + tid, {'10.image': first_frame(td, tid, src_name), '21.start_at_step': start}, prefix=pre)
         if not base: print('KF FAIL base', tid, flush=True); return
         cur = base
