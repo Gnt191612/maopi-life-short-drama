@@ -1,6 +1,6 @@
 # 毛坯人生，精装朋友圈 —— AI 辅助写实短剧（白模 + AI 写实化管线）
 
-> **⚠ 做视频前必读：[docs/写实化视频避坑清单.md](docs/写实化视频避坑清单.md)**——每一条都是真实返工的教训（白模陈设、手握物体、首帧遮挡、图生视频跑偏、镜头衔接……）。
+> **⚠ 做视频前必读：[docs/写实化视频避坑清单.md](docs/写实化视频避坑清单.md)、[docs/模型选型.md](docs/模型选型.md)（视频必须用白模动作控制的最新模型）**——每一条都是真实返工的教训（白模陈设、手握物体、首帧遮挡、图生视频跑偏、镜头衔接……）。
 
 大连理工大学思政课程短剧作品（约 9–10 分钟）。本仓库包含**从剧本到成片的完整工具链、全部固定资产和踩过的坑**：
 一台什么都没装的电脑按本文步骤即可重新做出整部影片，也可以拿它做新的短剧（见 [docs/制作新短剧指南.md](docs/制作新短剧指南.md)）。
@@ -18,13 +18,14 @@
       │ 关键点标注 → 脸型拟合 → 照片贴脸 → 照着照片做发型 → 身体与服装
       ▼
 角色白模（MakeHuman/MPFB，blender/build_cast.py）  场景白模（blender/build_sets.py）
-配音（Spark-TTS 设计音色 + IndexTTS2 情绪配音）  口型（Rhubarb）  动作（姿态库 + CMU 动捕）
+配音（Spark-TTS 设计音色 + IndexTTS2 情绪配音；对比中：MOSS-TTSD 对话配音）  口型（Rhubarb）  动作（姿态库 + CMU 动捕）
       │
       ▼  Blender 自动拍摄引擎（机位、180° 轴线、遮挡规避、景深）── run_all.py
 白模画面 + 深度图 + 骨架图（每个片段）
       │  cloud/pack_for_cloud.py：按镜头切任务 + 高清首帧
       ▼  云端（仙宫云 ComfyUI 镜像）
-每个镜头：首帧白模 → Krea2「二转三」写实关键帧 → Qwen 只换脸（锁定标准长相）→ Wan2.2 图生视频
+每个镜头：首帧白模 → Krea2「二转三」写实关键帧 → MiniMax H3 + Fun ControlNet（白模姿态/深度逐帧控制）→ LatentSync 对口型
+      │  （2026-11-27 起；11-26 版用 Wan2.2 图生视频、没有动作控制，全片飘忽作废，见 docs/模型选型.md）
       │
       ▼  本地 cloud/make_final.ps1
 片头（Claude 娘讲解 + 场记板）＋ 写实正片（配音、字幕、配乐）──► 成片
@@ -71,7 +72,7 @@ powershell -ExecutionPolicy Bypass -File cloud\prep_trial.ps1 -Segs <要拍的�
 
 ## 四、云端写实化与成片
 
-详细说明：[cloud/写实化会话流程.md](cloud/写实化会话流程.md)。平台：仙宫云，社区镜像「Moss/Krea2 超写实人像 + Wan2.2/MiniMaxH3 图生视频」+ RTX 4090D（约 ¥1.89/时）。
+**现行方案（2026-11-27）：[docs/模型选型.md](docs/模型选型.md)，一条命令试跑 cloud\trial_h3.ps1、全片 cloud\full_fun.ps1。** 下面是旧流程（图生视频），仅供参考：[cloud/写实化会话流程.md](cloud/写实化会话流程.md)。平台：仙宫云，社区镜像「Moss/Krea2 超写实人像 + Wan2.2/MiniMaxH3 图生视频」+ RTX 4090D（约 ¥1.89/时）。
 ```powershell
 # 1) 本地（免费）：重拍全片 + 高清首帧 + 打包 dist/cloud_pack.zip
 powershell -ExecutionPolicy Bypass -File cloud\prep_trial.ps1 -SkipCast -Segs <全部片段>
