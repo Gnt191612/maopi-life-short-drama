@@ -16,6 +16,7 @@ REN = os.environ.get('V11_PACK_RENDERS') or (os.path.join(config.ROOT, 'build', 
 OUT = os.path.join(config.ROOT, 'dist', 'cloud_pack')
 sys.path.insert(0, os.path.join(config.ROOT, 'blender')); import charlib
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import backgrounds   # 每个场景的背景描述、运镜词
+import shot_prompts   # 按镜头覆盖提示词和出场角色
 REFS = os.path.join(config.ROOT, 'assets', 'identity')   # 旧位置；现在用 charlib.identity()（人物库优先）   # 2026-11-22 起：用户选定的标准长相照片 <cid>.png（原来是 assets/lookdev 的旧定妆照）
 CID = S.CID
 STYLE = ('photorealistic live-action film, shot on cinema camera, natural lighting, realistic skin texture, Chinese university campus, '
@@ -73,6 +74,7 @@ def main():
             chars = sorted({CID[c] for b in bts for c in byid.get(b['id'], {}).get('chars', []) if c in CID})
             if ONLY_BEATS and not any(b['id'] in ONLY_BEATS for b in bts): continue   # 局部补拍：其它镜头保留旧任务
             tid = '%s_%04d' % (sid, f0); td = os.path.join(OUT, tid); shutil.rmtree(td, ignore_errors=True); os.makedirs(td)
+            en = shot_prompts.EN.get(tid, en); chars = shot_prompts.CHARS.get(tid, chars)   # 按白模画面覆盖：人数、左右位置（踩坑记录 49）
             for kind in ('beauty', 'depth', 'pose'):
                 fr = [os.path.join(REN if kind != 'pose' else config.RENDERS, sid, '%s_%04d.png' % (kind, f)) for f in range(f0, f1 + 1)]
                 fr = [p for p in fr if os.path.exists(p)]
