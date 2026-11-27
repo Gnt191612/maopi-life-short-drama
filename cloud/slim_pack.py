@@ -15,7 +15,7 @@ with zipfile.ZipFile(out, 'w', zipfile.ZIP_STORED) as z:
         td = os.path.join(PACK, t)
         for f in os.listdir(td):
             if f == 'first.png' and FIRST is not None and t not in FIRST: continue
-            if f in ('task.json', 'first.png', 'depth.mp4', 'voice.wav', 'voice.json') + (('pose.mp4',) if POSE else ()) or (not NOANCHOR and (f == 'anchors.json' or f.startswith('anchor_'))):   # 11-27 起视频阶段用白模深度视频控制、口型同步用配音轨
+            if f in ('task.json', 'first.png', 'depth.mp4', 'voice.wav', 'voice.json', 'lines.json') + (('pose.mp4',) if POSE else ()) or (not NOANCHOR and (f == 'anchors.json' or f.startswith('anchor_'))):   # 11-27 起视频阶段用白模深度视频控制、口型同步用配音轨
                 z.write(os.path.join(td, f), 'cloud_pack/%s/%s' % (t, f))
         chars |= set(json.load(open(os.path.join(td, 'task.json'), encoding='utf-8')).get('characters', []))
     for f in os.listdir(os.path.join(PACK, 'refs')):

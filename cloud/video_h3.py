@@ -171,7 +171,7 @@ for tid in man['tasks']:
     audio = None
     if args.ref_audio and os.path.exists(os.path.join(td, 'voice.wav')):
         audio = 'h3voice_%s.wav' % tid; shutil.copy(os.path.join(td, 'voice.wav'), os.path.join(INP, audio))
-    vj = os.path.join(td, 'voice.json'); vlines = json.load(open(vj, encoding='utf-8')) if os.path.exists(vj) else None
+    vlines = h3_prompt.load_lines(td)   # 全部台词（含多人、画外音），不只是口型同步用的 voice.json（11-27 审查）
     prompt = prompt_of(task, vlines)
     if args.speech and vlines and not audio and os.path.exists(os.path.join(td, 'voice.wav')) and args.mode == 'ref':
         audio = 'h3voice_%s.wav' % tid; shutil.copy(os.path.join(td, 'voice.wav'), os.path.join(INP, audio))

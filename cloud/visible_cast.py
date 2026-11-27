@@ -76,6 +76,7 @@ if __name__ == '__main__':
         o = sorted(c for c, s in v.items() if s >= MIN_SHARE and c not in t.get('characters', []) and not c.startswith('extra'))
         ov = OVERRIDES.get(t['id'], {}); o = sorted((set(o) - set(ov.get('remove', []))) | set(ov.get('add', [])))   # 人工核对过的修正
         extras = sorted(c for c, s in v.items() if c.startswith('extra') and s >= MIN_SHARE)
+        if 'extras' in ov: extras = ['extra_ov%d' % k for k in range(int(ov['extras']))]   # 修正表直接给路人数
         if o or extras or v.keys() - set(t.get('characters', [])):
             print('%s 主角=%s 入画=%s → others=%s%s' % (t['id'], ','.join(t.get('characters', [])) or '无',
                   ' '.join('%s:%.0f%%' % (c, s * 100) for c, s in sorted(v.items())), o, ('  路人 %s' % extras) if extras else ''))

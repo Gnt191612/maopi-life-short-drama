@@ -71,29 +71,34 @@ def main():
             make_kf(td, jid, task, src_name, out)
     print('KEYFRAMES DONE', flush=True)
 
+def kf_prefix(task):
+    """首帧「二转三」读的中文前缀（唯一实现：export_prompts.py 审查也调这里，避免两份逻辑不同步，11-27）"""
+    chars = task.get('characters', [])
+    # 只加一句性别/体型提示（2026-11-25：s09 深夜特写里二转三把林晓画成了短发女生，换脸也没改回来；完整外貌描述会拉远镜头、多画出人，所以只取第一小句）
+    def tag(c):   # 单人只给性别体型；多人再加眼镜和衣着，区分谁是谁（11-25：两人同框时陈瑶被画成第二个穿卫衣的胖子）
+        parts = LOOK[c].split('，'); s = parts[0]
+        keep = [p for p in parts[1:] if '发' in p and len(p) < 24]   # 发型（11-25：林母在 s03 被画成黑长直、s09 是波浪短发）
+        keep += [p for p in parts[1:] if p.startswith('穿')]   # 衣着（单人也加：同学乙的衣服、周明远的毛衣在不同镜头里被画成别的）
+        if len(chars) > 1: keep += [p for p in parts[1:] if '眼镜' in p]
+        if keep: s += '（' + '，'.join(keep) + '）'
+        return s
+    pre = ('画面中的人物是' + '、'.join(tag(c) for c in chars if c in LOOK) + '，不要改变人物的性别、人数和衣着。') if chars else ''
+    # 画面边缘只露背影/肩膀的人也写上（踩坑 68：没写的人会被随意画，男生背影画成长发女生、穿灰衬衫的陌生人）
+    others = [c for c in task.get('others', []) if c in LOOK and c not in chars]
+    if others: pre += '画面边缘还露出' + '、'.join(tag(c) for c in others) + '的一部分（背影、肩膀或侧面），也是这个人，性别和衣着不变。'
+    n = len(chars) + len(others) + int(task.get('extras', 0) or 0)
+    if n: pre += '画面里一共只有 %d 个人。' % n
+    pre += lighting.for_task(task)[0]   # 场景的时间和光线（踩坑 70：白模是统一日光，傍晚/夜戏首帧被画成白天）
+    pre += task.get('kf_hint', '')   # 按镜头的中文画面提示（谁在左谁在右、体型、人数）：二转三只读这句前缀，task.json 的英文 prompt 只在视频阶段用（11-27 查明）
+    return pre
+
 def make_kf(td, tid, task, src_name, out):
     if True:
         if os.path.exists(out): return
         chars = task.get('characters', [])
-        look = '；'.join(LOOK[c] for c in chars if c in LOOK)
         # 图生图：8 步采样从第 3 步开始（保留白模构图，只重绘质感）；不加人物描述——从头重画时会拉远镜头、多画出一个人（2026-11-22 试片）
         start, swap = plan(task)
-        # 只加一句性别/体型提示（2026-11-25：s09 深夜特写里二转三把林晓画成了短发女生，换脸也没改回来；完整外貌描述会拉远镜头、多画出人，所以只取第一小句）
-        def tag(c):   # 单人只给性别体型；多人再加眼镜和衣着，区分谁是谁（11-25：两人同框时陈瑶被画成第二个穿卫衣的胖子）
-            parts = LOOK[c].split('，'); s = parts[0]
-            keep = [p for p in parts[1:] if '发' in p and len(p) < 24]   # 发型（11-25：林母在 s03 被画成黑长直、s09 是波浪短发）
-            keep += [p for p in parts[1:] if p.startswith('穿')]   # 衣着（单人也加：同学乙的衣服、周明远的毛衣在不同镜头里被画成别的）
-            if len(chars) > 1: keep += [p for p in parts[1:] if '眼镜' in p]
-            if keep: s += '（' + '，'.join(keep) + '）'
-            return s
-        pre = ('画面中的人物是' + '、'.join(tag(c) for c in chars if c in LOOK) + '，不要改变人物的性别、人数和衣着。') if chars else ''
-        # 画面边缘只露背影/肩膀的人也写上（踩坑 68：没写的人会被随意画，男生背影画成长发女生、穿灰衬衫的陌生人）
-        others = [c for c in task.get('others', []) if c in LOOK and c not in chars]
-        if others: pre += '画面边缘还露出' + '、'.join(tag(c) for c in others) + '的一部分（背影、肩膀或侧面），也是这个人，性别和衣着不变。'
-        n = len(chars) + len(others) + int(task.get('extras', 0) or 0)
-        if n: pre += '画面里一共只有 %d 个人。' % n
-        pre += lighting.zh(task.get('set', ''))   # 场景的时间和光线（踩坑 70：白模是统一日光，傍晚/夜戏首帧被画成白天）
-        pre += task.get('kf_hint', '')   # 按镜头的中文画面提示（谁在左谁在右、体型、人数）：二转三只读这句前缀，task.json 的英文 prompt 只在视频阶段用（11-27 查明）
+        pre = kf_prefix(task)
         base = comfy_run.run(WF_REAL, 'kfbase_' + tid, {'10.image': first_frame(td, tid, src_name), '21.start_at_step': start}, prefix=pre)
         if not base: print('KF FAIL base', tid, flush=True); return
         cur = base

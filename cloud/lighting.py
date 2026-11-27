@@ -31,3 +31,17 @@ LIGHT = {
 
 def zh(set_name): return LIGHT.get(set_name, ('', ''))[0]
 def en(set_name): return LIGHT.get(set_name, ('', ''))[1]
+
+# 回忆镜头有自己的调色（剧本写明冷蓝/暖金），不能套场景平时的光线（s07_01/03 夜里宿舍回忆是冷蓝，不是暖黄台灯）
+FLASH = {
+    'cold blue': ('这是回忆画面，整体冷蓝色调，昏暗的夜里，人脸主要被手机屏幕的冷光照亮，周围很暗。',
+                  'This is a flashback with a cold blue color grade: a dim night, his face lit mainly by the cool glow of the phone screen, the surroundings dark.'),
+    'warm golden': ('这是回忆画面，整体暖金色调，温暖柔和的晨光，画面明亮温馨。',
+                    'This is a flashback with a warm golden color grade: soft warm morning light, bright and cozy.'),
+}
+def for_task(task):
+    """(中文, 英文)：回忆镜头按调色，其他按场景"""
+    p = task.get('prompt', '').lower()
+    for k, v in FLASH.items():
+        if k + ' color grade' in p: return v
+    return LIGHT.get(task.get('set', ''), ('', ''))

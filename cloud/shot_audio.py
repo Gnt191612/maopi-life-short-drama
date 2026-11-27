@@ -43,3 +43,36 @@ for sid in [s[0] for s in S.segments()]:
         made.append(t['id'])
 print('配音轨 %d 个：%s' % (len(made), ' '.join(made)))
 print('跳过（多人或说话人不在画面里）%d 个：' % len(skipped)); [print('  ', s) for s in skipped]
+
+# ---- lines.json：每个镜头的全部台词（视频提示词用）----
+# voice.json 只给口型同步（单人且说话人在画面里），以前视频提示词也读它，多人/画外音镜头被当成「没人说话、嘴唇闭着」，
+# 剧情里在说话的人画出来闭着嘴，口型对不上（11-27 全片提示词审查：s08_01_0288、s09_02/03、s07_06_0495/0848 等）
+sys.path.insert(0, os.path.join(ROOT, 'story'))
+from story_scenes import SCENES
+BEAT = {b['id']: b for sc in SCENES for b in sc['beats']}
+nl = 0
+for sid, ts in tasks.items():
+    tlp = os.path.join(config.SHOTS, sid + '_timeline.json')
+    tl_lines = [(fr, lid) for b in json.load(open(tlp, encoding='utf-8')) for fr, lid in b['audio'] if not lid.startswith('X') and lid in S.TEXT] if os.path.exists(tlp) else None
+    for t in ts:
+        if want and t['id'] not in want: continue
+        f0, f1 = t['frames']
+        if tl_lines is not None: mine = [((fr - f0) / 24.0, lid) for fr, lid in tl_lines if f0 <= fr <= f1]
+        else:   # 没有白模时间线的段（s09_02/03）：按节拍里的台词顺序，从 0.33 秒起依次排
+            mine, at = [], 0.33
+            for b in t.get('beats', []):
+                for lid in BEAT.get(b, {}).get('line', []):
+                    if lid in S.TEXT and os.path.exists(os.path.join(S.AUD, lid + '.wav')):
+                        mine.append((at, lid))
+                        with wave.open(os.path.join(S.AUD, lid + '.wav')) as w: at += w.getnframes() / w.getframerate() + 0.3
+        on = set(t.get('characters', [])) | set(t.get('others', [])); fv = t.get('face_visible')
+        out = []
+        for st, lid in mine:
+            with wave.open(os.path.join(S.AUD, lid + '.wav')) as w: dur = w.getnframes() / w.getframerate()
+            c = CID.get(S.TEXT[lid][0])
+            out.append(dict(lid=lid, speaker=S.TEXT[lid][0], cid=c, text=S.TEXT[lid][1], start=round(st, 2), dur=round(dur, 2),
+                            onscreen=c in on, face_first_frame=(None if fv is None else c in fv)))
+        lp = os.path.join(PACK, t['id'], 'lines.json')
+        if out: json.dump(out, open(lp, 'w', encoding='utf-8'), ensure_ascii=False, indent=1); nl += 1
+        elif os.path.exists(lp): os.remove(lp)
+print('lines.json %d 个镜头（含多人、画外音）' % nl)

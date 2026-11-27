@@ -15,27 +15,20 @@ OUT = os.path.join(ROOT, 'build', 'review', 'prompts'); os.makedirs(OUT, exist_o
 PACK = os.path.join(ROOT, 'dist', 'cloud_pack')
 BEAT = {b['id']: b for sc in SCENES for b in sc['beats']}
 
-def kf_prefix(task):   # 与 keyframes.py make_kf 里的 tag() 相同逻辑（首帧「二转三」读的中文前缀）
-    chars = task.get('characters', []); L = looks.LOOK
-    def tag(c):
-        parts = L[c].split('，'); s = parts[0]
-        keep = [p for p in parts[1:] if '发' in p and len(p) < 24] + [p for p in parts[1:] if p.startswith('穿')]
-        if len(chars) > 1: keep += [p for p in parts[1:] if '眼镜' in p]
-        return s + ('（' + '，'.join(keep) + '）' if keep else '')
-    pre = ('画面中的人物是' + '、'.join(tag(c) for c in chars if c in L) + '，不要改变人物的性别、人数和衣着。') if chars else ''
-    return pre + task.get('kf_hint', '')
+import keyframes as KF
+def kf_prefix(task): return KF.kf_prefix(task)   # 直接用云端的同一个函数（以前这里复制了一份，改了 keyframes.py 没跟着改，审查看到的和实际用的不一样）
 
 rows = []
 for tj in sorted(glob.glob(os.path.join(PACK, '*', 'task.json'))):
     t = json.load(open(tj, encoding='utf-8'))
-    vj = os.path.join(os.path.dirname(tj), 'voice.json'); lines = json.load(open(vj, encoding='utf-8')) if os.path.exists(vj) else None
+    lines = HP.load_lines(os.path.dirname(tj))
     acts = []
     for b in t.get('beats', []):
         a = BEAT.get(b, {}).get('act', '')
         acts.append('；'.join(a) if isinstance(a, list) else a)
     rows.append(dict(id=t['id'], segment=t['segment'], set=t.get('set', ''), frames=t['frames'], seconds=round(t['n'] / 24, 2), move=t.get('move'),
                      characters=t.get('characters', []), act_zh=[a for a in acts if a], beat_en=t['prompt'].split('. Background:')[0],
-                     overridden=t['id'] in SP.EN, kf_prefix_zh=kf_prefix(t), h3_prompt=HP.build(t, 'i2va', lines, False),
+                     overridden=t['id'] in SP.EN, kf_prefix_zh=kf_prefix(t), others=t.get('others', []), extras=t.get('extras', 0), face_visible=t.get('face_visible'), face_hidden=t.get('face_hidden', []), h3_prompt=HP.build(t, 'i2va', lines, False),
                      h3_prompt_speech=HP.build(t, 'i2va', lines, True) if lines else None,
                      lines=[dict(speaker=v['speaker'], text=v['text'], start=v['start']) for v in (lines or [])]))
 json.dump(rows, open(os.path.join(OUT, 'prompts.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)

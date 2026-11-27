@@ -23,6 +23,8 @@ if [ "$1" = setup ]; then
 fi
 if [ "$1" = run ]; then
   PACK=$2; shift 2; mkdir -p /root/v11_out/lips
+  # ComfyUI 跑完视频后一直占着 30 多 GB 显存不放，口型同步/MOSS 会显存不足（11-27 MOSS 报 CUDA out of memory）：先让它卸载模型
+  curl -s -X POST http://127.0.0.1:8188/free -H 'Content-Type: application/json' -d '{"unload_models":true,"free_memory":true}' >/dev/null; sleep 5
   cd $LS; . venv/bin/activate
   CFG=configs/unet/stage2_512.yaml; [ -f $CFG ] || CFG=configs/unet/stage2.yaml
   for id in "$@"; do

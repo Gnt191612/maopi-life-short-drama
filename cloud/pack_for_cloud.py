@@ -71,6 +71,8 @@ def main():
             bts = [b for b in tl if b['f0'] <= f1 and b['f1'] >= f0]
             descs = [byid[b['id']].get('en') for b in bts if byid.get(b['id'], {}).get('en')]
             en = descs[0] if descs else last_en; last_en = en or last_en
+            tid_ = '%s_%04d' % (sid, f0)
+            if not descs and tid_ not in shot_prompts.EN: print('！镜头 %s 的节拍没有英文画面描述，沿用了上一镜（动作可能对不上，踩坑 72）：请在 cloud/shot_prompts.py 的 EN 里补写' % tid_)
             chars = sorted({CID[c] for b in bts for c in byid.get(b['id'], {}).get('chars', []) if c in CID})
             if ONLY_BEATS and not any(b['id'] in ONLY_BEATS for b in bts): continue   # 局部补拍：其它镜头保留旧任务
             tid = '%s_%04d' % (sid, f0); td = os.path.join(OUT, tid); shutil.rmtree(td, ignore_errors=True); os.makedirs(td)

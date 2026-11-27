@@ -71,6 +71,10 @@ VOICE = {
     'classA': 'a lively young man with a quick, bright voice',
     'classB': 'a young woman with a soft, slightly hesitant voice',
 }
+VIS = {   # 多人同框时指明说话人用的外貌短语（和人物库衣着一致）
+    'lin': 'the chubby young man in the dark grey hoodie', 'chen': 'the slim young man with round glasses in the white shirt',
+    'zhou': 'the thin young man with fluffy curly hair in the olive green sweater', 'wang': 'the man in the light blue shirt and navy tie',
+    'classA': 'the sturdy young man in the navy T-shirt', 'classB': 'the young woman with a low ponytail', 'mom': 'the mother with short wavy hair'}
 NAME2CID = {'林晓': 'lin', '陈瑶': 'chen', '周明远': 'zhou', '王老师': 'wang', '林母': 'mom', '同学甲': 'classA', '同学乙': 'classB'}
 
 # 让动作像真人的正面描述（不写「不要什么」）
@@ -87,6 +91,13 @@ def size_of(desc):
     for k, v in SHOT_SIZE:
         if d.startswith(k) or (', ' + k) in d[:40]: return v
     return 'a medium shot'
+
+def load_lines(td):
+    """镜头的全部台词：优先 lines.json（含多人、画外音，shot_audio.py 生成），没有再用 voice.json（只含口型同步用的单人台词）"""
+    for f in ('lines.json', 'voice.json'):
+        p = os.path.join(td, f)
+        if os.path.exists(p): return json.load(open(p, encoding='utf-8'))
+    return None
 
 def build(task, mode='i2va', lines=None, speech=False):
     desc = task.get('prompt', '').split('. Background:')[0].strip().rstrip('.')
@@ -114,7 +125,7 @@ def build(task, mode='i2va', lines=None, speech=False):
             'One other college student' if extras == 1 else '%d other college students' % extras, 's' if extras == 1 else '', 'them')
     if others or extras:
         shot += ' The shot contains exactly %d people.' % (len(chars) + len(others) + extras)
-    light = lighting.en(task.get('set', ''))   # 场景的时间和光线，和首帧（keyframes.py 用 lighting.zh）同一说法（踩坑 70：台灯亮着、窗外白天）
+    light = lighting.for_task(task)[1]   # 场景的时间和光线，和首帧（keyframes.py 用 lighting.zh）同一说法（踩坑 70：台灯亮着、窗外白天）
     if light: shot += ' ' + light
     # 首帧模式：背景只认首帧，不再用文字描述场景（11-27 试片教训：近景首帧只有白墙，文字写了「宿舍、上下铺、黄昏窗户」，模型中途把背景整个换成宿舍还镜像重复）
     if mode == 'i2va':
@@ -124,19 +135,32 @@ def build(task, mode='i2va', lines=None, speech=False):
         shot += ' Setting: %s.' % bg
     talk = ''
     if lines:
-        seen = {}
+        seen = {}; inframe = set(chars) | set(others); multi = len(inframe) > 1
         for v in lines:
             cid = NAME2CID.get(v.get('speaker'), '')
             if cid not in seen: seen[cid] = 'S%d' % (len(seen) + 1)
             sid = seen[cid]
-            first = list(seen).index(cid) == len(seen) - 1 and sum(1 for x in lines[:lines.index(v)] if NAME2CID.get(x.get('speaker')) == cid) == 0
+            first = sum(1 for x in lines[:lines.index(v)] if NAME2CID.get(x.get('speaker')) == cid) == 0
             voice = VOICE.get(cid, 'the speaker')
-            if speech:
+            pron = 'she' if cid in ('mom', 'classB') else 'he'
+            on = v.get('onscreen', cid in inframe)
+            # 多人同框要指明是谁在说（外貌短语），否则模型随便挑一张嘴动（11-27 审查）；不在画面里的人说话写成画外音，画面里的人不张嘴
+            who = ('%s, %s,' % (VIS.get(cid, 'the speaker'), voice) if multi else voice) if first else ('%s' % VIS.get(cid, pron) if multi else pron)
+            if cid in task.get('face_hidden', []):   # 人在画面里但整段看不到脸（肩后、背影）：只写听得到声音，别让模型为了露嘴把头转过来（s01_01_1016）
+                talk += ' At about %.1f seconds %s (%s) is heard speaking softly%s while his face stays out of view.' % (
+                    v['start'], voice if first else pron, sid, (': <d>[Chinese] %s</d>' % v['text']) if speech else ' for about %.0f seconds' % v['dur'])
+            elif not on:
+                talk += ' At about %.1f seconds an off-screen voice, %s (%s), is heard%s; everyone in the frame listens with lips closed.' % (
+                    v['start'], voice, sid, (': <d>[Chinese] %s</d>' % v['text']) if speech else ' for about %.0f seconds' % v['dur'])
+            elif speech:
                 talk += ' At about %.1f seconds, %s (%s) says with realistic lip articulation and no exaggerated mouth opening: <d>[Chinese] %s</d>' % (
-                    v['start'], voice if first else 'he' if cid not in ('mom', 'classB') else 'she', sid, v['text'])
+                    v['start'], who, sid, v['text'])
             else:
                 talk += ' At about %.1f seconds %s (%s) starts speaking naturally, lips moving with realistic articulation, for about %.0f seconds.' % (
-                    v['start'], voice if first else 'the same speaker', sid, v['dur'])
+                    v['start'], who, sid, v['dur'])
+        if multi:
+            quiet = [c for c in inframe if c not in seen]
+            if quiet: talk += ' %s listen%s with lips closed.' % (' and '.join(VIS.get(c, 'the others') for c in quiet), 's' if len(quiet) == 1 else '')
     elif chars:
         talk = ' Nobody speaks in this shot; lips stay relaxed and closed except for natural breathing.'
     body = 'integrated_multimodal_description: %s%s %s\n\noverall_soundscape: %s\n\nnon_diegetic_music: N/A' % (shot, talk, QUALITY, sound_of(task))
@@ -147,5 +171,4 @@ if __name__ == '__main__':   # 本地预览：python cloud/h3_prompt.py <任务i
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     tid = sys.argv[1]; td = os.path.join(root, 'dist', 'cloud_pack', tid)
     task = json.load(open(os.path.join(td, 'task.json'), encoding='utf-8'))
-    vj = os.path.join(td, 'voice.json'); lines = json.load(open(vj, encoding='utf-8')) if os.path.exists(vj) else None
-    print(build(task, 'i2va', lines, '--speech' in sys.argv))
+    print(build(task, 'i2va', load_lines(td), '--speech' in sys.argv))
