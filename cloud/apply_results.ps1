@@ -16,6 +16,10 @@ foreach ($m in Get-ChildItem $From -Filter *.mp4) {
     $j = Get-Content $tj -Raw -Encoding utf8 | ConvertFrom-Json
     if (Test-Path "$dst\$t") { Remove-Item "$dst\$t" -Recurse -Force }
     Copy-Item $m.FullName "$dst\$t.mp4" -Force
+    if ($t -match '^s07_0[13]_') {   # 回忆戏统一冷蓝调色（踩坑记录 42）
+        $FF = & python -c "import config;print(config.FFMPEG)"
+        & $FF -v error -y -i "$dst\$t.mp4" -vf "colorbalance=rs=-0.10:gs=-0.03:bs=0.14:rm=-0.08:bm=0.10:rh=-0.05:bh=0.06,eq=saturation=0.72:brightness=-0.035" -c:v libx264 -crf 14 -pix_fmt yuv420p "$dst\$t.g.mp4"; Move-Item "$dst\$t.g.mp4" "$dst\$t.mp4" -Force
+    }
     & python cloud\pull_frames.py "$dst\$t.mp4" | Out-Null
     $n = (Get-ChildItem "$dst\$t" -Filter frame_*.png).Count
     if ($n -ne $j.n) { Write-Host "注意：$t 帧数 $n，任务应为 $($j.n)（白模时间轴可能改过，合成时会按时间轴截断或用白模补）" -ForegroundColor Yellow }
