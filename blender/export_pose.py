@@ -64,7 +64,16 @@ for f in range(sc.frame_start, sc.frame_end + 1, step):
             x, y = v.x * W, (1 - v.y) * H
             flat += [round(x, 1), round(y, 1), 1.0 if ok else 0.0]; px.append((x, y, ok))
         if not any(p[2] for p in px): continue
-        people.append({'person_id': FIXED.get(rig.name[:-4], 10 + k), 'pose_keypoints_2d': flat})
+        # 遮挡检测（只写进 json，不影响骨架图）：从相机向关键点打射线，先打到别的物体就算被挡住（visible_cast.py 用它判断谁真的入画，踩坑记录 68）
+        # 规则：①本人至少有一个网格在渲染里可见（白模里隐藏的角色骨架仍在，曾被误算入画）②从相机打向关键点，第一个打中的必须是本人身体
+        meshes = [c for c in rig.children_recursive if c.type == 'MESH']
+        shown = any(not c.hide_render and not any(col.hide_render for col in c.users_collection) for c in meshes)
+        own = {c.name for c in meshes}; co = cam.matrix_world.translation; dg = bpy.context.evaluated_depsgraph_get(); vis = []
+        for p, q in zip(keypoints(rig), px):
+            if not q[2] or not shown: vis.append(0); continue
+            d = p - co; hit, _loc, _n, _i, obj, _m = sc.ray_cast(dg, co, d.normalized(), distance=d.length + 0.25)
+            vis.append(1 if hit and obj is not None and obj.name in own else 0)
+        people.append({'person_id': FIXED.get(rig.name[:-4], 10 + k), 'pose_keypoints_2d': flat, 'unoccluded': vis})
         for li, (i, j) in enumerate(LIMBS):
             if px[i][2] and px[j][2]: draw(img, px[i], px[j], tuple(c * 0.6 for c in COLORS[li % 18]), 2)
         for i, p in enumerate(px):

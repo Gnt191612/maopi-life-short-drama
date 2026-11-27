@@ -106,6 +106,12 @@ def main():
                 import cv2; cv2.imwrite(os.path.join(td, 'first.png'), cv2.imread(src))
         shutil.rmtree(tmp, ignore_errors=True)
         print('高清首帧', sid, len(jobs), flush=True)
+    # 画面里出现但不是主角的人 → task.json 的 others / extras（踩坑记录 68）。骨架数据带遮挡检测，先保证每段都导出过
+    for sid in sorted({t['segment'] for t in tasks}):
+        if not glob.glob(os.path.join(config.RENDERS, sid, 'pose_*.json')) and os.path.exists(os.path.join(config.SHOTS, sid + '.blend')):
+            subprocess.run([config.BLENDER, '-b', '--factory-startup', '-P', os.path.join(config.BLENDER_SCRIPTS, 'export_pose.py'), '--', sid],   # 不跳帧：抽帧导出会留下不全的 pose_*.png，下次打包会因此跳过骨架视频
+                           env=config.blender_env(), capture_output=True)
+    subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'visible_cast.py'), OUT, '--write'])
     all_ids = sorted(os.path.basename(os.path.dirname(p_)) for p_ in glob.glob(os.path.join(OUT, '*', 'task.json')))   # --update 时包含保留下来的旧任务
     json.dump(dict(fps=24, size=[832, 480], tasks=all_ids), open(os.path.join(OUT, 'manifest.json'), 'w', encoding='utf-8'), indent=1)
     zp = OUT + '.zip'
