@@ -24,6 +24,8 @@ ap.add_argument('--prec', choices=['int8', 'bf16', 'fp8'], default='int8');   # 
 ap.add_argument('--mode', choices=['fl', 'ref'], default='fl'); ap.add_argument('--pika', action='store_true'); ap.add_argument('--union', choices=['auto', '1', '2'], default='auto')
 ap.add_argument('--seed', type=int, default=20261127); ap.add_argument('--out', default='/root/v11_out/h3')
 ap.add_argument('--force', action='store_true'); ap.add_argument('--dry', action='store_true')
+ap.add_argument('--hybrid', action='store_true')   # 混合方案（11-27 用户定）：运镜在动的镜头（push/track/arc）用 20 步完整采样拿运镜，手持/固定镜头（hand/static）用 Pika 6 步拿质感和稳定的脸
+ap.add_argument('--frames', type=int, default=0)   # 只跑前 N 帧（便宜的对比测试用，如 SageAttention 测速；0 = 整个镜头）
 args = ap.parse_args()
 W, H = [int(v) for v in args.res.split('x')]; OUT = args.out; os.makedirs(OUT, exist_ok=True); MAXF = 362
 def log(*a):
@@ -71,9 +73,11 @@ _u2 = [f for f in pool('ModelPatchLoader', 'name') if 'union_2' in f.lower()]   
 PATCH = (sorted(_u2, key=lambda f: ('int8' not in f, len(f)))[0] if _u2 and args.union != '1' else pick('ModelPatchLoader', 'name', 'h3_fun_controlnet_union_pruned_int8', 'h3_fun_controlnet', 'h3*controlnet'))
 if args.union == '2' and not _u2: sys.exit('缺少 ControlNet Union 2.0（先运行 setup_h3.sh）')
 LORA = (pick('LoraLoaderModelOnly', 'lora_name', 'h3_fl2v_turbo_4step', 'h3_fl2v_turbo') if args.mode == 'fl' else pick('LoraLoaderModelOnly', 'lora_name', 'h3_ref2v_turbo', 'h3*turbo')) if args.turbo else None
-PIKA = pick('LoraLoaderModelOnly', 'lora_name', 'pika_h3_flex_%s_v1' % _M, 'pika_h3_flex_%s_comfy' % _M, 'pika_h3_flex_%s' % _M) if args.pika else None   # 不要选 pika_h3_flex_turbo_*（另一种加速版）   # Pika H3 Flex：真实感/清晰度后训练（2026-10-29），叠在 H3 上
+PIKA = pick('LoraLoaderModelOnly', 'lora_name', 'pika_h3_flex_%s_v1' % _M, 'pika_h3_flex_%s_comfy' % _M, 'pika_h3_flex_%s' % _M) if (args.pika or args.hybrid) else None   # 不要选 pika_h3_flex_turbo_*（另一种加速版）   # Pika H3 Flex：真实感/清晰度后训练（2026-10-29），叠在 H3 上
 CLIP_T = 'minimax' if 'minimax' in pool('CLIPLoader', 'type') else pool('CLIPLoader', 'type')[0]
-for c in (('MiniMaxH3ImageToVideo' if args.mode == 'fl' else 'MiniMaxH3ReferenceToVideo'), 'MiniMaxH3FunControlNetApply', 'ModelPatchLoader', 'LoadVideo', 'GetVideoComponents', 'SamplerCustomAdvanced', 'BasicGuider', 'KSamplerSelect', 'BasicScheduler', 'RandomNoise') + (('ManualSigmas',) if args.pika else ()): spec(c)
+for c in (('MiniMaxH3ImageToVideo' if args.mode == 'fl' else 'MiniMaxH3ReferenceToVideo'), 'MiniMaxH3FunControlNetApply', 'ModelPatchLoader', 'LoadVideo', 'GetVideoComponents', 'SamplerCustomAdvanced', 'BasicGuider', 'KSamplerSelect', 'BasicScheduler', 'RandomNoise') + (('ManualSigmas',) if (args.pika or args.hybrid) else ()): spec(c)
+USE_PIKA = [bool(args.pika)]   # 当前镜头是否用 Pika（--hybrid 时按镜头运镜类型逐个设置）
+def pika_for(task): return bool(args.pika) or (args.hybrid and task.get('move', 'static') in ('hand', 'static'))
 log('节点和模型核对通过', args.mode, UNET, TE, PATCH, LORA or '（不用 turbo）', PIKA or '（不用 Pika）', '%dx%d' % (W, H), 'steps', 4 if args.turbo else args.steps)
 
 import h3_prompt   # 提示词按 MiniMax 官方写作规范生成（cloud/h3_prompt.py，docs/prompts/）
@@ -87,7 +91,7 @@ def graph(refs, controls, n, prompt, seed, audio=None):
         A[i] = {'class_type': cls, 'inputs': inp}; return i
     m = node('UNETLoader', vals=[UNET, 'default'])
     if LORA: m = node('LoraLoaderModelOnly', {'model': [m, 0]}, [LORA, 1.0])
-    if PIKA: m = node('LoraLoaderModelOnly', {'model': [m, 0]}, [PIKA, 1.0])
+    if PIKA and USE_PIKA[0]: m = node('LoraLoaderModelOnly', {'model': [m, 0]}, [PIKA, 1.0])
     clip = node('CLIPLoader', vals=[TE, CLIP_T, 'default']); vv = node('VAELoader', vals=[VVAE]); av = node('VAELoader', vals=[AVAE])
     patch = node('ModelPatchLoader', vals=[PATCH])
     for vid, w in controls:   # 每路控制视频套一层 ControlNet（姿态、深度）
@@ -101,7 +105,7 @@ def graph(refs, controls, n, prompt, seed, audio=None):
         if audio: links['ref_audios.ref_audio_0'] = [node('LoadAudio', vals=[audio]), 0]
         r2v = node('MiniMaxH3ReferenceToVideo', links, [prompt, W, H, n, 'match'])
     g = node('BasicGuider', {'model': [m, 0], 'conditioning': [r2v, 0]})
-    if PIKA:   # Pika H3 Flex 按 ComfyUI 官方模板 video_pika_h3_flex_fl2va：LCM 采样器 + 作者固定的 6 步 sigma（不是普通 20 步）
+    if PIKA and USE_PIKA[0]:   # Pika H3 Flex 按 ComfyUI 官方模板 video_pika_h3_flex_fl2va：LCM 采样器 + 作者固定的 6 步 sigma（不是普通 20 步）
         smp = node('KSamplerSelect', vals=['lcm'])
         sig = node('ManualSigmas', vals=['1.0, 0.972973, 0.923077, 0.8, 0.571429, 0.333333, 0.0'])
     else:
@@ -157,7 +161,8 @@ for tid in man['tasks']:
     td = os.path.join(pack, tid); task = json.load(open(os.path.join(td, 'task.json'), encoding='utf-8'))
     kf = os.path.join(KF, tid + '.png')
     if not os.path.exists(kf): log('跳过（没有写实首帧）', tid); continue
-    n24 = task['n']; t0 = time.time()
+    n24 = min(task['n'], args.frames) if args.frames else task['n']; t0 = time.time()
+    USE_PIKA[0] = pika_for(task); log(tid, '用 Pika 6 步' if USE_PIKA[0] else '用 20 步完整采样', '运镜', task.get('move'))
     ctl = []   # (完整控制视频, 强度)
     if args.pose > 0 and os.path.exists(os.path.join(td, 'pose.mp4')) and task.get('characters'):
         p = os.path.join(TMP, tid + '_pose.mp4')

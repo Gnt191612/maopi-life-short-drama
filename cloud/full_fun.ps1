@@ -4,7 +4,8 @@
 #   3) powershell -ExecutionPolicy Bypass -File cloud\full_fun.ps1 -Step final                   # 备份旧成片 → 合成新成片 → 跑审查（跑偏拼图、角色对照、台词对齐）
 # 云端流程：装模型（已有就跳过）→ 后台装口型环境 → 重做改过提示词的首帧 → 全片视频（已做好的跳过，断线/空闲关机后重跑接着做）→ 口型同步 49 个单人说话镜头 → DONE_FULL
 # 结果目录 build\cloud_out\final_fun（先复制一份旧版 final_all 当兜底：哪个镜头新版没做出来，暂时用旧版顶上并在报告里列出）
-param([ValidateSet('start', 'pull', 'final')][string]$Step = 'start', [string]$Res = '1344x768', [ValidateSet('h3', 'fun')][string]$Engine = 'h3', [string]$H3Args = '',   # Engine：h3 = MiniMax H3（11-27 选定，默认），fun = Wan2.2 Fun Control（备选）；H3Args 例如 '--turbo' 按试跑结论加
+param([ValidateSet('start', 'keys', 'pull', 'final')][string]$Step = 'start', [string]$Res = '1344x768', [ValidateSet('h3', 'fun')][string]$Engine = 'h3', [string]$H3Args = '--hybrid',   # 11-27 用户定：混合方案（运镜镜头 20 步、手持/固定镜头 Pika 6 步）
+      [switch]$KeysOnly, [switch]$Sage,   # KeysOnly：只做首帧（取回审查合格后再不带它跑视频，首帧已有的跳过）；Sage：视频前用 --use-sage-attention 重启 ComfyUI（测试确认画质不变后才用）   # Engine：h3 = MiniMax H3（11-27 选定，默认），fun = Wan2.2 Fun Control（备选）；H3Args 例如 '--turbo' 按试跑结论加
       [string]$SshHost = 'root@tdtjxa8cdyzuands.ssh.x-gpu.com', [int]$Port = 49855)
 $ErrorActionPreference = 'Continue'
 $R = Split-Path $PSScriptRoot -Parent; Set-Location $R; $env:PYTHONIOENCODING = 'utf-8'
@@ -21,7 +22,13 @@ if ($Step -eq 'start') {
     $free = (Get-PSDrive D).Free / 1GB
     if ($free -lt 25) { Write-Host ("D 盘只剩 {0:N0} GB，全片新素材约需 23 GB，先清理再开始" -f $free); exit 1 }
     & python -c "import sys,json; sys.path.insert(0,'cloud'); import looks; json.dump(dict(look=looks.LOOK, look_en=looks.LOOK_EN, name=looks.NAME), open('cloud/looks_gen.json','w',encoding='utf-8'), ensure_ascii=False, indent=1)"
-    & python cloud\shot_audio.py | Select-Object -First 1
+    # ---- 开跑前提示词审查（11-27 起强制，踩坑 72～76）：不是 0 条就不上传 ----
+    & python cloud\apply_shot_prompts.py | Write-Host
+    & python cloud\visible_cast.py --write | Select-Object -Last 1 | Write-Host
+    & python cloud\shot_audio.py | Select-Object -Last 1 | Write-Host
+    & python cloud\export_prompts.py | Write-Host
+    $aud = & python cloud\audit_prompts.py; Write-Host $aud
+    if ($aud -notmatch '有提示的镜头 0 个') { Write-Host '提示词审查没过，先按 build\review\prompts\审查报告.md 改完再上云（不要带着已知问题花钱）'; exit 1 }
     $all = (Get-ChildItem dist\cloud_pack -Directory | Where-Object { Test-Path "$($_.FullName)\task.json" } | ForEach-Object Name | Sort-Object) -join ','
     $have = Ssh1 'cd /root/v11_out/kf 2>/dev/null && ls *.png 2>/dev/null' 90   # 云端已有的写实首帧（不带 @ 的）
     $have = @($have | Where-Object { $_ -match '^s\d\d_\d\d_\d{4}\.png$' } | ForEach-Object { $_ -replace '\.png$', '' })
@@ -30,7 +37,7 @@ if ($Step -eq 'start') {
     & python cloud\slim_pack.py $all dist\full_fun.zip --no-anchors --pose --first ($needFirst -join ',')
     $voice = (Get-ChildItem dist\cloud_pack -Directory | Where-Object { Test-Path "$($_.FullName)\voice.wav" } | ForEach-Object Name | Sort-Object) -join ' '
     Ssh1 'mkdir -p /root/v11_upload/scripts /root/v11_out/kf /root/ComfyUI/input; pkill -f trial_h3.sh; pkill -f full_fun.sh; echo dirs' 60 | Out-Null   # 新实例没有这些目录（11-27 新建 TDTJ 时第一次上传失败）
-    & scp.exe @O -P $Port cloud\video_fun.py cloud\video_h3.py cloud\h3_prompt.py cloud\disk_guard.sh cloud\cleanup_auto.sh cloud\lipsync.sh cloud\setup_fun.sh cloud\setup_h3.sh cloud\keyframes.py cloud\lighting.py cloud\comfy_run.py cloud\looks.py cloud\looks_gen.json cloud\shard.py "${SshHost}:/root/v11_upload/scripts/"
+    & scp.exe @O -P $Port cloud\video_fun.py cloud\video_h3.py cloud\h3_prompt.py cloud\disk_guard.sh cloud\cleanup_auto.sh cloud\lipsync.sh cloud\setup_fun.sh cloud\setup_h3.sh cloud\keyframes.py cloud\lighting.py cloud\comfy_run.py cloud\comfy_restart.sh cloud\looks.py cloud\looks_gen.json cloud\shard.py "${SshHost}:/root/v11_upload/scripts/"
     & scp.exe @O -P $Port dist\full_fun.zip "${SshHost}:/root/v11_upload/full_fun.zip"
     $sh = @'
 PYC=$(ls /root/miniconda3/envs/comfyui/bin/python 2>/dev/null || command -v python3)   # ComfyUI 环境的 Python（有 cv2/PIL/numpy；系统 python3 没有）
@@ -43,6 +50,8 @@ bash $S/setup___ENGINE__.sh > $OUT/full_setup.log 2>&1 || { echo SETUP_FAIL > $O
 ( bash $S/lipsync.sh setup > $OUT/full_lipsetup.log 2>&1 ) &
 for i in __REKEY__; do rm -f $OUT/kf/$i.png $OUT/kf/$i@*.png $OUT/kfbase_$i*.png $OUT/kfswap_$i*.png; done
 cd $S && $PYC keyframes.py $PACK > $OUT/full_keys.log 2>&1          # 已有首帧的跳过，只补缺的
+if [ __KEYSONLY__ = 1 ]; then touch $OUT/DONE_KEYS; exit; fi   # 只做首帧：取回本地逐张审查（踩坑 71），合格后再跑视频
+if [ __SAGE__ = 1 ]; then bash $S/comfy_restart.sh --use-sage-attention > $OUT/full_comfy.log 2>&1 || { echo COMFY_FAIL > $OUT/DONE_FULL; exit; }; fi
 curl -s -X POST -H "Content-Type: application/json" -d '{"unload_models":true,"free_memory":true}' http://127.0.0.1:8188/free >/dev/null   # 卸掉 Krea2/Qwen，给 Wan 腾显存
 if [ __ENGINE__ = h3 ]; then $PYC video_h3.py $PACK --res __RES__ --out $OUT/fun __H3ARGS__ > $OUT/full_fun.log 2>&1; else $PYC video_fun.py $PACK --res __RES__ > $OUT/full_fun.log 2>&1; fi   # 两种引擎都输出到 fun/，后面取回和口型同步不用改
 wait
@@ -50,13 +59,20 @@ curl -s -X POST -H "Content-Type: application/json" -d '{"unload_models":true,"f
 bash $S/lipsync.sh run $PACK __VOICE__ > $OUT/full_lips.log 2>&1
 touch $OUT/DONE_FULL
 '@
-    $p = Join-Path $env:TEMP 'full_fun.sh'; [IO.File]::WriteAllText($p, $sh.Replace('__REKEY__', $Rekey).Replace('__RES__', $Res).Replace('__ENGINE__', $Engine).Replace('__H3ARGS__', $H3Args).Replace('__VOICE__', $voice).Replace("`r`n", "`n"))
+    $p = Join-Path $env:TEMP 'full_fun.sh'; [IO.File]::WriteAllText($p, $sh.Replace('__REKEY__', $Rekey).Replace('__RES__', $Res).Replace('__ENGINE__', $Engine).Replace('__H3ARGS__', $H3Args).Replace('__VOICE__', $voice).Replace('__KEYSONLY__', [string][int][bool]$KeysOnly).Replace('__SAGE__', [string][int][bool]$Sage).Replace('__KEYSONLY__', [string][int][bool]$KeysOnly).Replace('__SAGE__', [string][int][bool]$Sage).Replace("`r`n", "`n"))
     & scp.exe @O -P $Port $p "${SshHost}:/root/full_fun.sh"
     & ssh.exe @O -p $Port $SshHost 'nohup bash /root/full_fun.sh > /root/full_fun.log 2>&1 & echo QUEUED'
     Write-Host '已排队。接着运行 -Step pull（后台），它会一直取回到全部完成。'
     exit
 }
 
+if ($Step -eq 'keys') {   # 取回全部写实首帧做审查（-KeysOnly 跑完后）：build\cloud_out\kf_review\ + 拼图，人工逐张对照白模首帧（人数、朝向、衣着、光线、有没有多出的人/脸）
+    $dst = Join-Path $R 'build\cloud_out\kf_review'; New-Item -ItemType Directory -Force $dst | Out-Null
+    Write-Host ((Ssh1 'ls /root/v11_out/DONE_KEYS 2>/dev/null; ls /root/v11_out/kf/*.png 2>/dev/null | wc -l' 60) -join ' ')
+    & scp.exe @O -P $Port "${SshHost}:/root/v11_out/kf/*.png" $dst
+    & python cloud\kf_review.py $dst
+    exit
+}
 if ($Step -eq 'pull') {
     if (-not (Test-Path build\cloud_out\final_fun\real)) {   # 新结果目录：复制旧版当兜底（片头、头部位置、时间轴快照也一并带上）
         & robocopy build\cloud_out\final_all build\cloud_out\final_fun /E /NFL /NDL /NJH /NJS /NP | Out-Null

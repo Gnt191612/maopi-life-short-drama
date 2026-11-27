@@ -18,7 +18,12 @@ if [ "$1" = setup ]; then
   $PY -m uv pip install -p venv/bin/python -r requirements.mirror.txt huggingface_hub
   for f in whisper/tiny.pt latentsync_unet.pt; do mkdir -p checkpoints/$(dirname $f); [ -s checkpoints/$f ] && continue   # ModelScope 快（hf-mirror 约 0.4 MB/s，11-27 实测）
     wget -q -c -O checkpoints/$f "https://modelscope.cn/models/ByteDance/LatentSync-1.6/resolve/master/$f" || wget -q -c -O checkpoints/$f "$HF/ByteDance/LatentSync-1.6/resolve/main/$f"; done
-  ls -la checkpoints checkpoints/whisper
+  # VAE：推理脚本默认从 HuggingFace 拉 stabilityai/sd-vae-ft-mse，云端 HF 和 hf-mirror 都下到一半断（11-27 两次 IncompleteRead）→ ModelScope 续传下载到本地，推理时改读本地目录
+  mkdir -p checkpoints/sd-vae-ft-mse
+  for f in config.json diffusion_pytorch_model.safetensors; do [ -s checkpoints/sd-vae-ft-mse/$f ] && continue
+    wget -q -c -O checkpoints/sd-vae-ft-mse/$f "https://modelscope.cn/models/AI-ModelScope/sd-vae-ft-mse/resolve/master/$f"; done
+  grep -rl '"stabilityai/sd-vae-ft-mse"' scripts latentsync 2>/dev/null | xargs -r sed -i 's#"stabilityai/sd-vae-ft-mse"#"checkpoints/sd-vae-ft-mse"#g'
+  ls -la checkpoints checkpoints/whisper checkpoints/sd-vae-ft-mse
   echo LIPSYNC SETUP DONE; exit 0
 fi
 if [ "$1" = run ]; then
