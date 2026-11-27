@@ -15,9 +15,9 @@ img1, img2, name, inst = sys.argv[1:5]; seed = int(sys.argv[5]) if len(sys.argv)
 w0, h0 = Image.open(os.path.join('/root/ComfyUI/input', img1)).size
 W = 1920 if w0 >= h0 else round(1920 * w0 / h0 / 16) * 16
 H = round(W * h0 / w0 / 16) * 16                                   # 和原图同比例，16 的倍数
-api = comfy_run.convert(WF)
+api = comfy_run.convert(WF, enable=(52, 48, 50))   # 「第二参考」分组（52 读图、48/50 缩放）作者默认静音，不强制启用就会被跳过（KeyError '52'，2026-11-26）
 api['66']['inputs']['image'] = img1; api['52']['inputs']['image'] = img2
-api['34']['inputs']['text'] = inst
+api['34']['inputs']['prompt'] = inst   # 字段名是 prompt；写成 text 会被忽略，跑出作者自带的示例指令（红衣服、指镜头）
 api['6']['inputs']['width'] = W; api['6']['inputs']['height'] = H; api['6']['inputs']['batch_size'] = 1
 api['7']['inputs']['seed'] = seed
 r = comfy_run._post('/prompt', {'prompt': api}); pid = r.get('prompt_id')
