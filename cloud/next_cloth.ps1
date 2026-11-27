@@ -1,4 +1,4 @@
-# 下次开机一条命令（2026-11-27 准备）：重做林晓穿成黑外套的两个镜头 s01_01_1016、s02_01_1116
+﻿# 下次开机一条命令（2026-11-27 准备）：重做林晓穿成黑外套的两个镜头 s01_01_1016、s02_01_1116
 #   powershell -ExecutionPolicy Bypass -File cloud\next_cloth.ps1
 # 上传最新脚本（keyframes.py 含 kf_hint/noswap、林晓体型描述）和素材包 → 云端排队做关键帧+视频 → 等完成标记 → 取回到 build\cloud_out\pulled_next\cloth
 # 取回后：审查（衣服是深灰开襟卫衣、和前后镜头一致、体型偏胖）→ powershell -File cloud\apply_results.ps1 -From build\cloud_out\pulled_next\cloth → 记得关机

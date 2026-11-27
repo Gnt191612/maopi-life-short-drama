@@ -1,4 +1,4 @@
-# 等云端某轮完成标记出现后取回指定镜头（本地后台运行；每条 ssh/scp 都有心跳和硬超时，不会卡死）
+﻿# 等云端某轮完成标记出现后取回指定镜头（本地后台运行；每条 ssh/scp 都有心跳和硬超时，不会卡死）
 #   powershell -File cloud\wait_fetch.ps1 -Flag DONE_R8 -Ids s07_00_0171,s10_00_0102 -Dst build\cloud_out\pulled_next\real8 [-Hours 6]
 param([Parameter(Mandatory = $true)][string]$Flag, [Parameter(Mandatory = $true)][string]$Ids, [Parameter(Mandatory = $true)][string]$Dst,
       [double]$Hours = 6, [string]$SshHost = 'root@4b5fw7589f8xzvy1.ssh.x-gpu.com', [int]$Port = 56493)
