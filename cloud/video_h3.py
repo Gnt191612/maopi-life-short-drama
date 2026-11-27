@@ -71,9 +71,9 @@ _u2 = [f for f in pool('ModelPatchLoader', 'name') if 'union_2' in f.lower()]   
 PATCH = (sorted(_u2, key=lambda f: ('int8' not in f, len(f)))[0] if _u2 and args.union != '1' else pick('ModelPatchLoader', 'name', 'h3_fun_controlnet_union_pruned_int8', 'h3_fun_controlnet', 'h3*controlnet'))
 if args.union == '2' and not _u2: sys.exit('缺少 ControlNet Union 2.0（先运行 setup_h3.sh）')
 LORA = (pick('LoraLoaderModelOnly', 'lora_name', 'h3_fl2v_turbo_4step', 'h3_fl2v_turbo') if args.mode == 'fl' else pick('LoraLoaderModelOnly', 'lora_name', 'h3_ref2v_turbo', 'h3*turbo')) if args.turbo else None
-PIKA = pick('LoraLoaderModelOnly', 'lora_name', 'pika_h3_flex_%s' % ('fl2va' if args.mode == 'fl' else 'ref2va'), 'pika_h3_flex') if args.pika else None   # Pika H3 Flex：真实感/清晰度后训练（2026-10-29），叠在 H3 上
+PIKA = pick('LoraLoaderModelOnly', 'lora_name', 'pika_h3_flex_%s_v1' % _M, 'pika_h3_flex_%s_comfy' % _M, 'pika_h3_flex_%s' % _M) if args.pika else None   # 不要选 pika_h3_flex_turbo_*（另一种加速版）   # Pika H3 Flex：真实感/清晰度后训练（2026-10-29），叠在 H3 上
 CLIP_T = 'minimax' if 'minimax' in pool('CLIPLoader', 'type') else pool('CLIPLoader', 'type')[0]
-for c in (('MiniMaxH3ImageToVideo' if args.mode == 'fl' else 'MiniMaxH3ReferenceToVideo'), 'MiniMaxH3FunControlNetApply', 'ModelPatchLoader', 'LoadVideo', 'GetVideoComponents', 'SamplerCustomAdvanced', 'BasicGuider', 'KSamplerSelect', 'BasicScheduler', 'RandomNoise'): spec(c)
+for c in (('MiniMaxH3ImageToVideo' if args.mode == 'fl' else 'MiniMaxH3ReferenceToVideo'), 'MiniMaxH3FunControlNetApply', 'ModelPatchLoader', 'LoadVideo', 'GetVideoComponents', 'SamplerCustomAdvanced', 'BasicGuider', 'KSamplerSelect', 'BasicScheduler', 'RandomNoise') + (('ManualSigmas',) if args.pika else ()): spec(c)
 log('节点和模型核对通过', args.mode, UNET, TE, PATCH, LORA or '（不用 turbo）', PIKA or '（不用 Pika）', '%dx%d' % (W, H), 'steps', 4 if args.turbo else args.steps)
 
 import h3_prompt   # 提示词按 MiniMax 官方写作规范生成（cloud/h3_prompt.py，docs/prompts/）
@@ -101,8 +101,12 @@ def graph(refs, controls, n, prompt, seed, audio=None):
         if audio: links['ref_audios.ref_audio_0'] = [node('LoadAudio', vals=[audio]), 0]
         r2v = node('MiniMaxH3ReferenceToVideo', links, [prompt, W, H, n, 'match'])
     g = node('BasicGuider', {'model': [m, 0], 'conditioning': [r2v, 0]})
-    smp = node('KSamplerSelect', vals=['res_multistep'])
-    sig = node('BasicScheduler', {'model': [m, 0]}, ['simple', 4 if args.turbo else args.steps, 1.0])
+    if PIKA:   # Pika H3 Flex 按 ComfyUI 官方模板 video_pika_h3_flex_fl2va：LCM 采样器 + 作者固定的 6 步 sigma（不是普通 20 步）
+        smp = node('KSamplerSelect', vals=['lcm'])
+        sig = node('ManualSigmas', vals=['1.0, 0.972973, 0.923077, 0.8, 0.571429, 0.333333, 0.0'])
+    else:
+        smp = node('KSamplerSelect', vals=['res_multistep'])
+        sig = node('BasicScheduler', {'model': [m, 0]}, ['simple', 4 if args.turbo else args.steps, 1.0])
     noise = node('RandomNoise', vals=[seed, 'fixed'])
     s = node('SamplerCustomAdvanced', {'noise': [noise, 0], 'guider': [g, 0], 'sampler': [smp, 0], 'sigmas': [sig, 0], 'latent_image': [r2v, 1]})
     dec = node('VAEDecode', {'samples': [s, 0], 'vae': [vv, 0]})

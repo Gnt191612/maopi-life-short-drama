@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """本地演练 video_h3.py（不开机、不花钱）：伪造一份 ComfyUI /object_info（节点名和控件顺序照官方模板 cloud/wf_templates），
 把 comfy_run._get 换成假的，用 --dry 跑一遍构图，检查脚本本身有没有错、节点连线是否齐全。
 用法：python cloud/tests/dry_h3.py [video_h3.py 的参数...]   例：python cloud/tests/dry_h3.py --only s06_01_0626 --mode fl --pika"""
@@ -11,7 +11,7 @@ FILES = dict(
     clip=['qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors'], vae=['minimax_h3_video_vae_int8_convrot.safetensors', 'minimax_h3_audio_vae_fp32.safetensors'],
     patch=['minimax_h3_fun_controlnet_union_pruned_int8_convrot.safetensors', 'minimax_h3_fun_controlnet_union_2.0_pruned_int8_convrot.safetensors'],
     lora=['minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors', 'minimax_h3_fl2v_turbo_4step_v1.0_768p_comfyui_bf16.safetensors',
-          'pika_h3_flex_fl2va_v1_bf16.safetensors', 'pika_h3_flex_ref2va_v1_bf16.safetensors'])
+          'H3/pika_h3_flex_fl2va_comfy_bf16.safetensors', 'H3/pika_h3_flex_ref2va_comfy_bf16.safetensors', 'H3/pika_h3_flex_turbo_4step_fl2va.safetensors'])
 def I(**req): return {'input': {'required': req}}
 INFO = {
     'UNETLoader': I(unet_name=[FILES['unet']], weight_dtype=[['default']]),
@@ -24,7 +24,7 @@ INFO = {
     'MiniMaxH3FunControlNetApply': I(model=['MODEL'], model_patch=['MODEL_PATCH'], vae=['VAE'], control_video=['IMAGE'], strength=['FLOAT'], start_percent=['FLOAT'], end_percent=['FLOAT']),
     'MiniMaxH3ImageToVideo': I(clip=['CLIP'], vae=['VAE'], first_frame=['IMAGE'], prompt=['STRING'], width=['INT'], height=['INT'], length=['INT']),
     'MiniMaxH3ReferenceToVideo': I(clip=['CLIP'], vae=['VAE'], audio_vae=['VAE'], prompt=['STRING'], width=['INT'], height=['INT'], length=['INT'], mode=[['match']]),
-    'BasicGuider': I(model=['MODEL'], conditioning=['CONDITIONING']), 'KSamplerSelect': I(sampler_name=[['res_multistep']]),
+    'BasicGuider': I(model=['MODEL'], conditioning=['CONDITIONING']), 'KSamplerSelect': I(sampler_name=[['res_multistep', 'lcm']]), 'ManualSigmas': I(sigmas=['STRING']),
     'BasicScheduler': I(model=['MODEL'], scheduler=[['simple']], steps=['INT'], denoise=['FLOAT']),
     'RandomNoise': {'input': {'required': {'noise_seed': ['INT', {'control_after_generate': True}]}}},
     'SamplerCustomAdvanced': I(noise=['NOISE'], guider=['GUIDER'], sampler=['SAMPLER'], sigmas=['SIGMAS'], latent_image=['LATENT']),
