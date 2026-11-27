@@ -18,6 +18,10 @@ ap.add_argument('pack'); ap.add_argument('--map', default=os.path.join(os.path.d
 ap.add_argument('--only', default=''); ap.add_argument('--test', action='store_true'); ap.add_argument('--dry', action='store_true')
 args = ap.parse_args()
 M = json.load(open(args.map, encoding='utf-8'))
+# 2026-11-27 严重失误后禁用：「图生视频 + 锚点首尾帧、不用白模动作视频控制」做出的全片动作飘忽、人物乱动、口型和台词对不上（踩坑记录 58）。
+# 视频阶段必须用白模控制视频（深度/姿态）驱动的最新模型；没有控制视频的工作流一律拒绝运行。
+if not M.get('control_video') and not os.environ.get('V11_I_KNOW_OLD_I2V_FAILED'):
+    sys.exit('拒绝运行：%s 没有白模控制视频（control_video 为空），属于 11-27 已判定失败的旧做法。见 docs/踩坑记录.md 第 58 条。' % M.get('workflow'))
 FPS = M.get('fps', 16); MAXF = M.get('max_frames', 81); W, H = M.get('size', [832, 480])
 
 def ff(*a): subprocess.run(['ffmpeg', '-v', 'error', '-y'] + list(a), check=True)
