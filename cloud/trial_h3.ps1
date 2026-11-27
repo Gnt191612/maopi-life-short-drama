@@ -1,0 +1,102 @@
+﻿# MiniMax H3 方案试跑（本地一条命令，2026-11-27 用户确认选型）：H3 + Fun ControlNet Union（白模姿态 0.7 + 深度 0.3）+ 口型同步
+#   powershell -ExecutionPolicy Bypass -File cloud\trial_h3.ps1 -Step report   # 开机后先跑：磁盘清单 + H3 在镜像里的情况（只看不删）
+#   powershell -ExecutionPolicy Bypass -File cloud\trial_h3.ps1 -Step trial    # 装缺的模型 → 重做 0577 首帧 → H3 生成 3 个镜头 + 2 个对照版 → 口型 → 取回 → 对比
+# 镜头：s01_01_0577（宿舍全景多人走动）、s02_01_1021（图书馆两人互动）、s06_01_0626（陈瑶说话特写）
+# 对照版（都是 s06_01_0626）：turbo 4 步（看快 5 倍画质掉多少，决定全片用哪档）、带参考配音（看 H3 能不能自己对上口型，能的话省掉 LatentSync）
+# 结果：build\cloud_out\trial_h3\ ；对比视频 build\review\trial_compare\ （左旧右新，带配音）；每镜头用时 speed.txt（算全片花费）
+param([ValidateSet('report', 'trial', 'compare')][string]$Step = 'trial', [string]$SshHost = 'root@4b5fw7589f8xzvy1.ssh.x-gpu.com', [int]$Port = 56493,
+      [string]$Res = '1344x768')
+$ErrorActionPreference = 'Continue'
+$R = Split-Path $PSScriptRoot -Parent; Set-Location $R; $env:PYTHONIOENCODING = 'utf-8'
+$Key = Join-Path $env:USERPROFILE '.ssh\xiangongyun_ed25519'
+$O = @('-i', $Key, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=20', '-o', 'ServerAliveInterval=15', '-o', 'ServerAliveCountMax=3')
+$ids = 's01_01_0577 s02_01_1021 s06_01_0626'
+$dst = Join-Path $R 'build\cloud_out\trial_h3'; New-Item -ItemType Directory -Force $dst | Out-Null
+function Ssh1($cmd, $sec = 90) {
+    $j = Start-Job { param($O, $H, $P, $c) & ssh.exe @O -p $P $H $c } -ArgumentList (, $O), $SshHost, $Port, $cmd
+    if (Wait-Job $j -Timeout $sec) { $r = Receive-Job $j } else { Stop-Job $j; $r = $null }; Remove-Job $j -Force; return $r
+}
+function Get1($src, $to) { & scp.exe @O -P $Port "${SshHost}:$src" $to 2>$null }
+
+if ($Step -eq 'report') {
+    & scp.exe @O -P $Port cloud\disk_report.sh cloud\probe_h3.sh "${SshHost}:/root/"
+    Ssh1 'bash /root/disk_report.sh >/dev/null 2>&1; bash /root/probe_h3.sh >/dev/null 2>&1; echo ok' 600 | Out-Null
+    Get1 '/root/disk_report.txt' 'build\review\disk_report.txt'; Get1 '/root/h3_probe.txt' 'build\review\h3_probe.txt'
+    Get-Content build\review\disk_report.txt, build\review\h3_probe.txt -Encoding utf8
+    exit
+}
+if ($Step -eq 'trial') {
+    & python -c "import sys,json; sys.path.insert(0,'cloud'); import looks; json.dump(dict(look=looks.LOOK, look_en=looks.LOOK_EN, name=looks.NAME), open('cloud/looks_gen.json','w',encoding='utf-8'), ensure_ascii=False, indent=1)"
+    & python cloud\shot_audio.py s06_01_0626 | Out-Null
+    & python cloud\slim_pack.py ($ids -replace ' ', ',') dist\slim_trial_h3.zip --no-anchors --pose
+    & scp.exe @O -P $Port cloud\video_h3.py cloud\setup_h3.sh cloud\lipsync.sh cloud\keyframes.py cloud\comfy_run.py cloud\looks.py cloud\looks_gen.json cloud\shard.py "${SshHost}:/root/v11_upload/scripts/"
+    & scp.exe @O -P $Port dist\slim_trial_h3.zip "${SshHost}:/root/v11_upload/cloud_pack.zip"
+    $sh = @'
+OUT=/root/v11_out; S=/root/v11_upload/scripts; PACK=/root/v11cloud/cloud_pack; rm -f $OUT/DONE_TRIAL
+rm -rf /root/v11cloud; mkdir -p /root/v11cloud; python3 -c "import zipfile; zipfile.ZipFile('/root/v11_upload/cloud_pack.zip').extractall('/root/v11cloud')"
+cp -f $PACK/refs/*.jpg /root/ComfyUI/input/ 2>/dev/null
+bash $S/setup_h3.sh > $OUT/trial_setup.log 2>&1 || { echo SETUP_FAIL > $OUT/DONE_TRIAL; exit; }
+( bash $S/lipsync.sh setup > $OUT/trial_lipsetup.log 2>&1 ) &
+i=s01_01_0577; rm -f $OUT/kf/$i.png $OUT/kf/$i@*.png $OUT/kfbase_$i*.png $OUT/kfswap_$i*.png
+cd $S && python3 keyframes.py $PACK $i > $OUT/trial_keys.log 2>&1
+curl -s -X POST -H "Content-Type: application/json" -d '{"unload_models":true,"free_memory":true}' http://127.0.0.1:8188/free >/dev/null
+python3 video_h3.py $PACK --only ${IDS// /,} --res __RES__ > $OUT/trial_h3.log 2>&1 || echo "H3 主版失败" >> $OUT/trial_h3.log
+python3 video_h3.py $PACK --only s06_01_0626 --res __RES__ --turbo --out $OUT/h3_turbo > $OUT/trial_h3_turbo.log 2>&1
+python3 video_h3.py $PACK --only s06_01_0626 --res __RES__ --ref-audio --out $OUT/h3_audio > $OUT/trial_h3_audio.log 2>&1
+wait
+curl -s -X POST -H "Content-Type: application/json" -d '{"unload_models":true,"free_memory":true}' http://127.0.0.1:8188/free >/dev/null
+mkdir -p $OUT/fun && cp -f $OUT/h3/s06_01_0626.mp4 $OUT/fun/ 2>/dev/null; bash $S/lipsync.sh run $PACK s06_01_0626 > $OUT/trial_lips.log 2>&1
+echo OK > $OUT/DONE_TRIAL
+'@
+    $p = Join-Path $env:TEMP 'trial_h3.sh'; [IO.File]::WriteAllText($p, $sh.Replace('__IDS__', $ids).Replace('__RES__', $Res).Replace("`r`n", "`n"))
+    & scp.exe @O -P $Port $p "${SshHost}:/root/trial_h3.sh"
+    Ssh1 'nohup bash /root/trial_h3.sh > /root/trial_h3.log 2>&1 & echo QUEUED' | Write-Host
+    $t0 = Get-Date
+    while (((Get-Date) - $t0).TotalHours -lt 4) {
+        Start-Sleep 120
+        $r = (Ssh1 'cat /root/v11_out/DONE_TRIAL 2>/dev/null; tail -n 1 /root/v11_out/h3_progress.log 2>/dev/null; tail -n 1 /root/v11_out/trial_setup.log 2>/dev/null') -join ' | '
+        Write-Host ("{0:HH:mm} {1}" -f (Get-Date), $r)
+        if ($r -match 'SETUP_FAIL|^OK') { break }
+    }
+    foreach ($t in ($ids -split ' ')) { Get1 "/root/v11_out/h3/$t.mp4" "$dst\" }
+    Get1 '/root/v11_out/lips/s06_01_0626.mp4' "$dst\s06_01_0626_lips.mp4"
+    Get1 '/root/v11_out/h3_turbo/s06_01_0626.mp4' "$dst\s06_01_0626_turbo.mp4"
+    Get1 '/root/v11_out/h3_audio/s06_01_0626.mp4' "$dst\s06_01_0626_refaudio.mp4"
+    Get1 '/root/v11_out/kf/s01_01_0577.png' "$dst\kf_s01_01_0577.png"
+    (Ssh1 'grep -h 完成 /root/v11_out/h3_progress.log') | Out-File -Encoding utf8 "$dst\speed.txt"
+    & scp.exe @O -P $Port "${SshHost}:/root/v11_out/trial_*.log" "$dst\" 2>$null
+    Get-ChildItem $dst | Select-Object Name, Length | Format-Table -AutoSize
+}
+# 对比：新版先做和旧版一样的本地人脸统一（公平），再左旧右新并排，带配音
+$cmp = Join-Path $R 'build\review\trial_compare'; New-Item -ItemType Directory -Force $cmp | Out-Null
+$FF = & python -c "import config;print(config.FFMPEG)"
+$work = Join-Path $dst 'work'; Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue; New-Item -ItemType Directory -Force "$work\real", "$work\heads" | Out-Null
+$vers = @{}; foreach ($t in ($ids -split ' ')) { $vers[$t] = if (Test-Path "$dst\${t}_lips.mp4") { "$dst\${t}_lips.mp4" } else { "$dst\$t.mp4" } }
+$vers['s06_01_0626_turbo'] = "$dst\s06_01_0626_turbo.mp4"; $vers['s06_01_0626_refaudio'] = "$dst\s06_01_0626_refaudio.mp4"
+foreach ($k in $vers.Keys) {
+    if (-not (Test-Path $vers[$k])) { continue }
+    $t = $k.Substring(0, 11); $j = Get-Content "dist\cloud_pack\$t\task.json" -Raw -Encoding utf8 | ConvertFrom-Json
+    $d = "$work\real\$k"; New-Item -ItemType Directory -Force $d | Out-Null
+    & $FF -v error -y -i $vers[$k] -start_number $j.frames[0] "$d\frame_%04d.png"
+    if ($k -ne $t) { Copy-Item "dist\cloud_pack\$t" "dist\cloud_pack\$k" -Recurse -Force -ErrorAction SilentlyContinue }   # 对照版借用同一镜头的任务信息
+    if (Test-Path "build\cloud_out\final_all\heads\$t.json") { Copy-Item "build\cloud_out\final_all\heads\$t.json" "$work\heads\$k.json" }
+}
+& python cloud\face_unify.py $work
+$lab = { param($s) "scale=960:540,setsar=1,drawtext=fontfile='C\:/Windows/Fonts/msyh.ttc':text='$s':x=20:y=20:fontsize=30:fontcolor=white:box=1:boxcolor=black@0.5" }
+foreach ($k in $vers.Keys) {
+    $t = $k.Substring(0, 11); $old = "build\cloud_out\final_all\real\$t.mp4"; $new = "$work\real\$k.mp4"
+    if (-not (Test-Path $new)) { Write-Host "缺 $k"; continue }
+    $name = @{ $t = '新：H3 动作控制'; 's06_01_0626_turbo' = '新：H3 turbo 4步'; 's06_01_0626_refaudio' = '新：H3 参考配音' }[$k]
+    if (-not $name) { $name = '新：H3' }
+    $vf = "[0:v]$(& $lab '旧：图生视频')[a];[1:v]$(& $lab $name)[b];[a][b]hstack"
+    $voice = "dist\cloud_pack\$t\voice.wav"
+    if (Test-Path $voice) { & $FF -v error -y -i $old -i $new -i $voice -filter_complex $vf -map 2:a -c:v libx264 -crf 18 -c:a aac -shortest "$cmp\$k.mp4" }
+    else { & $FF -v error -y -i $old -i $new -filter_complex $vf -c:v libx264 -crf 18 "$cmp\$k.mp4" }
+    Write-Host "对比视频：$cmp\$k.mp4"
+}
+Get-ChildItem dist\cloud_pack -Directory -Filter 's06_01_0626_*' | Remove-Item -Recurse -Force
+if (Test-Path "$dst\speed.txt") { Write-Host '== 每镜头用时'; Get-Content "$dst\speed.txt" -Encoding utf8 }
+Write-Host '== 音画同步（旧版 / H3+口型 / H3 参考配音）'
+& python cloud\av_sync_check.py build\cloud_out\final_all s06_01_0626 2>$null | Select-Object -First 1
+& python cloud\av_sync_check.py $work s06_01_0626 s06_01_0626_refaudio s06_01_0626_turbo 2>$null | Select-Object -First 3
+Write-Host '试跑完成：看完对比视频再决定是否全片重做；记得关机（或等平台空闲 30 分钟自动关机）。'
