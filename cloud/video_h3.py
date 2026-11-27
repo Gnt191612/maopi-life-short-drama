@@ -19,7 +19,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument('pack'); ap.add_argument('--only', default=''); ap.add_argument('--res', default='1344x768')
 ap.add_argument('--steps', type=int, default=20); ap.add_argument('--turbo', action='store_true')
 ap.add_argument('--pose', type=float, default=0.7); ap.add_argument('--depth', type=float, default=0.3)
-ap.add_argument('--ref-audio', action='store_true'); ap.add_argument('--no-canon', action='store_true')
+ap.add_argument('--ref-audio', action='store_true'); ap.add_argument('--speech', action='store_true'); ap.add_argument('--no-canon', action='store_true')
 ap.add_argument('--seed', type=int, default=20261127); ap.add_argument('--out', default='/root/v11_out/h3')
 ap.add_argument('--force', action='store_true'); ap.add_argument('--dry', action='store_true')
 args = ap.parse_args()
@@ -96,6 +96,8 @@ def graph(refs, controls, n, prompt, seed, audio=None):
     s = node('SamplerCustomAdvanced', {'noise': [noise, 0], 'guider': [g, 0], 'sampler': [smp, 0], 'sigmas': [sig, 0], 'latent_image': [r2v, 1]})
     dec = node('VAEDecode', {'samples': [s, 0], 'vae': [vv, 0]})
     node('SaveImage', {'images': [dec, 0]}, ['h3_tmp'])
+    if args.speech:   # H3 原生音频：人物按提示词里的台词说话、口型同步，音色照参考配音（11-27 用户：现在的配音不够像真人说话）
+        au = node('VAEDecodeAudio', {'samples': [s, 0], 'vae': [av, 0]}); node('SaveAudio', {'audio': [au, 0]}, ['h3_audio'])
     return A
 
 def run(A, tag):
@@ -108,6 +110,10 @@ def run(A, tag):
         if pid in h and h[pid].get('status', {}).get('status_str') == 'error': sys.exit('生成失败 %s %s' % (tag, json.dumps(h[pid]['status'], ensure_ascii=False)[:2000]))
         if pid in h and h[pid].get('status', {}).get('completed'): break
     else: sys.exit('超时 %s' % tag)
+    for o in h[pid]['outputs'].values():
+        for a in o.get('audio', []):
+            q = urllib.parse.urlencode({'filename': a['filename'], 'subfolder': a.get('subfolder', ''), 'type': a.get('type', 'output')})
+            open(os.path.join(TMP, '%s_audio%s' % (tag, os.path.splitext(a['filename'])[1])), 'wb').write(urllib.request.urlopen(comfy_run.URL + '/view?' + q).read())
     out = []
     for j, im in enumerate(im for o in h[pid]['outputs'].values() for im in o.get('images', [])):
         q = urllib.parse.urlencode({'filename': im['filename'], 'subfolder': im.get('subfolder', ''), 'type': im.get('type', 'output')})
@@ -150,7 +156,13 @@ for tid in man['tasks']:
     audio = None
     if args.ref_audio and os.path.exists(os.path.join(td, 'voice.wav')):
         audio = 'h3voice_%s.wav' % tid; shutil.copy(os.path.join(td, 'voice.wav'), os.path.join(INP, audio))
-    prompt = prompt_of(task); frames, s, k, extra = [], 0, 0, []
+    prompt = prompt_of(task)
+    if args.speech and os.path.exists(os.path.join(td, 'voice.json')):   # 台词写进提示词：H3 照着说、照着动嘴（时间点按白模时间轴）
+        vj = json.load(open(os.path.join(td, 'voice.json'), encoding='utf-8'))
+        prompt += ' ' + ' '.join('At %.1f seconds %s speaks in natural conversational Mandarin Chinese, saying: \u201c%s\u201d' % (v['start'], 'the person', v['text']) for v in vj) + \
+                  ' Realistic natural human voice with breathing and room tone, no background music.'
+        if not audio and os.path.exists(os.path.join(td, 'voice.wav')): audio = 'h3voice_%s.wav' % tid; shutil.copy(os.path.join(td, 'voice.wav'), os.path.join(INP, audio))
+    frames, s, k, extra = [], 0, 0, []
     while s < n24 - 1 or not frames:
         n = grid(min(MAXF, n24 - s))
         if n > MAXF: n = MAXF - 17
@@ -170,6 +182,8 @@ for tid in man['tasks']:
     od = os.path.join(OUT, tid); shutil.rmtree(od, ignore_errors=True); os.makedirs(od)
     for i, f in enumerate(frames[:n24]): shutil.move(f, os.path.join(od, 'frame_%04d.png' % (task['frames'][0] + i)))
     ff('-framerate', '24', '-start_number', str(task['frames'][0]), '-i', os.path.join(od, 'frame_%04d.png'), '-c:v', 'libx264', '-crf', '14', '-pix_fmt', 'yuv420p', os.path.join(OUT, tid + '.mp4'))
+    for a in sorted(glob.glob(os.path.join(TMP, '%s_*_audio.*' % tid))):   # 原生语音：多段按顺序接起来，存成 <id>.speech.wav
+        shutil.copy(a, os.path.join(OUT, '%s.speech%s' % (tid, os.path.splitext(a)[1]))); break
     for f in glob.glob(os.path.join(TMP, '%s_*' % tid)): os.remove(f)
     log('完成', tid, '%d 帧' % n24, '%.0f 秒' % (time.time() - t0), '%.2f 秒/帧' % ((time.time() - t0) / n24))
 print('H3 DONE', flush=True)

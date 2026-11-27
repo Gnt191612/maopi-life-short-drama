@@ -25,6 +25,7 @@ if ($Step -eq 'report') {
     Get-Content build\review\disk_report.txt, build\review\h3_probe.txt -Encoding utf8
     exit
 }
+$cmp0 = Join-Path $R 'build\review\trial_compare'; New-Item -ItemType Directory -Force $cmp0 | Out-Null
 if ($Step -eq 'trial') {
     & python -c "import sys,json; sys.path.insert(0,'cloud'); import looks; json.dump(dict(look=looks.LOOK, look_en=looks.LOOK_EN, name=looks.NAME), open('cloud/looks_gen.json','w',encoding='utf-8'), ensure_ascii=False, indent=1)"
     & python cloud\shot_audio.py s06_01_0626 | Out-Null
@@ -43,6 +44,7 @@ curl -s -X POST -H "Content-Type: application/json" -d '{"unload_models":true,"f
 python3 video_h3.py $PACK --only ${IDS// /,} --res __RES__ > $OUT/trial_h3.log 2>&1 || echo "H3 主版失败" >> $OUT/trial_h3.log
 python3 video_h3.py $PACK --only s06_01_0626 --res __RES__ --turbo --out $OUT/h3_turbo > $OUT/trial_h3_turbo.log 2>&1
 python3 video_h3.py $PACK --only s06_01_0626 --res __RES__ --ref-audio --out $OUT/h3_audio > $OUT/trial_h3_audio.log 2>&1
+python3 video_h3.py $PACK --only s06_01_0626 --res __RES__ --speech --out $OUT/h3_speech > $OUT/trial_h3_speech.log 2>&1   # H3 自己说台词（原生语音 + 口型），音色照参考配音
 wait
 curl -s -X POST -H "Content-Type: application/json" -d '{"unload_models":true,"free_memory":true}' http://127.0.0.1:8188/free >/dev/null
 mkdir -p $OUT/fun && cp -f $OUT/h3/s06_01_0626.mp4 $OUT/fun/ 2>/dev/null; bash $S/lipsync.sh run $PACK s06_01_0626 > $OUT/trial_lips.log 2>&1
@@ -62,6 +64,9 @@ echo OK > $OUT/DONE_TRIAL
     Get1 '/root/v11_out/lips/s06_01_0626.mp4' "$dst\s06_01_0626_lips.mp4"
     Get1 '/root/v11_out/h3_turbo/s06_01_0626.mp4' "$dst\s06_01_0626_turbo.mp4"
     Get1 '/root/v11_out/h3_audio/s06_01_0626.mp4' "$dst\s06_01_0626_refaudio.mp4"
+    Get1 '/root/v11_out/h3_speech/s06_01_0626.mp4' "$dst\s06_01_0626_speech_v.mp4"; Get1 '/root/v11_out/h3_speech/s06_01_0626.speech.*' "$dst\"
+    $sp = Get-ChildItem $dst -Filter 's06_01_0626.speech.*' | Select-Object -First 1   # 原生语音版：画面配 H3 自己的声音
+    if ($sp -and (Test-Path "$dst\s06_01_0626_speech_v.mp4")) { $FF0 = & python -c "import config;print(config.FFMPEG)"; & $FF0 -v error -y -i "$dst\s06_01_0626_speech_v.mp4" -i $sp.FullName -map 0:v -map 1:a -c:v copy -c:a aac -shortest "$cmp0\s06_01_0626_H3原生语音.mp4"; & $FF0 -v error -y -i $sp.FullName -ar 16000 -ac 1 "$dst\s06_01_0626_h3voice.wav" }
     Get1 '/root/v11_out/kf/s01_01_0577.png' "$dst\kf_s01_01_0577.png"
     (Ssh1 'grep -h 完成 /root/v11_out/h3_progress.log') | Out-File -Encoding utf8 "$dst\speed.txt"
     & scp.exe @O -P $Port "${SshHost}:/root/v11_out/trial_*.log" "$dst\" 2>$null
@@ -99,4 +104,5 @@ if (Test-Path "$dst\speed.txt") { Write-Host '== 每镜头用时'; Get-Content "
 Write-Host '== 音画同步（旧版 / H3+口型 / H3 参考配音）'
 & python cloud\av_sync_check.py build\cloud_out\final_all s06_01_0626 2>$null | Select-Object -First 1
 & python cloud\av_sync_check.py $work s06_01_0626 s06_01_0626_refaudio s06_01_0626_turbo 2>$null | Select-Object -First 3
+if (Test-Path "$cmp0\s06_01_0626_H3原生语音.mp4") { Write-Host "H3 原生语音版（声音和口型都是 H3 生成的）：$cmp0\s06_01_0626_H3原生语音.mp4" }
 Write-Host '试跑完成：看完对比视频再决定是否全片重做；记得关机（或等平台空闲 30 分钟自动关机）。'
