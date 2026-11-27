@@ -30,13 +30,14 @@ if ($Step -eq 'trial') {
     & python -c "import sys,json; sys.path.insert(0,'cloud'); import looks; json.dump(dict(look=looks.LOOK, look_en=looks.LOOK_EN, name=looks.NAME), open('cloud/looks_gen.json','w',encoding='utf-8'), ensure_ascii=False, indent=1)"
     & python cloud\shot_audio.py s06_01_0626 | Out-Null
     & python cloud\slim_pack.py ($ids -replace ' ', ',') dist\slim_trial_h3.zip --no-anchors --pose
-    & scp.exe @O -P $Port cloud\video_h3.py cloud\setup_h3.sh cloud\lipsync.sh cloud\keyframes.py cloud\comfy_run.py cloud\looks.py cloud\looks_gen.json cloud\shard.py "${SshHost}:/root/v11_upload/scripts/"
+    & scp.exe @O -P $Port cloud\video_h3.py cloud\h3_prompt.py cloud\disk_guard.sh cloud\cleanup_auto.sh cloud\setup_h3.sh cloud\lipsync.sh cloud\keyframes.py cloud\comfy_run.py cloud\looks.py cloud\looks_gen.json cloud\shard.py "${SshHost}:/root/v11_upload/scripts/"
     & scp.exe @O -P $Port dist\slim_trial_h3.zip "${SshHost}:/root/v11_upload/cloud_pack.zip"
     & scp.exe @O -P $Port -r dist\moss_trial cloud\tts_moss.py cloud\setup_moss.sh "${SshHost}:/root/v11_upload/"   # MOSS-TTSD 对话配音对比（用户 11-27 同意）
     $sh = @'
 OUT=/root/v11_out; S=/root/v11_upload/scripts; PACK=/root/v11cloud/cloud_pack; rm -f $OUT/DONE_TRIAL
 rm -rf /root/v11cloud; mkdir -p /root/v11cloud; python3 -c "import zipfile; zipfile.ZipFile('/root/v11_upload/cloud_pack.zip').extractall('/root/v11cloud')"
 cp -f $PACK/refs/*.jpg /root/ComfyUI/input/ 2>/dev/null
+bash $S/disk_guard.sh > $OUT/trial_disk.log 2>&1 || { echo DISK_LOW > $OUT/DONE_TRIAL; exit; }   # 磁盘体检：不够就先清中间产物，仍不够就停下等用户（踩坑记录 62）
 bash $S/setup_h3.sh > $OUT/trial_setup.log 2>&1 || { echo SETUP_FAIL > $OUT/DONE_TRIAL; exit; }
 ( bash $S/lipsync.sh setup > $OUT/trial_lipsetup.log 2>&1; bash /root/v11_upload/setup_moss.sh > $OUT/trial_mosssetup.log 2>&1 ) &   # 口型、对话配音环境和视频生成同时装
 i=s01_01_0577; rm -f $OUT/kf/$i.png $OUT/kf/$i@*.png $OUT/kfbase_$i*.png $OUT/kfswap_$i*.png
@@ -62,7 +63,7 @@ echo OK > $OUT/DONE_TRIAL
         Start-Sleep 120
         $r = (Ssh1 'cat /root/v11_out/DONE_TRIAL 2>/dev/null; tail -n 1 /root/v11_out/h3_progress.log 2>/dev/null; tail -n 1 /root/v11_out/trial_setup.log 2>/dev/null') -join ' | '
         Write-Host ("{0:HH:mm} {1}" -f (Get-Date), $r)
-        if ($r -match 'SETUP_FAIL|^OK') { break }
+        if ($r -match 'SETUP_FAIL|DISK_LOW|^OK') { break }
     }
     foreach ($t in ($ids -split ' ')) { Get1 "/root/v11_out/h3/$t.mp4" "$dst\" }
     Get1 '/root/v11_out/lips/s06_01_0626.mp4' "$dst\s06_01_0626_lips.mp4"
@@ -76,6 +77,8 @@ echo OK > $OUT/DONE_TRIAL
     if (Test-Path "$dst\moss_s06_dialog_0.wav") { Copy-Item dist\moss_trial\current_s06_dialog.wav "$cmp0\配音对比_现在的IndexTTS2.wav"; foreach($k in 0,1,2){ if(Test-Path "$dst\moss_s06_dialog_$k.wav"){ Copy-Item "$dst\moss_s06_dialog_$k.wav" "$cmp0\配音对比_MOSS-TTSD对话_第$($k+1)版.wav" } }; Write-Host "配音对比（第二幕宿舍陈瑶和林晓三句对话）：$cmp0\配音对比_*.wav" }
     (Ssh1 'grep -h 完成 /root/v11_out/h3_progress.log') | Out-File -Encoding utf8 "$dst\speed.txt"
     & scp.exe @O -P $Port "${SshHost}:/root/v11_out/trial_*.log" "$dst\" 2>$null
+    # 取回后马上清云端中间产物（结果已在本地；写实首帧 kf/ 保留）
+    Ssh1 'cd /root/v11_out && ls h3*/*.mp4 lips/*.mp4 moss/*.wav 2>/dev/null >> .pulled; bash /root/v11_upload/scripts/cleanup_auto.sh --yes | tail -2' 300 | Write-Host
     Get-ChildItem $dst | Select-Object Name, Length | Format-Table -AutoSize
 }
 # 对比：新版先做和旧版一样的本地人脸统一（公平），再左旧右新并排，带配音

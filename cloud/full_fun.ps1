@@ -29,11 +29,12 @@ if ($Step -eq 'start') {
     Write-Host ("云端已有写实首帧 {0} 个；要新做首帧 {1} 个：{2}" -f $have.Count, $needFirst.Count, ($needFirst -join ' '))
     & python cloud\slim_pack.py $all dist\full_fun.zip --no-anchors --pose --first ($needFirst -join ',')
     $voice = (Get-ChildItem dist\cloud_pack -Directory | Where-Object { Test-Path "$($_.FullName)\voice.wav" } | ForEach-Object Name | Sort-Object) -join ' '
-    & scp.exe @O -P $Port cloud\video_fun.py cloud\video_h3.py cloud\lipsync.sh cloud\setup_fun.sh cloud\setup_h3.sh cloud\keyframes.py cloud\comfy_run.py cloud\looks.py cloud\looks_gen.json cloud\shard.py "${SshHost}:/root/v11_upload/scripts/"
+    & scp.exe @O -P $Port cloud\video_fun.py cloud\video_h3.py cloud\h3_prompt.py cloud\disk_guard.sh cloud\cleanup_auto.sh cloud\lipsync.sh cloud\setup_fun.sh cloud\setup_h3.sh cloud\keyframes.py cloud\comfy_run.py cloud\looks.py cloud\looks_gen.json cloud\shard.py "${SshHost}:/root/v11_upload/scripts/"
     & scp.exe @O -P $Port dist\full_fun.zip "${SshHost}:/root/v11_upload/full_fun.zip"
     $sh = @'
 OUT=/root/v11_out; S=/root/v11_upload/scripts; PACK=/root/v11cloud/cloud_pack; rm -f $OUT/DONE_FULL
 rm -rf /root/v11cloud; mkdir -p /root/v11cloud; python3 -c "import zipfile; zipfile.ZipFile('/root/v11_upload/full_fun.zip').extractall('/root/v11cloud')"; cp -f $PACK/refs/*.jpg /root/ComfyUI/input/ 2>/dev/null
+bash $S/disk_guard.sh > $OUT/full_disk.log 2>&1 || { echo DISK_LOW > $OUT/DONE_FULL; exit; }   # 踩坑记录 62
 bash $S/setup___ENGINE__.sh > $OUT/full_setup.log 2>&1 || { echo SETUP_FAIL > $OUT/DONE_FULL; exit; }
 ( bash $S/lipsync.sh setup > $OUT/full_lipsetup.log 2>&1 ) &
 for i in __REKEY__; do rm -f $OUT/kf/$i.png $OUT/kf/$i@*.png $OUT/kfbase_$i*.png $OUT/kfswap_$i*.png; done
@@ -68,7 +69,7 @@ if ($Step -eq 'pull') {
             else { continue }
             if (Test-Path $loc) { continue }
             $j = Start-Job { param($O, $H, $P, $src, $dst) & scp.exe @O -P $P "${H}:/root/v11_out/$src" $dst } -ArgumentList (, $O), $SshHost, $Port, $l, $loc
-            if (Wait-Job $j -Timeout 300) { $new += $id } else { Stop-Job $j; Remove-Item $loc -ErrorAction SilentlyContinue }; Remove-Job $j -Force
+            if (Wait-Job $j -Timeout 300) { $new += $id; Ssh1 "echo $l >> /root/v11_out/.pulled" 30 | Out-Null }   # 记下已取回，清理时只删这些 else { Stop-Job $j; Remove-Item $loc -ErrorAction SilentlyContinue }; Remove-Job $j -Force
         }
         $new = $new | Sort-Object -Unique
         if ($new) {
@@ -78,6 +79,8 @@ if ($Step -eq 'pull') {
         $done = ($ls -match 'DONE_FULL').Count -gt 0; $fail = ($ls -match 'SETUP_FAIL').Count -gt 0
         Write-Host ("{0:HH:mm} 已取回 {1} 个视频、{2} 个口型版；{3}" -f (Get-Date), (Get-ChildItem $pulled -Filter *.mp4 | Where-Object { $_.Name -notlike '*_lips.mp4' }).Count, (Get-ChildItem $pulled -Filter *_lips.mp4).Count, ($ls | Select-Object -Last 1))
         if ($fail) { Write-Host '云端模型安装失败，看 /root/v11_out/full_setup.log'; break }
+        if (($ls -match 'DISK_LOW').Count) { Write-Host '云端磁盘不够，看 /root/v11_out/full_disk.log，把清单发给用户决定'; break }
+        if ($new.Count -ge 10) { Ssh1 'bash /root/v11_upload/scripts/cleanup_auto.sh --yes | tail -1' 300 | Write-Host }   # 边取回边清，云端不堆积
         if ($done -and -not $new) { Write-Host '云端全部完成、本地全部取回。可以关机，然后运行 -Step final'; break }
         Start-Sleep 600
     }
