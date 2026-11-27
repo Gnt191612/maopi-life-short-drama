@@ -74,7 +74,7 @@ def process(tdir, tid, heads=None):
     tk = json.load(open(tj, encoding='utf-8')) if os.path.exists(tj) else {}
     chars = tk.get('characters', []); bg = tk.get('bg_face')   # bg_face：没配上主角的脸换成这个背景人物（s02_01_0450 视频多画了一个和林晓很像的人，换成同学甲，避免看成两个林晓）
     if not chars or os.path.exists(os.path.join(tdir, '.unified')): return 0
-    frames = sorted(glob.glob(os.path.join(tdir, 'frame_*.png'))); n = 0
+    frames = sorted(glob.glob(os.path.join(tdir, 'frame_*.png'))); n = 0; prev = {}
     for p in frames:
         img = cv2.imread(p); faces = []
         for f in app.get(img):
@@ -93,7 +93,10 @@ def process(tdir, tid, heads=None):
         if bg in REF:
             for k in range(len(faces)):
                 if k not in got: got[k] = bg
-        for i, c in got.items():
+        for i, c in got.items():   # 五官定位点做前后帧平滑：逐帧单独检测会有几个像素的跳动，换上去的脸就跟着抖（11-27 用户：画面飘）
+            k = faces[i].kps.astype(np.float32); w = float(faces[i].bbox[2] - faces[i].bbox[0]); pk = prev.get(c)
+            if pk is not None and float(np.abs(k - pk).mean()) < 0.08 * w: k = 0.55 * pk + 0.45 * k   # 动得小就平滑，大动作（转头、切换）直接跟上
+            prev[c] = k; faces[i].kps = k
             img = swapper.get(img, faces[i], REF[c], paste_back=True)
             img = enhance(img, faces[i]); n += 1
         cv2.imwrite(p, img)

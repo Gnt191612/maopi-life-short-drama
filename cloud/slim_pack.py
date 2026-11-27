@@ -12,7 +12,7 @@ with zipfile.ZipFile(out, 'w', zipfile.ZIP_STORED) as z:
     for t in ids:
         td = os.path.join(PACK, t)
         for f in os.listdir(td):
-            if f in ('task.json', 'first.png', 'anchors.json') or f.startswith('anchor_'):
+            if f in ('task.json', 'first.png', 'anchors.json', 'depth.mp4', 'pose.mp4', 'voice.wav', 'voice.json') or f.startswith('anchor_'):   # 11-27 起视频阶段用白模深度视频控制、口型同步用配音轨
                 z.write(os.path.join(td, f), 'cloud_pack/%s/%s' % (t, f))
         chars |= set(json.load(open(os.path.join(td, 'task.json'), encoding='utf-8')).get('characters', []))
     for f in os.listdir(os.path.join(PACK, 'refs')):
