@@ -1,16 +1,13 @@
 # 提示词资产库（2026-11-27）
 
-这部短剧用到的全部提示词，以及「怎么写才能让 AI 视频动作自然、运镜可控、人物不走样」的规则。下一部片照着改就能用。
+只收**以后任何短剧都能通用**的提示词写法、模板和踩过的坑；本片专属的逐镜头提示词不放这里。
 
 | 文件 | 内容 |
 |---|---|
-| [全片提示词.md](全片提示词.md) / [prompts.json](prompts.json) | 129 个镜头逐个：剧情动作（中文）、画面描述（英文）、首帧中文前缀、H3 视频提示词（官方格式）、台词 |
-| [角色与声音.md](角色与声音.md) | 7 个角色的中英文外貌描述、声音特征 |
-| [场景与运镜.md](场景与运镜.md) | 每个场景的背景描述、环境音；白模运镜类型 → H3 官方运镜词 |
-| [风格与通用句.md](风格与通用句.md) | 真人动作、质感、对齐句、说话格式、首帧前缀模板、换脸指令 |
+| [通用提示词模板.md](通用提示词模板.md) | 换一部片照样能用的句式：H3 视频提示词骨架、运镜句、说话格式、常见地点环境音、首帧前缀和 kf_hint、人物外貌写法、情绪细节的安全写法 |
 | [_official/](_official/) | MiniMax 官方 H3 提示词写作规范原文（base：T2VA/I2VA/FL2VA/L2VA；ref：参考生视频） |
 
-生成方式：全部由代码拼出来，源头在 `story/story_scenes.py`（剧情动作、节拍画面）、`cloud/shot_prompts.py`（按镜头改写、kf_hint）、人物库 `characters/`（外貌）、`cloud/backgrounds.py`（场景）、`cloud/h3_prompt.py`（H3 格式、运镜、环境音、声音）。改完源头运行 `python cloud/export_prompts.py` 重新导出。
+代码版：`cloud/h3_prompt.py`（按模板自动拼每个镜头的 H3 提示词）。本片每个镜头实际用的提示词不入库，开机前运行 `python cloud/export_prompts.py` 导出到 `build/review/prompts/` 逐个审查。
 
 ## 一、分工：白模管动作，提示词管「是谁、什么情绪、什么质感」
 
@@ -50,5 +47,5 @@
 1. 复制 `story/story_scenes.py` 的格式写剧情：每拍 `en`（英文画面）+ `act`（中文动作）+ 台词。
 2. 人物外貌写进人物库，**中英文都写体型的整体轮廓、发型、完整衣着**（帽子、内搭、外套）。
 3. 场景写进 `cloud/backgrounds.py`，环境音写进 `h3_prompt.SOUND`。
-4. 打包后先运行 `python cloud/export_prompts.py`，通读 `全片提示词.md`：人数、左右、衣着、和白模是否一致，问题镜头写进 `shot_prompts.py`。
+4. 打包后先运行 `python cloud/export_prompts.py`，通读 `build/review/prompts/全片提示词.md`：人数、左右、衣着、和白模是否一致，问题镜头写进 `shot_prompts.py`。
 5. 开机先试 3 个镜头再全片（见 [../模型选型.md](../模型选型.md)）。

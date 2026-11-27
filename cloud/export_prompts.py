@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
-"""把这部短剧用到的全部提示词导出成可复用的资产库（本地运行，2026-11-27 用户要求）：
-  docs/prompts/全片提示词.md   —— 每个镜头一节：剧情动作（中文 act）、节拍画面描述（英文）、首帧中文前缀 + kf_hint、H3 视频最终提示词
-  docs/prompts/prompts.json   —— 同样内容的机器可读版（下一部片可直接改了再用）
-  docs/prompts/角色与声音.md   —— 每个角色的中英文外貌描述、声音特征
-  docs/prompts/场景与运镜.md   —— 每个场景的背景描述、环境音；白模运镜 → H3 官方运镜词
-  docs/prompts/风格与通用句.md —— 风格、质感、真人动作、关键帧换脸指令等通用句
+"""把这部短剧每个镜头实际用的提示词导出来，供开机前逐个审查（本地运行，输出在 build/review/prompts/，不入库）：
+  build/review/prompts/全片提示词.md   —— 每个镜头一节：剧情动作（中文 act）、节拍画面描述（英文）、首帧中文前缀 + kf_hint、H3 视频最终提示词
+  build/review/prompts/prompts.json   —— 同样内容的机器可读版（下一部片可直接改了再用）
+  build/review/prompts/角色与声音.md   —— 每个角色的中英文外貌描述、声音特征
+  build/review/prompts/场景与运镜.md   —— 每个场景的背景描述、环境音；白模运镜 → H3 官方运镜词
+  build/review/prompts/风格与通用句.md —— 风格、质感、真人动作、关键帧换脸指令等通用句
 提示词的写法规则和踩过的坑见 docs/prompts/README.md。改了剧本、人物或 shot_prompts.py 后重新运行一遍即可。
 用法：python cloud/export_prompts.py"""
 import os, sys, json, glob
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); sys.path.insert(0, ROOT); sys.path.insert(0, os.path.join(ROOT, 'cloud'))
 import segments as S, looks, backgrounds as B, h3_prompt as HP, shot_prompts as SP
 from story_scenes import SCENES
-OUT = os.path.join(ROOT, 'docs', 'prompts'); os.makedirs(OUT, exist_ok=True)
+OUT = os.path.join(ROOT, 'build', 'review', 'prompts'); os.makedirs(OUT, exist_ok=True)   # 本片专属，只在本地供审查；通用写法和模板在 docs/prompts/
 PACK = os.path.join(ROOT, 'dist', 'cloud_pack')
 BEAT = {b['id']: b for sc in SCENES for b in sc['beats']}
 
