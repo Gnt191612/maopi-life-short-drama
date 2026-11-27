@@ -6,9 +6,8 @@ EN = {
     's02_01_0450': 'medium shot by a window seat, sunlight on the wooden table, green trees outside, the chubby young man in the dark grey hoodie, no glasses, '
                    'stands alone beside the table looking around with bright eyes, his face visible; he is the only standing person in the frame; '
                    'far in the background two other students sit at a distant table reading',
-    's02_01_0852': 'close-up: the chubby young man in the dark grey hoodie, round face, no glasses, leans toward the left edge of the frame and whispers to a seated classmate '
-                   'who is cut off by the left frame edge: only that classmate\'s white shirt shoulder and upper arm are visible, a plain white cotton shirt with folds; '
-                   'no ball, no lamp, no round object; exactly one face in the frame',
+    's02_01_0852': 'close-up of one person only: the chubby young man in the dark grey hoodie, round face, no glasses, leans down at the library table and whispers '
+                   'toward someone just outside the left edge of the frame; the left foreground is the empty wooden table edge; exactly one face in the frame',   # 白模左下角陈瑶的白肩膀已从锚点图抹掉（会被画成白球）
     's02_01_1021': 'medium shot at a library table, exactly two people: on the LEFT, slightly behind, the chubby young man in the dark grey hoodie with no glasses '
                    'leans over and whispers; on the RIGHT, the slim young man with glasses in a white shirt sits at the table with his head tilted toward him; '
                    'both glance toward the corner',
@@ -34,6 +33,20 @@ EN = {
     's10_00_0502': 'medium shot on a sunny lawn, exactly three young men squeeze together for a selfie: on the left the slim young man with glasses in a white shirt, '
                    'in the middle the chubby young man in the dark grey hoodie holding up the phone, on the right the thin young man with fluffy slightly curly black hair '
                    'in an olive green knit sweater; their clothes stay the same throughout',
+    # 11-26 夜全片跑偏拼图第二批
+    's07_00_0171': 'on the running track at dusk: the thin young man with fluffy slightly curly black hair in an olive green knit sweater walks beside the chubby young man '
+                   'in the dark grey hoodie, then the camera moves in to a close-up of the chubby young man walking with his head down, kicking a small pebble, '
+                   'then turning his face to ask, face visible, street lamp light; two clearly different people',
+    's10_00_0102': 'medium shot on the sunny lawn, exactly three young men, from left to right: the slim young man with glasses in a white shirt laughs and reaches out '
+                   'to push down the phone held by the chubby young man in the dark grey hoodie in the middle; on the right the thin young man with fluffy slightly curly '
+                   'black hair in an olive green knit sweater',
+    's05_01_0674': 'medium close-up, the thin young man with fluffy slightly curly black hair in an olive green knit sweater stands further back in the canteen queue '
+                   'holding a tray, watching quietly with a serious expression',
+    's08_01_1461': 'medium shot in a small plain meeting room with only a few students on chairs in a circle: the slim young man with glasses in a white shirt '
+                   'stands up from his chair, the two students seated beside him look up at him; no crowd, no other people, the room stays the same',
+    's06_01_0446': 'close-up of one person only: the chubby young man in the dark grey hoodie has his head down on the desk, at first only the top of his black hair is visible; '
+                   'he slowly lifts his head and looks toward the right, eyes slightly puffy from crying, natural skin and natural eyes, no glowing, no red light; '
+                   'exactly one person in the frame, warm lamp light',   # 原提示词 eyes red and swollen → 眼睛发红光；face clearly visible → 开头只有头顶时补出第二张脸
 }
 EXTRA = {   # 写进 task.json 的额外字段：noswap = 关键帧不做 Qwen 换脸（两人挨得近时会换错人）
     's02_01_1021': dict(noswap=True),
@@ -42,4 +55,6 @@ EXTRA = {   # 写进 task.json 的额外字段：noswap = 关键帧不做 Qwen �
 }
 CHARS = {
     's02_01_0852': ['lin'],
+    's07_00_0171': ['lin', 'zhou'],          # 白模开头周明远和林晓并排走，原来只写了林晓 → 画成两个林晓
+    's10_00_0102': ['chen', 'lin', 'zhou'],  # 白模右边有周明远
 }
