@@ -10,7 +10,7 @@ $ErrorActionPreference = 'Continue'
 $R = Split-Path $PSScriptRoot -Parent; Set-Location $R; $env:PYTHONIOENCODING = 'utf-8'
 $Key = Join-Path $env:USERPROFILE '.ssh\xiangongyun_ed25519'
 $O = @('-i', $Key, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=20', '-o', 'ServerAliveInterval=15', '-o', 'ServerAliveCountMax=3')
-$ids = 's01_01_0577 s02_01_1021 s06_01_0626'
+$ids = 's06_01_0260 s06_01_0446 s06_01_0626'   # 第二幕宿舍连续 3 个镜头（陈瑶和林晓三句来回对话 B10/B11/B12），拼起来看衔接
 $dst = Join-Path $R 'build\cloud_out\trial_h3'; New-Item -ItemType Directory -Force $dst | Out-Null
 function Ssh1($cmd, $sec = 90) {
     $j = Start-Job { param($O, $H, $P, $c) & ssh.exe @O -p $P $H $c } -ArgumentList (, $O), $SshHost, $Port, $cmd
@@ -28,7 +28,7 @@ if ($Step -eq 'report') {
 $cmp0 = Join-Path $R 'build\review\trial_compare'; New-Item -ItemType Directory -Force $cmp0 | Out-Null
 if ($Step -eq 'trial') {
     & python -c "import sys,json; sys.path.insert(0,'cloud'); import looks; json.dump(dict(look=looks.LOOK, look_en=looks.LOOK_EN, name=looks.NAME), open('cloud/looks_gen.json','w',encoding='utf-8'), ensure_ascii=False, indent=1)"
-    & python cloud\shot_audio.py s06_01_0626 | Out-Null
+    & python cloud\shot_audio.py s06_01_0260 s06_01_0446 s06_01_0626 | Out-Null
     & python cloud\slim_pack.py ($ids -replace ' ', ',') dist\slim_trial_h3.zip --no-anchors --pose
     & scp.exe @O -P $Port cloud\video_h3.py cloud\h3_prompt.py cloud\disk_guard.sh cloud\cleanup_auto.sh cloud\setup_h3.sh cloud\lipsync.sh cloud\keyframes.py cloud\comfy_run.py cloud\looks.py cloud\looks_gen.json cloud\shard.py "${SshHost}:/root/v11_upload/scripts/"
     & scp.exe @O -P $Port dist\slim_trial_h3.zip "${SshHost}:/root/v11_upload/cloud_pack.zip"
@@ -40,8 +40,7 @@ cp -f $PACK/refs/*.jpg /root/ComfyUI/input/ 2>/dev/null
 bash $S/disk_guard.sh > $OUT/trial_disk.log 2>&1 || { echo DISK_LOW > $OUT/DONE_TRIAL; exit; }   # 磁盘体检：不够就先清中间产物，仍不够就停下等用户（踩坑记录 62）
 bash $S/setup_h3.sh > $OUT/trial_setup.log 2>&1 || { echo SETUP_FAIL > $OUT/DONE_TRIAL; exit; }
 ( bash $S/lipsync.sh setup > $OUT/trial_lipsetup.log 2>&1; bash /root/v11_upload/setup_moss.sh > $OUT/trial_mosssetup.log 2>&1 ) &   # 口型、对话配音环境和视频生成同时装
-i=s01_01_0577; rm -f $OUT/kf/$i.png $OUT/kf/$i@*.png $OUT/kfbase_$i*.png $OUT/kfswap_$i*.png
-cd $S && python3 keyframes.py $PACK $i > $OUT/trial_keys.log 2>&1
+cd $S && python3 keyframes.py $PACK ${IDS} > $OUT/trial_keys.log 2>&1   # 新实例没有首帧：按现在的提示词重做（已有的跳过）
 curl -s -X POST -H "Content-Type: application/json" -d '{"unload_models":true,"free_memory":true}' http://127.0.0.1:8188/free >/dev/null
 python3 video_h3.py $PACK --only ${IDS// /,} --res __RES__ --mode fl --out $OUT/h3 > $OUT/trial_h3.log 2>&1 || echo "H3 主版失败" >> $OUT/trial_h3.log   # 主版：首帧模式 20 步
 V="python3 video_h3.py $PACK --only s06_01_0626 --res __RES__"   # 对照版都用陈瑶说话特写，便于并排比较
@@ -115,4 +114,16 @@ Write-Host '== 音画同步（旧版 / H3+口型 / H3 参考配音）'
 & python cloud\av_sync_check.py build\cloud_out\final_all s06_01_0626 2>$null | Select-Object -First 1
 & python cloud\av_sync_check.py $work s06_01_0626 s06_01_0626_refaudio s06_01_0626_turbo s06_01_0626_pika s06_01_0626_ref 2>$null | Select-Object -First 3
 if (Test-Path "$cmp0\s06_01_0626_H3原生语音.mp4") { Write-Host "H3 原生语音版（声音和口型都是 H3 生成的）：$cmp0\s06_01_0626_H3原生语音.mp4" }
+# 连续 3 个镜头拼成一段（主版 H3 + 白模控制，带这三句的原配音），看镜头之间衔接
+$seq = @('s06_01_0260','s06_01_0446','s06_01_0626') | ForEach-Object { "$work\real\$_.mp4" } | Where-Object { Test-Path $_ }
+if ($seq.Count -eq 3) {
+    $lst = Join-Path $work 'seq.txt'; ($seq | ForEach-Object { "file '$($_ -replace '\\','/')'" }) | Set-Content $lst -Encoding ascii
+    & $FF -v error -y -f concat -safe 0 -i $lst -c:v libx264 -crf 18 "$work\seq_v.mp4"
+    $seg = Get-Content dist\cloud_pack\s06_01_0260\task.json -Raw -Encoding utf8 | ConvertFrom-Json
+    $t0 = ($seg.frames[0] - 1) / 24.0; $dur = (626 + 164 - $seg.frames[0]) / 24.0
+    & $FF -v error -y -ss ([math]::Round($t0 + 6.5, 3)) -t $dur -i "build\final\毛坯人生，精装朋友圈_成片_旧版图生视频.mp4" -vn -ac 2 "$work\seq_a.wav" 2>$null
+    if (-not (Test-Path "$work\seq_a.wav")) { & $FF -v error -y -ss ([math]::Round($t0 + 6.5, 3)) -t $dur -i "build\final\毛坯人生，精装朋友圈_成片.mp4" -vn -ac 2 "$work\seq_a.wav" }
+    & $FF -v error -y -i "$work\seq_v.mp4" -i "$work\seq_a.wav" -map 0:v -map 1:a -c:v copy -c:a aac -shortest "$cmp\连续三镜头_H3新方案.mp4"
+    & $FF -v error -y -ss ([math]::Round($t0 + 6.5, 3)) -t $dur -i "build\final\毛坯人生，精装朋友圈_成片.mp4" -c:v libx264 -crf 18 -c:a aac "$cmp\连续三镜头_旧版.mp4"
+    Write-Host "连续三镜头：$cmp\连续三镜头_H3新方案.mp4（对照 连续三镜头_旧版.mp4）" }
 Write-Host '试跑完成：看完对比视频再决定是否全片重做；记得关机（或等平台空闲 30 分钟自动关机）。'
