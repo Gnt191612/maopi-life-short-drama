@@ -26,6 +26,7 @@ ap.add_argument('--seed', type=int, default=20261127); ap.add_argument('--out', 
 ap.add_argument('--force', action='store_true'); ap.add_argument('--dry', action='store_true')
 ap.add_argument('--hybrid', action='store_true')   # 混合方案（11-27 用户定）：运镜在动的镜头（push/track/arc）用 20 步完整采样拿运镜，手持/固定镜头（hand/static）用 Pika 6 步拿质感和稳定的脸
 ap.add_argument('--subset', choices=['all', 'full', 'pika'], default='all')   # --hybrid 时只跑其中一类（先跑完 20 步的再跑 Pika 的，少切换模型）
+ap.add_argument('--approved', default='')   # 首帧审批清单（每行/空格分隔的镜头 id）：只跑审过合格的首帧，每个镜头开始前重新读（11-27：没审的首帧被拿去跑视频）
 ap.add_argument('--frames', type=int, default=0)   # 只跑前 N 帧（便宜的对比测试用，如 SageAttention 测速；0 = 整个镜头）
 args = ap.parse_args()
 W, H = [int(v) for v in args.res.split('x')]; OUT = args.out; os.makedirs(OUT, exist_ok=True); MAXF = 362
@@ -162,6 +163,7 @@ for tid in man['tasks']:
     td = os.path.join(pack, tid); task = json.load(open(os.path.join(td, 'task.json'), encoding='utf-8'))
     kf = os.path.join(KF, tid + '.png')
     if not os.path.exists(kf): log('跳过（没有写实首帧）', tid); continue
+    if args.approved and tid not in (open(args.approved, encoding='utf-8').read().split() if os.path.exists(args.approved) else []): log('跳过（首帧还没审过）', tid); continue
     n24 = min(task['n'], args.frames) if args.frames else task['n']; t0 = time.time()
     USE_PIKA[0] = pika_for(task)
     if args.subset != 'all' and (args.subset == 'pika') != USE_PIKA[0]: continue   # 不属于这一批
