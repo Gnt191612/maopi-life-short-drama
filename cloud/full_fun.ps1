@@ -69,7 +69,8 @@ if ($Step -eq 'pull') {
             else { continue }
             if (Test-Path $loc) { continue }
             $j = Start-Job { param($O, $H, $P, $src, $dst) & scp.exe @O -P $P "${H}:/root/v11_out/$src" $dst } -ArgumentList (, $O), $SshHost, $Port, $l, $loc
-            if (Wait-Job $j -Timeout 300) { $new += $id; Ssh1 "echo $l >> /root/v11_out/.pulled" 30 | Out-Null }   # 记下已取回，清理时只删这些 else { Stop-Job $j; Remove-Item $loc -ErrorAction SilentlyContinue }; Remove-Job $j -Force
+            if (Wait-Job $j -Timeout 300) { $new += $id; Ssh1 "echo $l >> /root/v11_out/.pulled" 30 | Out-Null }
+            if ($l -like 'fun/*') { New-Item -ItemType Directory -Force build\cloud_out\kf_sync | Out-Null; & scp.exe @O -P $Port "${SshHost}:/root/v11_out/kf/$id.png" build\cloud_out\kf_sync\ 2>$null }   # 写实首帧同步回本地（踩坑记录 62）   # 记下已取回，清理时只删这些 else { Stop-Job $j; Remove-Item $loc -ErrorAction SilentlyContinue }; Remove-Job $j -Force
         }
         $new = $new | Sort-Object -Unique
         if ($new) {

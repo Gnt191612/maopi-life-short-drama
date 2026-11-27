@@ -73,6 +73,7 @@ echo OK > $OUT/DONE_TRIAL
     $sp = Get-ChildItem $dst -Filter 's06_01_0626.speech.*' | Select-Object -First 1   # 原生语音版：画面配 H3 自己的声音
     if ($sp -and (Test-Path "$dst\s06_01_0626_speech_v.mp4")) { $FF0 = & python -c "import config;print(config.FFMPEG)"; & $FF0 -v error -y -i "$dst\s06_01_0626_speech_v.mp4" -i $sp.FullName -map 0:v -map 1:a -c:v copy -c:a aac -shortest "$cmp0\s06_01_0626_H3原生语音.mp4"; & $FF0 -v error -y -i $sp.FullName -ar 16000 -ac 1 "$dst\s06_01_0626_h3voice.wav" }
     Get1 '/root/v11_out/kf/s01_01_0577.png' "$dst\kf_s01_01_0577.png"
+    New-Item -ItemType Directory -Force build\cloud_out\kf_sync | Out-Null; foreach ($t in ($ids -split ' ')) { Get1 "/root/v11_out/kf/$t.png" 'build\cloud_out\kf_sync\' }   # 写实首帧同步回本地
     foreach($k in 0,1,2){ Get1 "/root/v11_out/moss/s06_dialog_$k.wav" "$dst\moss_s06_dialog_$k.wav" }; Get1 '/root/v11_out/moss/s06_dialog.json' "$dst\moss_s06_dialog.json"
     if (Test-Path "$dst\moss_s06_dialog_0.wav") { Copy-Item dist\moss_trial\current_s06_dialog.wav "$cmp0\配音对比_现在的IndexTTS2.wav"; foreach($k in 0,1,2){ if(Test-Path "$dst\moss_s06_dialog_$k.wav"){ Copy-Item "$dst\moss_s06_dialog_$k.wav" "$cmp0\配音对比_MOSS-TTSD对话_第$($k+1)版.wav" } }; Write-Host "配音对比（第二幕宿舍陈瑶和林晓三句对话）：$cmp0\配音对比_*.wav" }
     (Ssh1 'grep -h 完成 /root/v11_out/h3_progress.log') | Out-File -Encoding utf8 "$dst\speed.txt"
