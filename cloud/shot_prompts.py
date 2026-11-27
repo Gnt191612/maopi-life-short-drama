@@ -47,12 +47,17 @@ EN = {
     's06_01_0446': 'close-up of one person only: the chubby young man in the dark grey hoodie has his head down on the desk, at first only the top of his black hair is visible; '
                    'he slowly lifts his head and looks toward the right, eyes slightly puffy from crying, natural skin and natural eyes, no glowing, no red light; '
                    'exactly one person in the frame, warm lamp light',   # 原提示词 eyes red and swollen → 眼睛发红光；face clearly visible → 开头只有头顶时补出第二张脸
+
+    's01_01_1016': 'close-up of the same chubby young man by the window looking down at his phone, typing, his face and mouth clearly visible in soft window light; he wears the same dark grey open zip hoodie with the hood resting behind his neck over a dark grey T-shirt, not a black jacket, not a white T-shirt',   # 11-27 用户指出：同一场戏里林晓穿成黑外套+白T恤（白模卫衣帽子被机位挡住）
+    's02_01_1116': 'medium close-up, the same chubby young man now sits at the window table with the open book, his phone face-up beside the book; he wears the same dark grey open zip hoodie with the hood resting behind his neck over a dark grey T-shirt, not a black jacket, not a white T-shirt',   # 11-27 用户指出：同一场戏里林晓穿成黑外套+白T恤（白模卫衣帽子被机位挡住）
 }
 EXTRA = {   # 写进 task.json 的额外字段：noswap = 关键帧不做 Qwen 换脸（两人挨得近时会换错人）
     's03_02_0001': dict(noswap=True),   # 林母：Qwen 按标准照换脸会把白模的短卷发换成长直发，和 s09 的短卷发对不上
     's08_01_0226': dict(kf_hint='从左到右：左边是清瘦的周明远（蓬松卷发、橄榄绿毛衣），中间是陈瑶（白衬衫、圆框眼镜），右边是体型明显偏胖的林晓（深灰连帽卫衣）；画面里只有这三个学生，其他人都不胖。'),
     's08_01_0735': dict(kf_hint='从左到右：左边是清瘦的周明远（蓬松卷发、橄榄绿毛衣），中间是陈瑶（白衬衫、圆框眼镜），右边是体型明显偏胖的林晓（深灰连帽卫衣）；画面里只有这三个学生，其他人都不胖。'),
     's08_01_2657': dict(kf_hint='从左到右：左边坐着清瘦的周明远（蓬松卷发、橄榄绿毛衣），中间站着陈瑶（白衬衫、圆框眼镜），右边站着体型明显偏胖的林晓（深灰连帽卫衣）；画面里只有这三个学生，其他人都不胖。'),
+    's01_01_1016': dict(kf_hint='林晓穿的是深灰色开襟连帽卫衣（帽子搭在脖子后面），里面是深灰色T恤，和前后镜头同一身衣服；不是黑色西装外套，里面也不是白T恤。'),
+    's02_01_1116': dict(kf_hint='林晓穿的是深灰色开襟连帽卫衣（帽子搭在脖子后面），里面是深灰色T恤，和前后镜头同一身衣服；不是黑色西装外套，里面也不是白T恤。'),
     's02_01_1021': dict(noswap=True),
     's02_01_0852': dict(noswap=True),
     's02_01_0450': dict(bg_face='classA'),   # 本地换脸：多出来的站立路人换成同学甲的脸
