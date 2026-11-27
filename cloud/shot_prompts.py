@@ -49,6 +49,7 @@ EN = {
                    'exactly one person in the frame, warm lamp light',   # 原提示词 eyes red and swollen → 眼睛发红光；face clearly visible → 开头只有头顶时补出第二张脸
 }
 EXTRA = {   # 写进 task.json 的额外字段：noswap = 关键帧不做 Qwen 换脸（两人挨得近时会换错人）
+    's03_02_0001': dict(noswap=True),   # 林母：Qwen 按标准照换脸会把白模的短卷发换成长直发，和 s09 的短卷发对不上
     's02_01_1021': dict(noswap=True),
     's02_01_0852': dict(noswap=True),
     's02_01_0450': dict(bg_face='classA'),   # 本地换脸：多出来的站立路人换成同学甲的脸

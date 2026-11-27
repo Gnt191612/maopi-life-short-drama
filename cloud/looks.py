@@ -3,7 +3,7 @@
 云端脚本（keyframes.py / video_run.py）和本地打包（pack_for_cloud.py）共用。改了白模造型要同步改这里。"""
 
 LOOK = {
- 'lin':    '一位20岁微胖的中国男大学生，圆脸，小眼睛，略有双下巴，黑色碎发短发，穿深灰色开襟连帽卫衣、里面深灰色T恤、深蓝色牛仔裤，憨厚腼腆',
+ 'lin':    '一位20岁体型偏胖的中国男大学生（圆脸、双下巴、肚子圆、身形宽厚，明显比同龄人胖），圆脸，小眼睛，略有双下巴，黑色碎发短发，穿深灰色开襟连帽卫衣、里面深灰色T恤、深蓝色牛仔裤，憨厚腼腆',
  'chen':   '一位21岁高瘦的中国男大学生，鹅蛋脸，戴浅金色圆形细框眼镜，黑色中分刘海短发，穿白衬衫、黑色长裤，沉稳安静',
  'zhou':   '一位22岁清瘦的中国男研究生，长方脸，高颧骨，轻微眼袋，黑色偏长蓬松微卷的短发、厚刘海，穿橄榄绿针织毛衣、工装裤，温和踏实',
  'wang':   '一位38岁的中国男辅导员，方脸微胖，有笑纹，黑色侧分短发，穿浅蓝色衬衫系深蓝色领带、灰色西裤，略有小肚子，真诚温暖',
@@ -13,7 +13,7 @@ LOOK = {
 }
 # 英文版（视频模型多数对英文提示词更稳）
 LOOK_EN = {
- 'lin':    'a chubby 20-year-old Chinese male college student with a round face, small eyes, slight double chin, short messy black hair, dark grey open hoodie over a dark grey T-shirt, dark blue jeans',
+ 'lin':    'a noticeably overweight, chubby 20-year-old Chinese male college student with a broad heavy build, round belly, round face, small eyes, slight double chin, short messy black hair, dark grey open hoodie over a dark grey T-shirt, dark blue jeans',
  'chen':   'a tall slim 21-year-old Chinese male college student with an oval face, thin round light-gold wire glasses, short black hair with center-parted bangs, white shirt, black trousers',
  'zhou':   'a lean 22-year-old Chinese male graduate student with a long face, high cheekbones, slight eye bags, fluffy slightly curly black hair with thick bangs, olive green knit sweater, cargo pants',
  'wang':   'a 38-year-old Chinese male counselor with a square, slightly chubby face, smile lines, side-parted short black hair, light blue shirt with a navy tie, grey trousers',
