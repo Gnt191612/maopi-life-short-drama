@@ -57,8 +57,8 @@ CHAR = {'cast': ('林晓', 1.0, 0.5, 1.0, 0.18, 0.5, 0.4, 'male_casualsuit02', '
           'fly': 260,
           'cap_edge': False,
           'base_hl': {'ear': -0.05, 'behind': -0.065, 'nape': -0.072}},
- 'look': '一位20岁体型偏胖的中国男大学生（圆脸双下巴、肚子圆、身形宽厚，明显比同龄人胖），圆脸，小眼睛，略有双下巴，黑色碎发短发，穿深灰色开襟连帽卫衣、里面深灰色T恤、深蓝色牛仔裤，憨厚腼腆',
- 'look_en': 'a noticeably overweight, chubby 20-year-old Chinese male college student with a broad heavy build, round belly, round face, small eyes, slight double chin, short messy black hair, dark grey '
+ 'look': '一位20岁体型偏胖的中国男大学生（圆脸双下巴、身形宽厚敦实，明显比同龄人胖，卫衣和T恤完整盖住身体），圆脸，小眼睛，略有双下巴，黑色碎发短发，穿深灰色开襟连帽卫衣、里面深灰色T恤、深蓝色牛仔裤，憨厚腼腆',
+ 'look_en': 'a noticeably overweight, chubby 20-year-old Chinese male college student with a broad heavy stocky build, fully clothed, round face, small eyes, slight double chin, short messy black hair, dark grey '
             'open hoodie over a dark grey T-shirt, dark blue jeans',
  'voice': 'voice.wav',
  'voice_design': {'engine': 'Spark-TTS 0.5B', 'gender': 'male', 'pitch': 'moderate', 'speed': 'high', 'text': '哎，你们别笑我啊，我就是想让大家觉得，我过得还挺不错的嘛。', 'source': '林晓_12'}}
