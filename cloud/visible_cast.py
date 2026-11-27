@@ -45,6 +45,23 @@ def visible(seg, f0, f1, pose_mp4=None):
                 c = ID2CID.get(p['person_id'], 'extra%d' % p['person_id']); cnt[c] = cnt.get(c, 0) + 1
     return {c: n / len(fs) for c, n in cnt.items()}
 
+def face_visible(seg, f0, f1):
+    """白模第一帧（取镜头开头最近的一份骨架数据）里脸看得见的角色：脸朝向相机（facing > -0.35）且鼻子和至少一只眼没被挡。
+    首帧换脸只对这些人做（11-27 s06_01_0446：低头只露头顶，被硬换上一张正脸）。没有 facing 数据返回 None（keyframes 按老规则）"""
+    for f in range(f0, min(f1, f0 + 8) + 1):
+        p = os.path.join(config.RENDERS, seg, 'pose_%04d.json' % f)
+        if not os.path.exists(p): continue
+        out = []
+        for q in json.load(open(p)).get('people', []):
+            if 'facing' not in q: return None
+            un = q.get('unoccluded', [1] * 18); kp = q['pose_keypoints_2d']
+            ok = lambda i: kp[i * 3 + 2] > 0 and un[i]
+            if q['facing'] > -0.35 and ok(0) and (ok(14) or ok(15)):
+                c = ID2CID.get(q['person_id'])
+                if c: out.append(c)
+        return sorted(out)
+    return None
+
 def others_for(task, pose_mp4=None):
     v = visible(task['segment'], *task['frames'], pose_mp4=pose_mp4)
     if v is None: return None
@@ -62,8 +79,10 @@ if __name__ == '__main__':
         if o or extras or v.keys() - set(t.get('characters', [])):
             print('%s 主角=%s 入画=%s → others=%s%s' % (t['id'], ','.join(t.get('characters', [])) or '无',
                   ' '.join('%s:%.0f%%' % (c, s * 100) for c, s in sorted(v.items())), o, ('  路人 %s' % extras) if extras else ''))
-        if '--write' in sys.argv and (o != t.get('others', []) or len(extras) != t.get('extras', 0)):
+        fv = face_visible(t['segment'], *t['frames'])
+        if '--write' in sys.argv and (o != t.get('others', []) or len(extras) != t.get('extras', 0) or fv != t.get('face_visible')):
             t['others'] = o; t['extras'] = len(extras)   # extras = 白模里的无名路人数（提示词写成「另有 N 名同学」）
+            if fv is not None: t['face_visible'] = fv
             json.dump(t, open(tp, 'w', encoding='utf-8'), ensure_ascii=False, indent=1); changed += 1
     if nodata: print('没有骨架数据（先跑 export_pose.py）：', ' '.join(nodata))
     print('写入 %d 个 task.json' % changed if '--write' in sys.argv else '（只出报告，加 --write 写入）')

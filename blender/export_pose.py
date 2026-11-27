@@ -73,7 +73,11 @@ for f in range(sc.frame_start, sc.frame_end + 1, step):
             if not q[2] or not shown: vis.append(0); continue
             d = p - co; hit, _loc, _n, _i, obj, _m = sc.ray_cast(dg, co, d.normalized(), distance=d.length + 0.25)
             vis.append(1 if hit and obj is not None and obj.name in own else 0)
-        people.append({'person_id': FIXED.get(rig.name[:-4], 10 + k), 'pose_keypoints_2d': flat, 'unoccluded': vis})
+        # 脸朝向相机的程度（1 = 正对，0 = 侧面，<0 = 背对/低头只露头顶）：首帧要不要换脸靠它（11-27 s06_01_0446 低头只露头顶，被硬换上一张正脸）
+        hb = rig.pose.bones['head']; hm = rig.matrix_world @ hb.matrix
+        face = (hm.to_3x3() @ (hb.bone.matrix_local.inverted().to_3x3() @ Vector((0, -1, 0)))).normalized()
+        to_cam = (co - rig.matrix_world @ hb.head).normalized()
+        people.append({'person_id': FIXED.get(rig.name[:-4], 10 + k), 'pose_keypoints_2d': flat, 'unoccluded': vis, 'facing': round(face.dot(to_cam), 3)})
         for li, (i, j) in enumerate(LIMBS):
             if px[i][2] and px[j][2]: draw(img, px[i], px[j], tuple(c * 0.6 for c in COLORS[li % 18]), 2)
         for i, p in enumerate(px):

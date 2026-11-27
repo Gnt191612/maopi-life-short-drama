@@ -12,6 +12,7 @@
 import os, sys, json
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from looks import LOOK_EN
+import lighting
 
 ALIGN = {   # 官方固定对齐句（逐字照抄）
     'i2va': 'For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.',
@@ -113,6 +114,8 @@ def build(task, mode='i2va', lines=None, speech=False):
             'One other college student' if extras == 1 else '%d other college students' % extras, 's' if extras == 1 else '', 'them')
     if others or extras:
         shot += ' The shot contains exactly %d people.' % (len(chars) + len(others) + extras)
+    light = lighting.en(task.get('set', ''))   # 场景的时间和光线，和首帧（keyframes.py 用 lighting.zh）同一说法（踩坑 70：台灯亮着、窗外白天）
+    if light: shot += ' ' + light
     # 首帧模式：背景只认首帧，不再用文字描述场景（11-27 试片教训：近景首帧只有白墙，文字写了「宿舍、上下铺、黄昏窗户」，模型中途把背景整个换成宿舍还镜像重复）
     if mode == 'i2va':
         shot += (' The background stays exactly as seen in <Picture 1> for the whole shot, softly out of focus, with the same walls, objects and light; '

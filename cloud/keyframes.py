@@ -6,7 +6,7 @@
 用法：python3 keyframes.py <cloud_pack 目录> [任务id前缀 ...]"""
 import os, sys, json, shutil, subprocess
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import comfy_run, shard
+import comfy_run, shard, lighting
 from looks import LOOK
 INP = '/root/ComfyUI/input'
 OUTK = '/root/v11_out/kf'; os.makedirs(OUTK, exist_ok=True)
@@ -27,6 +27,8 @@ def plan(task):
     swap = [] if any(k in en for k in NOFACE) or task.get('noswap') else chars   # 看不到脸的镜头不换脸；noswap：两人挨得近时 Qwen 换脸会换错人（s02_01_1021 林晓被戴上眼镜、陈瑶被抹掉），交给本地 face_unify
     if len(chars) >= 2 and not task.get('swap_multi'): swap = []   # 多人同框不做 Qwen 换脸：它连衣服一起换、还会选错人（11-26 s08_01_0226：给林晓换脸时把穿白衬衫的陈瑶整个变成了林晓），五官交给本地 face_unify 按白模位置换
     if task.get('kf_start') is not None: start = int(task['kf_start'])
+    if task.get('face_visible') is not None:   # 白模第一帧里脸看得见的人才换脸（visible_cast.py 按脸朝向+遮挡算；11-27 s06_01_0446 低头只露头顶，被硬换上一张正脸，画面多出一个人）
+        swap = [c for c in swap if c in task['face_visible']]
     return start, swap
 
 def first_frame(td, tid, src_name='first.png'):
@@ -85,6 +87,12 @@ def make_kf(td, tid, task, src_name, out):
             if keep: s += '（' + '，'.join(keep) + '）'
             return s
         pre = ('画面中的人物是' + '、'.join(tag(c) for c in chars if c in LOOK) + '，不要改变人物的性别、人数和衣着。') if chars else ''
+        # 画面边缘只露背影/肩膀的人也写上（踩坑 68：没写的人会被随意画，男生背影画成长发女生、穿灰衬衫的陌生人）
+        others = [c for c in task.get('others', []) if c in LOOK and c not in chars]
+        if others: pre += '画面边缘还露出' + '、'.join(tag(c) for c in others) + '的一部分（背影、肩膀或侧面），也是这个人，性别和衣着不变。'
+        n = len(chars) + len(others) + int(task.get('extras', 0) or 0)
+        if n: pre += '画面里一共只有 %d 个人。' % n
+        pre += lighting.zh(task.get('set', ''))   # 场景的时间和光线（踩坑 70：白模是统一日光，傍晚/夜戏首帧被画成白天）
         pre += task.get('kf_hint', '')   # 按镜头的中文画面提示（谁在左谁在右、体型、人数）：二转三只读这句前缀，task.json 的英文 prompt 只在视频阶段用（11-27 查明）
         base = comfy_run.run(WF_REAL, 'kfbase_' + tid, {'10.image': first_frame(td, tid, src_name), '21.start_at_step': start}, prefix=pre)
         if not base: print('KF FAIL base', tid, flush=True); return

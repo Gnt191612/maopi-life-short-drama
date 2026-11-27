@@ -30,7 +30,7 @@ if ($Step -eq 'start') {
     & python cloud\slim_pack.py $all dist\full_fun.zip --no-anchors --pose --first ($needFirst -join ',')
     $voice = (Get-ChildItem dist\cloud_pack -Directory | Where-Object { Test-Path "$($_.FullName)\voice.wav" } | ForEach-Object Name | Sort-Object) -join ' '
     Ssh1 'mkdir -p /root/v11_upload/scripts /root/v11_out/kf /root/ComfyUI/input; pkill -f trial_h3.sh; pkill -f full_fun.sh; echo dirs' 60 | Out-Null   # 新实例没有这些目录（11-27 新建 TDTJ 时第一次上传失败）
-    & scp.exe @O -P $Port cloud\video_fun.py cloud\video_h3.py cloud\h3_prompt.py cloud\disk_guard.sh cloud\cleanup_auto.sh cloud\lipsync.sh cloud\setup_fun.sh cloud\setup_h3.sh cloud\keyframes.py cloud\comfy_run.py cloud\looks.py cloud\looks_gen.json cloud\shard.py "${SshHost}:/root/v11_upload/scripts/"
+    & scp.exe @O -P $Port cloud\video_fun.py cloud\video_h3.py cloud\h3_prompt.py cloud\disk_guard.sh cloud\cleanup_auto.sh cloud\lipsync.sh cloud\setup_fun.sh cloud\setup_h3.sh cloud\keyframes.py cloud\lighting.py cloud\comfy_run.py cloud\looks.py cloud\looks_gen.json cloud\shard.py "${SshHost}:/root/v11_upload/scripts/"
     & scp.exe @O -P $Port dist\full_fun.zip "${SshHost}:/root/v11_upload/full_fun.zip"
     $sh = @'
 PYC=$(ls /root/miniconda3/envs/comfyui/bin/python 2>/dev/null || command -v python3)   # ComfyUI 环境的 Python（有 cv2/PIL/numpy；系统 python3 没有）
