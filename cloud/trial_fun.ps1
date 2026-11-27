@@ -22,7 +22,7 @@ if ($Step -eq 'report') {
 if ($Step -eq 'trial') {
     & python -c "import sys,json; sys.path.insert(0,'cloud'); import looks; json.dump(dict(look=looks.LOOK, look_en=looks.LOOK_EN, name=looks.NAME), open('cloud/looks_gen.json','w',encoding='utf-8'), ensure_ascii=False, indent=1)"
     & python cloud\shot_audio.py s06_01_0626 | Out-Null
-    & python cloud\slim_pack.py ($ids -replace ' ', ',') dist\slim_trial.zip
+    & python cloud\slim_pack.py ($ids -replace ' ', ',') dist\slim_trial.zip --no-anchors
     Up @('cloud\video_fun.py', 'cloud\lipsync.sh', 'cloud\setup_fun.sh', 'cloud\keyframes.py', 'cloud\comfy_run.py', 'cloud\looks.py', 'cloud\looks_gen.json', 'cloud\shard.py') '/root/v11_upload/scripts/'
     Up @('dist\slim_trial.zip') '/root/v11_upload/cloud_pack.zip'
     $sh = @'
@@ -33,6 +33,7 @@ bash $S/setup_fun.sh > $OUT/trial_setup.log 2>&1 || { echo SETUP_FAIL > $OUT/DON
 i=s01_01_0577; rm -f $OUT/kf/$i.png $OUT/kf/$i@*.png $OUT/kfbase_$i*.png $OUT/kfswap_$i*.png   # 首帧原来是白模质感，按 kf_hint + 重绘力度 2 重做
 cd $S && python3 keyframes.py $PACK $i > $OUT/trial_keys.log 2>&1
 python3 video_fun.py $PACK --only ${IDS// /,} --res __RES__ > $OUT/trial_fun.log 2>&1
+python3 video_fun.py $PACK --only s06_01_0626 --res 832x480 --out /root/v11_out/fun_480 > $OUT/trial_fun480.log 2>&1   # 同一镜头低一档分辨率，给用户选清晰度/花费
 wait
 bash $S/lipsync.sh run $PACK s06_01_0626 > $OUT/trial_lips.log 2>&1
 touch $OUT/DONE_TRIAL
@@ -52,6 +53,8 @@ touch $OUT/DONE_TRIAL
     }
     foreach ($t in ($ids -split ' ')) { & scp.exe @O -P $Port "${SshHost}:/root/v11_out/fun/$t.mp4" "$dst\" 2>$null }
     & scp.exe @O -P $Port "${SshHost}:/root/v11_out/lips/s06_01_0626.mp4" "$dst\s06_01_0626_lips.mp4" 2>$null
+    & scp.exe @O -P $Port "${SshHost}:/root/v11_out/fun_480/s06_01_0626.mp4" "$dst\s06_01_0626_480.mp4" 2>$null
+    & ssh.exe @O -p $Port $SshHost 'grep -h 完成 /root/v11_out/fun_progress.log' | Out-File -Encoding utf8 "$dst\speed.txt"   # 每个镜头用时，算全片花费
     & scp.exe @O -P $Port "${SshHost}:/root/v11_out/trial_*.log" "$dst\" 2>$null
     Get-ChildItem $dst | Select Name, Length | Format-Table -AutoSize
 }
@@ -77,4 +80,12 @@ foreach ($t in ($ids -split ' ')) {
     else { & $FF -v error -y -i $old -i $new -filter_complex $vf -c:v libx264 -crf 18 "$cmp\$t.mp4" }
     Write-Host "对比视频：$cmp\$t.mp4"
 }
+if (Test-Path "$dst\s06_01_0626_480.mp4") {   # 分辨率对比：旧版 | 新 832×480 | 新 1024×576（都不带口型，只比画质）
+    $lab = { param($t) "scale=640:360,setsar=1,drawtext=fontfile='C\:/Windows/Fonts/msyh.ttc':text='$t':x=12:y=12:fontsize=24:fontcolor=white:box=1:boxcolor=black@0.5" }
+    & $FF -v error -y -i build\cloud_out\final_all\real\s06_01_0626.mp4 -i "$dst\s06_01_0626_480.mp4" -i "$dst\s06_01_0626.mp4" -filter_complex "[0:v]$(& $lab '旧版')[a];[1:v]$(& $lab '新 832x480')[b];[2:v]$(& $lab '新 1024x576')[c];[a][b][c]hstack=3" -c:v libx264 -crf 18 "$cmp\s06_01_0626_分辨率对比.mp4"
+    Write-Host "分辨率对比：$cmp\s06_01_0626_分辨率对比.mp4" }
+if (Test-Path "$dst\speed.txt") { Get-Content "$dst\speed.txt" -Encoding utf8 }
+Write-Host '== 音画同步客观检查（旧版 vs 新版，s06_01_0626）'
+& python cloud\av_sync_check.py build\cloud_out\final_all s06_01_0626 2>$null | Select-Object -First 1
+& python cloud\av_sync_check.py $work s06_01_0626 2>$null | Select-Object -First 1
 Write-Host '试跑完成。看完对比视频再决定是否全片重做；记得关机（或等平台空闲 30 分钟自动关机）。'

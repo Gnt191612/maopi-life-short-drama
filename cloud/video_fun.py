@@ -19,8 +19,10 @@ ap = argparse.ArgumentParser()
 ap.add_argument('pack'); ap.add_argument('--only', default=''); ap.add_argument('--res', default='1024x576')
 ap.add_argument('--steps', type=int, default=4); ap.add_argument('--fps', type=int, default=16); ap.add_argument('--seed', type=int, default=20261127)
 ap.add_argument('--control', default='depth'); ap.add_argument('--no-lora', action='store_true'); ap.add_argument('--dry', action='store_true')
+ap.add_argument('--force', action='store_true'); ap.add_argument('--out', default='')
 args = ap.parse_args()
 W, H = [int(v) for v in args.res.split('x')]; FPS = args.fps; MAXF = 81
+if args.out: OUT = args.out; os.makedirs(OUT, exist_ok=True)   # 试跑对比两种分辨率时分开存
 MODELS = dict(high='wan2.2_fun_control_high_noise_14B_fp8_scaled.safetensors', low='wan2.2_fun_control_low_noise_14B_fp8_scaled.safetensors',
               lora_high='wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors', lora_low='wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors',
               t5='umt5_xxl_fp8_e4m3fn_scaled.safetensors', vae='wan_2.1_vae.safetensors')
@@ -112,6 +114,7 @@ man = json.load(open(os.path.join(pack, 'manifest.json'), encoding='utf-8'))
 for tid in man['tasks']:
     if only and not any(tid.startswith(x) for x in only): continue
     td = os.path.join(pack, tid); task = json.load(open(os.path.join(td, 'task.json'), encoding='utf-8'))
+    if os.path.exists(os.path.join(OUT, tid + '.mp4')) and not args.force: log('已有，跳过', tid); continue   # 断点续跑：断线或平台空闲关机后重开，接着往下跑
     kf = os.path.join(KF, tid + '.png')
     if not os.path.exists(kf): log('跳过（没有写实首帧）', tid); continue
     ctl_src = os.path.join(td, args.control + '.mp4')

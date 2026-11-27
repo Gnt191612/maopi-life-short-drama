@@ -4,14 +4,15 @@
 # 2) 检查帧数是否等于 task.json 里的帧数（不一致说明白模时间轴改过、云端用的是旧素材，会提示）
 # 3) 多人镜头导出白模头部位置 → face_unify 逐帧统一五官
 # 4) make_final：先 realign（节奏调整过的片段自动重对齐），再合成成片
-param([Parameter(Mandatory = $true)][string]$From, [string]$Only = '', [switch]$NoFinal)
+param([Parameter(Mandatory = $true)][string]$From, [string]$Only = '', [switch]$NoFinal, [string]$Target = 'final_all')   # Target：替换进哪个结果目录（11-27 新方案用 final_fun，旧版 final_all 保留作对照和兜底）
 $ErrorActionPreference = 'Continue'
 $R = Split-Path $PSScriptRoot -Parent; Set-Location $R
-$dst = Join-Path $R 'build\cloud_out\final_all\real'; $heads = Join-Path $R 'build\cloud_out\final_all\heads'
+$dst = Join-Path $R "build\cloud_out\$Target\real"; $heads = Join-Path $R "build\cloud_out\$Target\heads"
 $env:BLENDER_USER_RESOURCES = Join-Path $R '.tools\blender_user'; $env:PYTHONIOENCODING = 'utf-8'
 $ids = @()
 foreach ($m in Get-ChildItem $From -Filter *.mp4) {
-    $t = $m.BaseName; if ($Only -and ($Only -split ',') -notcontains $t) { continue }
+    if ($m.BaseName -like '*_lips') { continue }   # 口型版另行处理：同名 <id>_lips.mp4 存在时用它代替 <id>.mp4
+    $t = $m.BaseName; $lip = Join-Path $From ("{0}_lips.mp4" -f $t); if (Test-Path $lip) { $m = Get-Item $lip }; if ($Only -and ($Only -split ',') -notcontains $t) { continue }
     $tj = Join-Path $R "dist\cloud_pack\$t\task.json"; if (-not (Test-Path $tj)) { Write-Host "跳过（没有这个任务）：$t"; continue }
     $j = Get-Content $tj -Raw -Encoding utf8 | ConvertFrom-Json
     if (Test-Path "$dst\$t") { Remove-Item "$dst\$t" -Recurse -Force }
@@ -30,5 +31,5 @@ foreach ($m in Get-ChildItem $From -Filter *.mp4) {
 }
 if (-not $ids) { Write-Host '没有可替换的镜头'; exit }
 Write-Host ("替换 {0} 个镜头：{1}" -f $ids.Count, ($ids -join ' '))
-& python cloud\face_unify.py build\cloud_out\final_all @ids
-if (-not $NoFinal) { & powershell -NoProfile -ExecutionPolicy Bypass -File cloud\make_final.ps1 -Result (Join-Path $R 'build\cloud_out\final_all') }
+& python cloud\face_unify.py "build\cloud_out\$Target" @ids
+if (-not $NoFinal) { & powershell -NoProfile -ExecutionPolicy Bypass -File cloud\make_final.ps1 -Result (Join-Path $R "build\cloud_out\$Target") }
