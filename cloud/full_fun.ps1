@@ -33,6 +33,7 @@ if ($Step -eq 'start') {
     & scp.exe @O -P $Port cloud\video_fun.py cloud\video_h3.py cloud\h3_prompt.py cloud\disk_guard.sh cloud\cleanup_auto.sh cloud\lipsync.sh cloud\setup_fun.sh cloud\setup_h3.sh cloud\keyframes.py cloud\comfy_run.py cloud\looks.py cloud\looks_gen.json cloud\shard.py "${SshHost}:/root/v11_upload/scripts/"
     & scp.exe @O -P $Port dist\full_fun.zip "${SshHost}:/root/v11_upload/full_fun.zip"
     $sh = @'
+PYC=$(ls /root/miniconda3/envs/comfyui/bin/python 2>/dev/null || command -v python3)   # ComfyUI 环境的 Python（有 cv2/PIL/numpy；系统 python3 没有）
 OUT=/root/v11_out; S=/root/v11_upload/scripts; PACK=/root/v11cloud/cloud_pack; rm -f $OUT/DONE_FULL
 sed -i 's/\r$//' $S/*.sh /root/v11_upload/*.sh 2>/dev/null   # Windows 写的脚本是 CRLF，bash 读不了（11-27）
 for f in $S/*.sh /root/v11_upload/*.sh; do [ -f $f ] && { bash -n $f || { echo "SYNTAX_FAIL $f" > $OUT/DONE_FULL; exit; }; }; done
@@ -41,9 +42,9 @@ bash $S/disk_guard.sh > $OUT/full_disk.log 2>&1 || { echo DISK_LOW > $OUT/DONE_F
 bash $S/setup___ENGINE__.sh > $OUT/full_setup.log 2>&1 || { echo SETUP_FAIL > $OUT/DONE_FULL; exit; }
 ( bash $S/lipsync.sh setup > $OUT/full_lipsetup.log 2>&1 ) &
 for i in __REKEY__; do rm -f $OUT/kf/$i.png $OUT/kf/$i@*.png $OUT/kfbase_$i*.png $OUT/kfswap_$i*.png; done
-cd $S && python3 keyframes.py $PACK > $OUT/full_keys.log 2>&1          # 已有首帧的跳过，只补缺的
+cd $S && $PYC keyframes.py $PACK > $OUT/full_keys.log 2>&1          # 已有首帧的跳过，只补缺的
 curl -s -X POST -H "Content-Type: application/json" -d '{"unload_models":true,"free_memory":true}' http://127.0.0.1:8188/free >/dev/null   # 卸掉 Krea2/Qwen，给 Wan 腾显存
-if [ __ENGINE__ = h3 ]; then python3 video_h3.py $PACK --res __RES__ --out $OUT/fun __H3ARGS__ > $OUT/full_fun.log 2>&1; else python3 video_fun.py $PACK --res __RES__ > $OUT/full_fun.log 2>&1; fi   # 两种引擎都输出到 fun/，后面取回和口型同步不用改
+if [ __ENGINE__ = h3 ]; then $PYC video_h3.py $PACK --res __RES__ --out $OUT/fun __H3ARGS__ > $OUT/full_fun.log 2>&1; else $PYC video_fun.py $PACK --res __RES__ > $OUT/full_fun.log 2>&1; fi   # 两种引擎都输出到 fun/，后面取回和口型同步不用改
 wait
 curl -s -X POST -H "Content-Type: application/json" -d '{"unload_models":true,"free_memory":true}' http://127.0.0.1:8188/free >/dev/null   # 给口型同步腾显存
 bash $S/lipsync.sh run $PACK __VOICE__ > $OUT/full_lips.log 2>&1

@@ -35,20 +35,23 @@ if ($Step -eq 'trial') {
     & scp.exe @O -P $Port dist\slim_trial_h3.zip "${SshHost}:/root/v11_upload/cloud_pack.zip"
     & scp.exe @O -P $Port -r dist\moss_trial cloud\tts_moss.py cloud\setup_moss.sh "${SshHost}:/root/v11_upload/"   # MOSS-TTSD 对话配音对比（用户 11-27 同意）
     $sh = @'
+PYC=$(ls /root/miniconda3/envs/comfyui/bin/python 2>/dev/null || command -v python3)   # ComfyUI 环境的 Python（有 cv2/PIL/numpy；系统 python3 没有）
 OUT=/root/v11_out; S=/root/v11_upload/scripts; PACK=/root/v11cloud/cloud_pack; rm -f $OUT/DONE_TRIAL
 sed -i 's/\r$//' $S/*.sh /root/v11_upload/*.sh 2>/dev/null   # Windows 写的脚本是 CRLF，bash 读不了（11-27）
 for f in $S/*.sh /root/v11_upload/*.sh; do [ -f $f ] && { bash -n $f || { echo "SYNTAX_FAIL $f" > $OUT/DONE_TRIAL; exit; }; }; done
 rm -rf /root/v11cloud; mkdir -p /root/v11cloud; python3 -c "import zipfile; zipfile.ZipFile('/root/v11_upload/cloud_pack.zip').extractall('/root/v11cloud')"
 cp -f $PACK/refs/*.jpg /root/ComfyUI/input/ 2>/dev/null
 bash $S/disk_guard.sh > $OUT/trial_disk.log 2>&1 || { echo DISK_LOW > $OUT/DONE_TRIAL; exit; }   # 磁盘体检：不够就先清中间产物，仍不够就停下等用户（踩坑记录 62）
-bash $S/setup_h3.sh > $OUT/trial_setup.log 2>&1 || { echo SETUP_FAIL > $OUT/DONE_TRIAL; exit; }
-( bash $S/lipsync.sh setup > $OUT/trial_lipsetup.log 2>&1; bash /root/v11_upload/setup_moss.sh > $OUT/trial_mosssetup.log 2>&1 ) &   # 口型、对话配音环境和视频生成同时装
-cd $S && python3 keyframes.py $PACK ${IDS} > $OUT/trial_keys.log 2>&1   # 新实例没有首帧：按现在的提示词重做（已有的跳过）
+( H3_BF16=0 H3_FP8=0 bash $S/setup_h3.sh > $OUT/trial_setup.log 2>&1 && touch $OUT/SETUP_OK || touch $OUT/SETUP_BAD ) &   # 后台装模型，同时先用显卡做首帧（显卡空着 30 分钟会被平台关机，踩坑记录 64）
+( [ -f /root/latentsync/checkpoints/latentsync_unet.pt ] || bash $S/lipsync.sh setup > $OUT/trial_lipsetup.log 2>&1 ) &   # 已提前装好就跳过
+( [ -f /root/models/MOSS-TTSD-v1.0/config.json ] && [ -d /root/moss/venv ] || bash /root/v11_upload/setup_moss.sh > $OUT/trial_mosssetup.log 2>&1 ) &   # 口型、对话配音环境和视频生成同时装
+cd $S && $PYC keyframes.py $PACK ${IDS} > $OUT/trial_keys.log 2>&1   # 新实例没有首帧：按现在的提示词重做（已有的跳过）
+for w in $(seq 1 120); do [ -f $OUT/SETUP_OK ] || [ -f $OUT/SETUP_BAD ] && break; sleep 15; done
+[ -f $OUT/SETUP_OK ] || { echo SETUP_FAIL > $OUT/DONE_TRIAL; exit; }
 curl -s -X POST -H "Content-Type: application/json" -d '{"unload_models":true,"free_memory":true}' http://127.0.0.1:8188/free >/dev/null
-python3 video_h3.py $PACK --only ${IDS// /,} --res __RES__ --mode fl --out $OUT/h3 > $OUT/trial_h3.log 2>&1 || echo "H3 主版失败" >> $OUT/trial_h3.log   # 主版：首帧模式 20 步
-V="python3 video_h3.py $PACK --only s06_01_0626 --res __RES__"   # 对照版都用陈瑶说话特写，便于并排比较
+$PYC video_h3.py $PACK --only ${IDS// /,} --res __RES__ --mode fl --out $OUT/h3 > $OUT/trial_h3.log 2>&1 || echo "H3 主版失败" >> $OUT/trial_h3.log   # 主版：首帧模式 20 步
+V="$PYC video_h3.py $PACK --only s06_01_0626 --res __RES__"   # 对照版都用陈瑶说话特写，便于并排比较
 $V --mode fl --pika      --out $OUT/h3_pika   > $OUT/trial_h3_pika.log 2>&1     # + Pika H3 Flex 真实感 LoRA
-for w in $(seq 1 120); do [ -f $OUT/BF16_READY ] && break; sleep 30; done   # 等后台的 pruned bf16 下完（最多 60 分钟；没下完就用镜像自带的完整 bf16）
 $V --mode fl --prec bf16 --out $OUT/h3_bf16   > $OUT/trial_h3_bf16.log 2>&1     # 全精度 bf16（看比 int8 好多少，效果优先）
 $V --mode ref            --out $OUT/h3_ref    > $OUT/trial_h3_ref.log 2>&1      # 参考图模式（首帧 + 陈瑶标准照只当参考）
 $V --mode fl --turbo     --out $OUT/h3_turbo  > $OUT/trial_h3_turbo.log 2>&1    # 4 步加速（看画质掉多少，决定全片用哪档）

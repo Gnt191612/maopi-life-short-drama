@@ -31,11 +31,11 @@ V=$(cd /root/ComfyUI && python3 -c "import comfyui_version as v; print(v.__versi
 echo "ComfyUI 版本 $V"
 get diffusion_models minimax_h3_fl2va_pruned_int8_convrot.safetensors
 get diffusion_models minimax_h3_ref2va_pruned_int8_convrot.safetensors
-[ "${H3_BF16:-1}" = 1 ] && ( get diffusion_models minimax_h3_fl2va_pruned_bf16.safetensors && touch /root/v11_out/BF16_READY ) > /root/v11_out/bf16_dl.log 2>&1 &   # 40GB 放后台下，不挡住主版试跑   # 镜像自带完整 bf16（66GB，48G 卡要卸载到内存）；pruned bf16 40GB 输出等效、更省显存   # 40.2 GB：试跑对比全精度效果（效果优先，用户 11-27）
+[ "${H3_BF16:-0}" = 1 ] && ( get diffusion_models minimax_h3_fl2va_pruned_bf16.safetensors && touch /root/v11_out/BF16_READY ) > /root/v11_out/bf16_dl.log 2>&1 &   # 40GB 放后台下，不挡住主版试跑   # 镜像自带完整 bf16（66GB，48G 卡要卸载到内存）；pruned bf16 40GB 输出等效、更省显存   # 40.2 GB：试跑对比全精度效果（效果优先，用户 11-27）
 CPY=$PY; : $(for P in /root/miniconda3/envs/comfyui/bin/python /root/ComfyUI/venv/bin/python /root/ComfyUI/.venv/bin/python /root/miniconda3/bin/python /opt/conda/bin/python /usr/local/bin/python3 python3; do [ -x "$P" ] || command -v $P >/dev/null || continue; $P -c 'import torch' 2>/dev/null && { echo $P; break; }; done; true)
 echo "ComfyUI 的 Python：$CPY"
 $CPY -c "import torch; v=torch.version.cuda or '0'; print('torch', torch.__version__, 'cuda', v); import sys; sys.exit(0 if tuple(map(int, v.split('.')[:2]))>=(13,0) else 1)" \
-  || { echo 'torch 不是 cu130：int8_convrot 可能走慢路径，补下 fp8_scaled 后备'; get diffusion_models minimax_h3_fl2va_pruned_fp8_scaled.safetensors || true; }
+  || { echo 'torch 不是 cu130：int8_convrot 可能走慢一点的路径（镜像作者的工作流在同样环境下就用 int8）'; [ "${H3_FP8:-0}" = 1 ] && get diffusion_models minimax_h3_fl2va_pruned_fp8_scaled.safetensors || true; }
 python3 -c "import sys; v=[int(x) for x in '$V'.split('.')[:2]]+[0,0]; sys.exit(0 if v[:2]>=[0,38] else 1)" \
   && get model_patches minimax_h3_fun_controlnet_union_2.0_pruned_int8_convrot.safetensors \
   || echo "ComfyUI < 0.38，用 ControlNet Union 1.0"
