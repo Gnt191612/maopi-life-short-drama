@@ -101,7 +101,12 @@ def build(task, mode='i2va', lines=None, speech=False):
         keep = ('People: %s. ' % people) if people else ''
     shot = '[Shot 1] Live-action, cinematic, %s. %s%s. %s, matching the camera movement of the scene. %s' % (
         size_of(desc), keep, desc[0].upper() + desc[1:], cam, LIFE)
-    if bg: shot += ' Setting: %s.' % bg
+    # 首帧模式：背景只认首帧，不再用文字描述场景（11-27 试片教训：近景首帧只有白墙，文字写了「宿舍、上下铺、黄昏窗户」，模型中途把背景整个换成宿舍还镜像重复）
+    if mode == 'i2va':
+        shot += (' The background stays exactly as seen in <Picture 1> for the whole shot, softly out of focus, with the same walls, objects and light; '
+                 'the space behind %s keeps its look as the camera moves.' % focus)
+    elif bg:
+        shot += ' Setting: %s.' % bg
     talk = ''
     if lines:
         seen = {}
