@@ -7,7 +7,8 @@ HF=${HF_ENDPOINT:-https://hf-mirror.com}; R=/root/moss; mkdir -p $R /root/models
 [ -d MOSS-TTS/.git ] || git clone --depth 1 https://github.com/OpenMOSS/MOSS-TTS.git
 CU=$(nvidia-smi | grep -o 'CUDA Version: [0-9.]*' | grep -o '[0-9.]*$'); echo "驱动支持 CUDA $CU"
 IDX=cu128; python3 -c "import sys; sys.exit(0 if tuple(map(int,'$CU'.split('.')))>=(12,8) else 1)" || IDX=cu124
-PY=$(for P in /root/ComfyUI/venv/bin/python /root/ComfyUI/.venv/bin/python /root/miniconda3/bin/python /opt/conda/bin/python /usr/local/bin/python3 /usr/bin/python3; do [ -x "$P" ] && $P -m pip --version >/dev/null 2>&1 && { echo $P; break; }; done)   # 新镜像没有 pip 命令：找一个带 pip 的 Python（11-27）
+PY=$(for P in /root/miniconda3/envs/comfyui/bin/python /root/ComfyUI/venv/bin/python /root/ComfyUI/.venv/bin/python /root/miniconda3/bin/python /opt/conda/bin/python /usr/local/bin/python3 /usr/bin/python3; do [ -x "$P" ] && $P -m pip --version >/dev/null 2>&1 && { echo $P; break; }; done; true)   # 新镜像没有 pip 命令：找一个带 pip 的 Python（11-27）
+[ -n "$PY" ] || { echo 'PY 为空：找不到带 pip 的 Python'; exit 1; }
 $PY -m pip install -q uv
 [ -d venv ] || $PY -m uv venv -p 3.12 venv   # 官方要求 Python 3.12
 . venv/bin/activate
@@ -21,7 +22,9 @@ else
   $PIP install --no-deps -e MOSS-TTS
 fi
 $PIP install huggingface_hub
-[ -f /root/models/MOSS-TTSD-v1.0/config.json ] || HF_ENDPOINT=$HF python -c "from huggingface_hub import snapshot_download as s; s('OpenMOSS-Team/MOSS-TTSD-v1.0', local_dir='/root/models/MOSS-TTSD-v1.0')"
+$PIP install modelscope
+[ -f /root/models/MOSS-TTSD-v1.0/config.json ] || python -c "from modelscope import snapshot_download as s; s('openmoss/MOSS-TTSD-v1.0', local_dir='/root/models/MOSS-TTSD-v1.0')" \
+  || HF_ENDPOINT=$HF python -c "from huggingface_hub import snapshot_download as s; s('OpenMOSS-Team/MOSS-TTSD-v1.0', local_dir='/root/models/MOSS-TTSD-v1.0')"   # ModelScope 优先（官方 README 列了 openmoss/MOSS-TTSD-v1.0）
 python -c "import transformers, torch; print('transformers', transformers.__version__, 'torch', torch.__version__, 'cuda', torch.cuda.is_available())"
 du -sh /root/models/MOSS-TTSD-v1.0
 echo MOSS SETUP DONE

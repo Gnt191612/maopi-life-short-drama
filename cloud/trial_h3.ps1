@@ -48,6 +48,7 @@ curl -s -X POST -H "Content-Type: application/json" -d '{"unload_models":true,"f
 python3 video_h3.py $PACK --only ${IDS// /,} --res __RES__ --mode fl --out $OUT/h3 > $OUT/trial_h3.log 2>&1 || echo "H3 主版失败" >> $OUT/trial_h3.log   # 主版：首帧模式 20 步
 V="python3 video_h3.py $PACK --only s06_01_0626 --res __RES__"   # 对照版都用陈瑶说话特写，便于并排比较
 $V --mode fl --pika      --out $OUT/h3_pika   > $OUT/trial_h3_pika.log 2>&1     # + Pika H3 Flex 真实感 LoRA
+for w in $(seq 1 120); do [ -f $OUT/BF16_READY ] && break; sleep 30; done   # 等后台的 pruned bf16 下完（最多 60 分钟；没下完就用镜像自带的完整 bf16）
 $V --mode fl --prec bf16 --out $OUT/h3_bf16   > $OUT/trial_h3_bf16.log 2>&1     # 全精度 bf16（看比 int8 好多少，效果优先）
 $V --mode ref            --out $OUT/h3_ref    > $OUT/trial_h3_ref.log 2>&1      # 参考图模式（首帧 + 陈瑶标准照只当参考）
 $V --mode fl --turbo     --out $OUT/h3_turbo  > $OUT/trial_h3_turbo.log 2>&1    # 4 步加速（看画质掉多少，决定全片用哪档）

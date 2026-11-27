@@ -11,19 +11,19 @@
 set -e
 M=/root/ComfyUI/models; HF=${HF_ENDPOINT:-https://hf-mirror.com}; REPO=Comfy-Org/MiniMax-H3
 # 新镜像没有 pip / huggingface-cli 命令（11-27 TDTJ）：用 ComfyUI 自己的 Python 下载
-PY=$(for P in /root/ComfyUI/venv/bin/python /root/ComfyUI/.venv/bin/python /root/miniconda3/bin/python /opt/conda/bin/python /usr/local/bin/python3 /usr/bin/python3; do [ -x "$P" ] && $P -c 'import torch' 2>/dev/null && { echo $P; break; }; done)
-[ -n "$PY" ] || PY=$(command -v python3)
+PY=$(for P in /root/miniconda3/envs/comfyui/bin/python /root/ComfyUI/venv/bin/python /root/ComfyUI/.venv/bin/python /root/miniconda3/bin/python /opt/conda/bin/python /usr/local/bin/python3 /usr/bin/python3; do [ -x "$P" ] && $P -c 'import torch' 2>/dev/null && { echo $P; break; }; done; true)
+[ -n "$PY" ] || { echo "找不到装了 torch 的 Python（ComfyUI 环境），停下"; exit 1; }
 echo "用 Python：$PY"
-$PY -c 'import huggingface_hub' 2>/dev/null || $PY -m pip install -q huggingface_hub
-get() {   # get <子目录> <文件名>：本地任意位置已有就跳过；每个文件下载前再查一次空间
+get() {   # get <子目录> <文件名>：本地任意位置已有就跳过；优先 ModelScope（11-27 实测 27 MB/s），hf-mirror 只有约 0.4 MB/s 作后备
   local sub=$1 f=$2
   local have=$(find -L $M -name "$f" -size +1M 2>/dev/null | head -1)
   if [ -n "$have" ]; then echo "已有 $f  ($have)"; return; fi
   local free=$(df -BG --output=avail /root | tail -1 | tr -dc 0-9)
   [ "$free" -ge 35 ] || { echo "空间不够下载 $f（剩 ${free}G），停下"; return 1; }
-  echo "下载 $f ..."; mkdir -p $M/$sub
-  HF_ENDPOINT=$HF $PY -c "import sys; from huggingface_hub import hf_hub_download; p=hf_hub_download('$REPO', '$sub/$f', local_dir='/root/hf_tmp'); print(p)" \
-    && mv -f "/root/hf_tmp/$sub/$f" $M/$sub/$f && echo "装好 $M/$sub/$f"
+  echo "下载 $f ..."; mkdir -p $M/$sub; local t0=$(date +%s)
+  wget -q -c -O $M/$sub/$f.part "https://modelscope.cn/models/Comfy-Org/MiniMax-H3/resolve/master/$sub/$f" \
+    || wget -q -c -O $M/$sub/$f.part "$HF/$REPO/resolve/main/$sub/$f" || { echo "下载失败 $f"; rm -f $M/$sub/$f.part; return 1; }
+  mv -f $M/$sub/$f.part $M/$sub/$f && echo "装好 $M/$sub/$f（$(( $(date +%s) - t0 )) 秒）"
 }
 FREE=$(df -BG --output=avail /root | tail -1 | tr -dc 0-9); echo "/root 剩余 ${FREE}G"
 [ "$FREE" -ge 30 ] || { echo "磁盘剩余不足 30G，先按 disk_report 清理（需用户确认）"; exit 1; }
@@ -31,8 +31,8 @@ V=$(cd /root/ComfyUI && python3 -c "import comfyui_version as v; print(v.__versi
 echo "ComfyUI 版本 $V"
 get diffusion_models minimax_h3_fl2va_pruned_int8_convrot.safetensors
 get diffusion_models minimax_h3_ref2va_pruned_int8_convrot.safetensors
-[ "${H3_BF16:-1}" = 1 ] && get diffusion_models minimax_h3_fl2va_pruned_bf16.safetensors || true   # 镜像自带完整 bf16（66GB，48G 卡要卸载到内存）；pruned bf16 40GB 输出等效、更省显存   # 40.2 GB：试跑对比全精度效果（效果优先，用户 11-27）
-CPY=$PY; : $(for P in /root/ComfyUI/venv/bin/python /root/ComfyUI/.venv/bin/python /root/miniconda3/bin/python /opt/conda/bin/python /usr/local/bin/python3 python3; do [ -x "$P" ] || command -v $P >/dev/null || continue; $P -c 'import torch' 2>/dev/null && { echo $P; break; }; done)
+[ "${H3_BF16:-1}" = 1 ] && ( get diffusion_models minimax_h3_fl2va_pruned_bf16.safetensors && touch /root/v11_out/BF16_READY ) > /root/v11_out/bf16_dl.log 2>&1 &   # 40GB 放后台下，不挡住主版试跑   # 镜像自带完整 bf16（66GB，48G 卡要卸载到内存）；pruned bf16 40GB 输出等效、更省显存   # 40.2 GB：试跑对比全精度效果（效果优先，用户 11-27）
+CPY=$PY; : $(for P in /root/miniconda3/envs/comfyui/bin/python /root/ComfyUI/venv/bin/python /root/ComfyUI/.venv/bin/python /root/miniconda3/bin/python /opt/conda/bin/python /usr/local/bin/python3 python3; do [ -x "$P" ] || command -v $P >/dev/null || continue; $P -c 'import torch' 2>/dev/null && { echo $P; break; }; done; true)
 echo "ComfyUI 的 Python：$CPY"
 $CPY -c "import torch; v=torch.version.cuda or '0'; print('torch', torch.__version__, 'cuda', v); import sys; sys.exit(0 if tuple(map(int, v.split('.')[:2]))>=(13,0) else 1)" \
   || { echo 'torch 不是 cu130：int8_convrot 可能走慢路径，补下 fp8_scaled 后备'; get diffusion_models minimax_h3_fl2va_pruned_fp8_scaled.safetensors || true; }
