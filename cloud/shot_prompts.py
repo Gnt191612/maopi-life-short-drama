@@ -220,3 +220,5 @@ EN.update({
     's03_01_0152': 'medium shot, the chubby young man in the dark grey hoodie lies on his back on his bed holding his phone up above his face, swiping up again and again, his grin growing wider',
     's03_01_0244': 'medium shot, the chubby young man in the dark grey hoodie sits at his desk staring at the screen in front of him, where his grades show a failed course; he lets out a long sigh and his shoulders sag; then his phone rings with a video call, he quickly sits up straight, wipes his face, forces a smile and holds the phone up in front of him to answer; his face in three-quarter view toward the camera',
 })
+# —— 视频审查：跟拍镜头 s01_01_0411 镜头移动后编出了办公室、复制出第二个林晓（深度 0.3 约束不住首帧外的空间）→ 加强控制试拍 ——
+EXTRA.setdefault('s01_01_0411', {}).update(depth_w=0.7, pose_w=0.9)
