@@ -63,6 +63,7 @@ def end_task(task):
         t['extras'] = task.get('end_extras', 0)
         t['face_visible'] = task.get('face_visible_end', [])
     t['kf_hint'] = task.get('kf_hint_end', '')
+    if 'kf_start_end' in task: t['kf_start'] = task['kf_start_end']   # 尾帧单独的重绘力度（多画出人时调大，踩坑 80）
     return t
 
 def main():
