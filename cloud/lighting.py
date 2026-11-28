@@ -23,7 +23,7 @@ LIGHT = {
     'ext_dusk':    ('傍晚的校园路上，天空是橙紫色的晚霞，路灯刚刚亮起。', 'It is dusk: an orange and purple sky, street lamps just turning on.'),
     'ext_corridor': ('白天的教学楼走廊，窗户透进日光。', 'Daylight comes in through the corridor windows.'),
     'class':       ('白天的教室，明亮的日光和日光灯。', 'Bright daytime light from the windows and fluorescent ceiling lights.'),
-    'track':       ('夜晚的操场，天是黑的，场边的照明灯照亮跑道。', 'It is night: the sky is dark and floodlights beside the field light the running track.'),
+    'track':       ('刚入夜的操场，天边还剩一点余晖，场边的照明灯和路灯已经亮起，照亮跑道。', 'It is just after nightfall: the last glow fades at the horizon while floodlights and street lamps beside the field light the running track.'),   # 剧本「夜幕刚降临」，首帧天边有余晖（11-27 首帧审查统一）
     'lawn':        ('晴天的校园草坪，明亮的阳光，蓝天白云。', 'Bright sunny daylight.'),
     'home':        ('白天的家里客厅，日光从窗户照进来。', 'Daylight comes in through the living-room window.'),
     'home_nt':     ('夜晚的家里客厅，窗外是黑的，暖色落地灯照明，周围偏暗。', 'It is night: a warm floor lamp lights the living room, the rest falls into soft shadow.'),
