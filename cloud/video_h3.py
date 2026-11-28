@@ -167,7 +167,8 @@ for tid in man['tasks']:
     while os.path.exists('/root/v11_out/PAUSE_VIDEO'): time.sleep(20)   # 暂停开关：首帧重做时先让出显卡（11-27：首帧和视频交替排队，每步首帧都要等一个 20 分钟的视频）
     if not os.path.exists(kf): log('跳过（没有写实首帧）', tid); continue
     if args.approved and tid not in (open(args.approved, encoding='utf-8').read().split() if os.path.exists(args.approved) else []): log('跳过（首帧还没审过）', tid); continue
-    if args.approved and args.mode == 'fl' and os.path.exists(os.path.join(td, 'end.png')) and tid + '@end' not in open(args.approved, encoding='utf-8').read().split():
+    BIGMOVE = task.get('cam_motion', 99) >= 15   # 机位几乎不动的镜头不用尾帧：写实首帧和尾帧各自把人画在不同位置，视频中途会跳一下（s01_01_0577 第二版）；它们靠「镜头基本不动」的提示词
+    if BIGMOVE and args.approved and args.mode == 'fl' and os.path.exists(os.path.join(td, 'end.png')) and tid + '@end' not in open(args.approved, encoding='utf-8').read().split():
         log('跳过（写实尾帧还没审过）', tid); continue   # 跟拍/环绕镜头没有尾帧会编出新房间（踩坑 91），等尾帧审过再做
     n24 = min(task['n'], args.frames) if args.frames else task['n']; t0 = time.time()
     USE_PIKA[0] = pika_for(task)
@@ -192,7 +193,7 @@ for tid in man['tasks']:
     if args.speech and vlines and not audio and os.path.exists(os.path.join(td, 'voice.wav')) and args.mode == 'ref':
         audio = 'h3voice_%s.wav' % tid; shutil.copy(os.path.join(td, 'voice.wav'), os.path.join(INP, audio))
     endkf, endimg = os.path.join(KF, tid + '@end.png'), None
-    if args.mode == 'fl' and os.path.exists(endkf) and (not args.approved or tid + '@end' in open(args.approved, encoding='utf-8').read().split()):   # 尾帧也要审过
+    if BIGMOVE and args.mode == 'fl' and os.path.exists(endkf) and (not args.approved or tid + '@end' in open(args.approved, encoding='utf-8').read().split()):   # 尾帧也要审过
         endimg = 'h3end_%s.png' % tid; ff('-i', endkf, '-vf', 'scale=%d:%d:flags=lanczos' % (W, H), os.path.join(INP, endimg)); log(tid, '用写实尾帧')
     frames, s, k, extra = [], 0, 0, []
     while s < n24 - 1 or not frames:
