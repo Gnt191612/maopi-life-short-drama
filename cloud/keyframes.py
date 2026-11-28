@@ -21,10 +21,10 @@ NOFACE = ('extreme close-up of a smartphone', 'close-up of a smartphone', 'phone
 
 def plan(task):
     """按镜头内容定重绘力度和要不要换脸（2026-11-22 试片：外景树仍是卡通；手机特写被贴了一张脸）"""
-    en = task.get('prompt', '').lower(); chars = task.get('characters', [])
+    en = task.get('prompt', '').split('. Background:')[0].lower(); chars = task.get('characters', [])   # 只看画面描述：以前连背景一起搜，夜里宿舍背景有「phone screens」，所有夜戏都被当成看不到脸、跳过换脸，林晓被画成短发女生（11-25、11-27 两次，踩坑 84）
     start = int(os.environ.get('V11_KF_START', 3))
     if not chars: start = int(os.environ.get('V11_KF_START_EMPTY', 1))      # 无人外景/空镜：几乎从头重画，去掉卡通树和方块楼
-    swap = [] if any(k in en for k in NOFACE) or task.get('noswap') else chars   # 看不到脸的镜头不换脸；noswap：两人挨得近时 Qwen 换脸会换错人（s02_01_1021 林晓被戴上眼镜、陈瑶被抹掉），交给本地 face_unify
+    swap = [] if (task.get('face_visible') is None and any(k in en for k in NOFACE)) or task.get('noswap') else chars   # 有白模朝向数据（face_visible）时以它为准，不靠关键词猜   # 看不到脸的镜头不换脸；noswap：两人挨得近时 Qwen 换脸会换错人（s02_01_1021 林晓被戴上眼镜、陈瑶被抹掉），交给本地 face_unify
     if len(chars) >= 2 and not task.get('swap_multi'): swap = []   # 多人同框不做 Qwen 换脸：它连衣服一起换、还会选错人（11-26 s08_01_0226：给林晓换脸时把穿白衬衫的陈瑶整个变成了林晓），五官交给本地 face_unify 按白模位置换
     if task.get('kf_start') is not None: start = int(task['kf_start'])
     if task.get('face_visible') is not None:   # 白模第一帧里脸看得见的人才换脸（visible_cast.py 按脸朝向+遮挡算；11-27 s06_01_0446 低头只露头顶，被硬换上一张正脸，画面多出一个人）
