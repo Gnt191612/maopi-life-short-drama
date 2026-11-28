@@ -38,8 +38,8 @@ for r in rows:
     if not lighting.en(st): add(tid, '时间', '场景 %s 没有光线描述（lighting.py 缺这一项）' % st)
     # 2 首帧模式下描述里写了场景物体（踩坑 65）——只提示，人工确认首帧里有没有
     BG_OK = set(json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bg_checked.json'), encoding='utf-8'))) if os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bg_checked.json')) else set()
-    for w in ('window', 'sky', 'sunset', 'loft bed', 'bookshel', 'chalkboard', 'trees'):
-        if w in d and tid not in BG_OK: add(tid, '背景', '描述里提到「%s」，确认白模首帧里真有，否则模型会凭空加' % w)
+    for w in ('window', 'sky', 'sunset', 'loft bed', 'bookshel', 'chalkboard', 'trees', 'quilt', 'blanket', 'takeout', 'mirror', 'sink'):   # 被子/外卖盒/镜子：描述成一直在场、首帧却没有，视频会改场景（s01_01_0348）
+        if re.search(r'\b' + w, d) and not re.search(r'\b' + w + r'(ing|ed)\b', d) and tid not in BG_OK:   # 按单词匹配（sinking 不算 sink） add(tid, '背景', '描述里提到「%s」，确认白模首帧里真有，否则模型会凭空加' % w)
     # 3 性别（踩坑：男主被画成女生）
     if onscreen and onscreen <= MALE_CIDS and re.search(FEMALE, d): add(tid, '性别', '画面里全是男性，描述却有女性词：%s' % re.findall(FEMALE, d))
     # 4 衣着

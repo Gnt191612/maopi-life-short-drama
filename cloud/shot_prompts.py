@@ -208,3 +208,15 @@ EXTRA['s08_01_0226'] = dict(kf_start=4, kf_hint='从左到右：左边是清瘦�
 EXTRA.setdefault('s07_05_0001', {}).update(kf_start=4)   # 第二次门口仍是两个人 → 少重绘
 EXTRA['s08_01_0001'] = dict(kf_start=4, kf_hint='画面里一共 5 个人，只有最左边那个扎马尾的是女生，其他 4 个都是男生。从左数第三个坐着的是男生周明远：短卷发、橄榄绿毛衣、工装长裤。第四个坐着的男生陈瑶戴圆框眼镜、穿白衬衫。')   # 长提示 + 重绘力度 3 时周明远两次都被画成女生、还多出一个女生 → 精简 + 少重绘
 EXTRA['s08_01_0001'] = dict(kf_start=5, kf_hint='画面里一共 5 个人，只有最左边扎马尾的是女生，其他 4 个都是男生。从左数第三个坐着的是男生周明远：短卷发、橄榄绿毛衣、工装长裤。第四个坐着的男生陈瑶戴圆框眼镜、穿白衬衫。')   # 力度 3/4 都把周明远画成女生（第三版多出两个女生）→ 力度 5，基本照白模人物结构
+EXTRA['s09_01_0121'] = dict(kf_hint='画面里是林晓一个人：体型明显偏胖的男大学生，圆脸、略有双下巴，男生的黑色碎发短发（和上一镜一样，不是女生的精致短发），穿深灰色开襟连帽卫衣，深夜在台灯下低头打字。')   # 换脸后发型仍偏女性化，和相邻 0001 不像同一个人
+# —— 视频审查（11-27）：s01_01_0348 视频把首帧的光床板改成了盖被子、整个房间都换了（描述写了「躺在被子里」，首帧没有被子）→ 描述里「一直在场」的道具/状态必须是首帧里有的 ——
+EN.update({
+    's01_01_0001': 'close-up on the top bunk: a smartphone beside the sleeping chubby young man lights up again and again with notifications; he lies asleep in a dark grey T-shirt, frowns and stirs a little',
+    's01_01_0054': 'medium close-up beside the top bunk bed: the chubby young man in the dark grey hoodie, half awake, reaches out for the glowing phone beside him and brings it to his face, squints at the screen, then his eyes light up, he grins smugly, speaks softly and swipes up with his thumb',
+    's01_01_0348': 'medium shot from above the top bunk: the chubby young man in the dark grey hoodie lies on his back on the bed holding his phone; his eyes suddenly go wide in shock and he starts to sit up, shouting',
+    's01_01_0411': 'medium shot from behind and above: the chubby young man in the dark grey hoodie scrambles off the top bunk and climbs down the bunk ladder in a hurry, landing beside his desk',
+    's01_01_0758': 'medium shot by the dorm door: the chubby young man in the dark grey hoodie puts down his toothbrush, rubs his face with a towel, forces a smile, then turns and walks past the camera into the room',
+    's03_01_0001': 'medium shot, the chubby young man in the dark grey hoodie lies on his back on his bed holding his phone up above his face, scrolling through comments and grinning smugly',
+    's03_01_0152': 'medium shot, the chubby young man in the dark grey hoodie lies on his back on his bed holding his phone up above his face, swiping up again and again, his grin growing wider',
+    's03_01_0244': 'medium shot, the chubby young man in the dark grey hoodie sits at his desk staring at the screen in front of him, where his grades show a failed course; he lets out a long sigh and his shoulders sag; then his phone rings with a video call, he quickly sits up straight, wipes his face, forces a smile and holds the phone up in front of him to answer; his face in three-quarter view toward the camera',
+})
