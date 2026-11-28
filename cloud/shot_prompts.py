@@ -198,3 +198,8 @@ EN.update({   # 回忆镜头去掉调色字样（后期统一调色）
     's07_03_0152': 'late at night in a dark dorm, the thin young man types on his phone, the screen light on his tired face',
     's07_05_0001': 'at a dorm door in the morning, two smiling classmates hand steaming takeaway lunch boxes to the thin young man with fluffy slightly curly black hair who has just opened the door, and pat his arm; he is stunned, then smiles',
 })
+# —— 首帧审查第 9 批（11-27）——
+EN['s07_05_0001'] = 'at a dorm door in the morning, the thin young man with fluffy slightly curly black hair in an olive green knit sweater stands alone in the open doorway, taking steaming takeaway lunch boxes handed in by friends just outside the frame; he is stunned for a moment, then smiles'   # 白模门口只有周明远，送饭的同学在画外（原文写两人入画 → 首帧多画一个人）
+EXTRA.setdefault('s07_05_0001', {}).update(kf_hint='画面里只有周明远一个人：清瘦、蓬松微卷黑发、穿橄榄绿针织毛衣，站在打开的宿舍门口；门外的人不在画面里。', flashback='warm')
+EXTRA['s07_00_0469'] = dict(kf_start=4, kf_hint='画面里只有这两个人：左边是清瘦、蓬松卷发、穿橄榄绿针织毛衣的周明远，右边是体型明显偏胖、穿深灰色开襟连帽卫衣的林晓，两人面对面站在跑道边；后面只有路灯杆和树，没有别人。')   # 两次都把身后的灯杆画成人 → 少重绘
+EXTRA['s07_06_0495'] = dict(kf_start=4, kf_hint='画面里只有两个人：背对镜头站在前面的是体型明显偏胖、穿深灰色开襟连帽卫衣的林晓；他对面站着清瘦、蓬松卷发、穿橄榄绿针织毛衣的周明远，正伸手拍林晓的肩膀。没有第三个人。')   # 首帧多出一个正对镜头的林晓
