@@ -176,7 +176,8 @@ for tid in man['tasks']:
         ctl.append((p, float(task.get('pose_w', args.pose))))   # task.json 可单独指定（11-27：跟拍镜头露出首帧外的空间时，弱控制会编出新房间、复制出第二个人）
     if args.depth > 0:
         p = os.path.join(TMP, tid + '_depth.mp4'); depth_stretch(os.path.join(td, 'depth.mp4'), p, n24 + 2)
-        ctl.append((p, float(task.get('depth_w', args.depth if task.get('characters') else max(args.depth, 0.8)))))   # 无人空镜只有深度，强度加大
+        d0 = max(args.depth, 0.55) if USE_PIKA[0] else args.depth   # Pika 手持/固定特写默认深度 0.55（11-28：0.3 时背景中途换成另一个房间，s03_02_0001 林母连衣服长相都变了）
+        ctl.append((p, float(task.get('depth_w', d0 if task.get('characters') else max(d0, 0.8)))))   # 无人空镜只有深度，强度加大
     first = 'h3ref_%s.png' % tid; ff('-i', kf, '-vf', 'scale=%d:%d:flags=lanczos' % (W, H), os.path.join(INP, first))
     canon = [] if args.no_canon else ['canon_%s.jpg' % c for c in task.get('characters', []) if os.path.exists(os.path.join(INP, 'canon_%s.jpg' % c))]
     audio = None
