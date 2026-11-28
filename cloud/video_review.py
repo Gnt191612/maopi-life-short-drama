@@ -23,7 +23,7 @@ for v in sorted(glob.glob(os.path.join(src, 's*_*_*.mp4'))):
     g = cv2.imread(os.path.join(ROOT, 'dist', 'cloud_pack', tid, 'first.png')); g = cv2.resize(g, (W, H)) if g is not None else np.zeros((H, W, 3), np.uint8)
     row = np.hstack([g] + fr)
     lines = os.path.join(ROOT, 'dist', 'cloud_pack', tid, 'lines.json'); nl = len(json.load(open(lines, encoding='utf-8'))) if os.path.exists(lines) else 0
-    pika = t.get('move', 'static') in ('hand', 'static', 'push')
+    pika = t.get('move', 'static') in ('hand', 'static', 'push') or t.get('cam_motion', 99) < 15   # 和 video_h3.pika_for 一致
     txt = '%s  %s  %s  %s  主角:%s  台词%d句  | 左=白模首帧' % (tid, t.get('set', ''), t.get('move'), 'Pika' if pika else '20步', '、'.join(looks.NAME.get(c, c) for c in t.get('characters', [])) or '无', nl)
     im = Image.fromarray(cv2.cvtColor(row, cv2.COLOR_BGR2RGB)); d = ImageDraw.Draw(im); d.rectangle([0, 0, row.shape[1], 24], fill=(0, 0, 0)); d.text((6, 2), txt, font=FONT, fill=(255, 230, 0))
     rows.append(cv2.cvtColor(np.asarray(im), cv2.COLOR_RGB2BGR))

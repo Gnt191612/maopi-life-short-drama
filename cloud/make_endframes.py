@@ -29,6 +29,14 @@ def end_people(seg, f1):
         return out
     return None
 
+def cam_motion(td):
+    """白模运镜幅度：深度视频首尾两帧的平均差（0～255）。<15 是机位几乎不动的跟拍（video_h3 用 Pika，20 步的运镜优势用不上，11-28 省预算）"""
+    import cv2, numpy as np
+    c = cv2.VideoCapture(os.path.join(td, 'depth.mp4')); n = int(c.get(cv2.CAP_PROP_FRAME_COUNT)); fr = []
+    for i in (0, n - 1):
+        c.set(cv2.CAP_PROP_POS_FRAMES, i); ok, im = c.read(); fr.append(cv2.resize(cv2.cvtColor(im, cv2.COLOR_BGR2GRAY), (320, 180)).astype(np.float32))
+    return round(float(np.abs(fr[1] - fr[0]).mean()), 1)
+
 def main():
     ids = [x for x in sys.argv[1].split(',') if x] if len(sys.argv) > 1 else None
     by_seg = {}
@@ -51,8 +59,8 @@ def main():
                 t['end_cast'] = sorted(c for c in ep if not c.startswith('extra'))
                 t['end_extras'] = sum(1 for c in ep if c.startswith('extra'))
                 t['face_visible_end'] = sorted(c for c, v in ep.items() if v and not c.startswith('extra'))
-            t.update(END_FIX.get(t['id'], {}))
-            if ep is not None or t['id'] in END_FIX:
+            t.update(END_FIX.get(t['id'], {})); t['cam_motion'] = cam_motion(os.path.dirname(tj))
+            if True:
                 json.dump(t, open(tj, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
             print('END', t['id'], t.get('end_cast'), '脸', t.get('face_visible_end'), flush=True)
         shutil.rmtree(tmp, ignore_errors=True)
