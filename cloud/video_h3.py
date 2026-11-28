@@ -174,6 +174,8 @@ for tid in man['tasks']:
     BIGMOVE = task.get('cam_motion', 99) >= 15   # 机位几乎不动的镜头不用尾帧：写实首帧和尾帧各自把人画在不同位置，视频中途会跳一下（s01_01_0577 第二版）；它们靠「镜头基本不动」的提示词
     if BIGMOVE and args.approved and args.mode == 'fl' and os.path.exists(os.path.join(td, 'end.png')) and tid + '@end' not in open(args.approved, encoding='utf-8').read().split():
         log('跳过（写实尾帧还没审过）', tid); continue   # 跟拍/环绕镜头没有尾帧会编出新房间（踩坑 91），等尾帧审过再做
+    if task.get('still_insert'):   # 静物特写（手机屏幕）：用首帧做轻微手持晃动，不走模型（踩坑 95）
+        import still_insert; still_insert.make(kf, os.path.join(OUT, tid + '.mp4'), task['n'], (W, H), float(task.get('tremor', 3))); log('完成', tid, '静物特写（首帧手持晃动）'); continue
     n24 = min(task['n'], args.frames) if args.frames else task['n']; t0 = time.time()
     USE_PIKA[0] = pika_for(task)
     if args.subset != 'all' and (args.subset == 'pika') != USE_PIKA[0]: continue   # 不属于这一批
