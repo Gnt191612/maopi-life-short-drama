@@ -29,6 +29,14 @@ LIGHT = {
     'home_nt':     ('夜晚的家里客厅，窗外是黑的，暖色落地灯照明，周围偏暗。', 'It is night: a warm floor lamp lights the living room, the rest falls into soft shadow.'),
 }
 
+# 同一个地点的固定装修样式（只规定颜色和材质，不加物体；11-27 用户：「每段连在一起看能不能看出来是同一场景同一时间」——
+# 早晨宿舍 16 个镜头墙色、床架、桌椅各画各的：粉白墙/灰蓝墙、木床架/金属床架、白桌橙椅；下午宿舍的床只是个白方块）
+# 早中晚夜四场宿舍是同一间屋，以已经连贯的傍晚、夜里两场为准
+DORM_STYLE = ('这是同一间中国大学四人宿舍，装修固定：浅灰白色墙面，浅木色书桌、书架和衣柜，深灰色金属的上床下桌床架和梯子，浅灰色地砖；'
+              '床上铺着床垫、浅蓝色格子床单和白色枕头。画面里出现的墙、家具和床都按这个样式。')
+STYLE = {s: DORM_STYLE for s in ('dorm_am', 'dorm_pm', 'dorm_dusk', 'dorm_nt')}
+def style_zh(set_name): return STYLE.get(set_name, '')
+
 def zh(set_name): return LIGHT.get(set_name, ('', ''))[0]
 def en(set_name): return LIGHT.get(set_name, ('', ''))[1]
 

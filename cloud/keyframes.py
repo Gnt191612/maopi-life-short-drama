@@ -88,6 +88,7 @@ def kf_prefix(task):
     if others: pre += '画面边缘还露出' + '、'.join(tag(c) for c in others) + '的一部分（背影、肩膀或侧面），也是这个人，性别和衣着不变。'
     n = len(chars) + len(others) + int(task.get('extras', 0) or 0)
     if n: pre += '画面里一共只有 %d 个人。' % n
+    pre += lighting.style_zh(task.get('set', ''))   # 同一地点固定装修样式（场景连贯，11-27）
     pre += lighting.for_task(task)[0]   # 场景的时间和光线（踩坑 70：白模是统一日光，傍晚/夜戏首帧被画成白天）
     pre += task.get('kf_hint', '')   # 按镜头的中文画面提示（谁在左谁在右、体型、人数）：二转三只读这句前缀，task.json 的英文 prompt 只在视频阶段用（11-27 查明）
     return pre
