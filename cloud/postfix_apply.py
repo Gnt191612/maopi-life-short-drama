@@ -52,4 +52,27 @@ for kind, ids in CFG.get('grade', {}).items():
             src = cv2.imread(f) if tid in CFG.get('phone', []) else cv2.imread(os.path.join(bk, os.path.basename(f)))   # 手机镜头先贴字再调色
             cv2.imwrite(f, grade(src, kind))
         done.append(tid + '（%s调色）' % ('冷蓝' if kind == 'cold' else '暖金'))
-print('后期修正 %d 项：%s' % (len(done), ' '.join(done)))
+# ---- 按场景统一调色（11-27 用户：同一场戏连在一起要看得出是同一场景同一时间）----
+# 同一片段里每个镜头的 Lab 均值向本段中位数靠拢 60%（只平移、不改对比），手机屏幕特写和回忆调色镜头不参与（各有各的样子）
+SKIP = set(CFG.get('phone', [])) | {t for ids in CFG.get('grade', {}).values() for t in ids} | set(CFG.get('notice', {}))
+segs = {}
+for d in sorted(glob.glob(os.path.join(real, 's*_*_*'))):
+    tid = os.path.basename(d)
+    if os.path.isdir(d) and tid not in SKIP and glob.glob(os.path.join(d, 'frame_*.png')): segs.setdefault(tid.rsplit('_', 1)[0], []).append(tid)
+def mean_lab(tid):
+    bk, fs = frames(tid); pick = fs[len(fs) // 4::max(1, len(fs) // 4)][:3] or fs[:1]
+    return np.mean([cv2.cvtColor(cv2.imread(os.path.join(bk, os.path.basename(f))), cv2.COLOR_BGR2LAB).reshape(-1, 3).astype(np.float32).mean(0) for f in pick], axis=0)
+nm = 0
+for seg, ids in segs.items():
+    if len(ids) < 2: continue
+    means = {t: mean_lab(t) for t in ids}; target = np.median(np.array(list(means.values())), axis=0)
+    for t in ids:
+        shift = (target - means[t]) * 0.6
+        if np.abs(shift).max() < 2: continue   # 差得很少就不动
+        bk, fs = frames(t)
+        for f in fs:
+            src = cv2.imread(os.path.join(bk, os.path.basename(f)))   # 从备份原帧算（参与调色的镜头没有别的修正），重复运行不会叠加
+            lab = cv2.cvtColor(src, cv2.COLOR_BGR2LAB).astype(np.float32) + shift
+            cv2.imwrite(f, cv2.cvtColor(np.clip(lab, 0, 255).astype(np.uint8), cv2.COLOR_LAB2BGR))
+        nm += 1
+print('后期修正 %d 项：%s；按场景统一调色 %d 个镜头' % (len(done), ' '.join(done), nm))
