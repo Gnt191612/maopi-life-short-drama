@@ -216,7 +216,10 @@ for tid in man['tasks']:
             except RuntimeError as e:
                 if 'OutOfMemory' not in str(e): raise
                 # 显存不够：多半是首帧/尾帧的 Krea2、Qwen 模型还占着（11-28 s03_02_0001 250 帧 OOM，早上同一镜头能跑）。释放后当场重试一次
-                log(tid, '显存不够，释放模型后重试'); comfy_run._post('/free', {'unload_models': True, 'free_memory': True}); time.sleep(10)
+                log(tid, '显存不够，释放模型后重试')
+                try: comfy_run._post('/free', {'unload_models': True, 'free_memory': True})
+                except Exception: pass   # /free 返回空内容，_post 按 JSON 解析会报错（11-28：这个报错让整个视频进程退出了）
+                time.sleep(10)
                 imgs = run(graph(refs, segs, n, prompt, args.seed, audio if k == 0 else None, lastimg), '%s_%02d' % (tid, k))
         except RuntimeError as e:   # 一个镜头失败只跳过它（下一轮重试），不让整批退出（11-27：取消一个任务后整批 Pika 都停了）
             log(tid, '本轮失败，跳过', str(e)[:200]); frames = None; break
