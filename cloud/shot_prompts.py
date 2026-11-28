@@ -228,3 +228,7 @@ EXTRA['s10_00_0001'] = dict(kf_start=4, kf_hint='前面并排站着三个主角�
 EXTRA['s01_01_1174'] = dict(kf_start=2, kf_hint='书桌、书架和椅子都是浅木色的原木家具，和这间宿舍其他家具一样。')   # 白模这套桌椅本身是橙色材质，力度 3 时照着画成橙色；「不是橙色」是否定写法不起作用 → 正面写 + 多重绘
 EXTRA['s01_01_1174'] = dict(kf_start=3, kf_hint='画面里只有陈瑶一个人坐在书桌前。书桌、书架和椅子都是浅木色的原木家具，和这间宿舍其他家具一样。')   # 力度 2 多出一个陈瑶；力度 3 + 正面写法
 EXTRA['s10_00_0001'] = dict(kf_start=3, kf_hint='前面并排站着三个主角：穿白衬衫戴圆框眼镜的陈瑶、穿深灰卫衣的胖胖的林晓、穿橄榄绿毛衣的周明远；只有陈瑶穿白衬衫。远处小路上路过的两个学生穿深色和彩色的衣服、背着书包，离他们很远。真实的校园草坪和树木，真实照片质感。')   # 力度 4 树和草地变回 3D 白模样子；力度 3 + 写清路人穿着
+# —— 视频审查（11-28）——
+EN['s01_01_0543'] = 'close-up at floor level: the chubby young man\'s feet in dark sneakers land on the dorm floor at the bottom of the bunk ladder, then he turns and hurries off; he wears the same dark grey open zip hoodie over a dark grey T-shirt and dark blue jeans'   # 视频往上带到身体时成了浅灰 T 恤，写明衣着
+EN['s01_01_0896'] = 'medium close-up in the dorm, the chubby young man in the dark grey hoodie holds up his phone for a selfie, tries two angles, turns his face toward the soft light from the side, chin down, then a practiced smile, taps the shutter and looks down at the photo; the slim young man with round glasses in a white shirt stays seated at his desk far in the background the whole time'   # 视频里陈瑶从后面的书桌走到了林晓身边
+EXTRA.setdefault('s01_01_1016', {}).update(depth_w=0.7, pose_w=0.9)   # 视频后半段绕到正面露脸（应始终越肩、看不到脸）→ 加强控制
