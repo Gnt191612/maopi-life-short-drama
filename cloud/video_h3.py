@@ -162,6 +162,7 @@ for tid in man['tasks']:
     if os.path.exists(os.path.join(OUT, tid + '.mp4')) and not args.force: log('已有，跳过', tid); continue
     td = os.path.join(pack, tid); task = json.load(open(os.path.join(td, 'task.json'), encoding='utf-8'))
     kf = os.path.join(KF, tid + '.png')
+    while os.path.exists('/root/v11_out/PAUSE_VIDEO'): time.sleep(20)   # 暂停开关：首帧重做时先让出显卡（11-27：首帧和视频交替排队，每步首帧都要等一个 20 分钟的视频）
     if not os.path.exists(kf): log('跳过（没有写实首帧）', tid); continue
     if args.approved and tid not in (open(args.approved, encoding='utf-8').read().split() if os.path.exists(args.approved) else []): log('跳过（首帧还没审过）', tid); continue
     n24 = min(task['n'], args.frames) if args.frames else task['n']; t0 = time.time()
