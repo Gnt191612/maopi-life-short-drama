@@ -245,3 +245,5 @@ EN.update({   # 「笑容凝固/消失」容易被模型抓成笑（s04_00_0321 
     's05_01_0068': 'close-up, the chubby young man in the dark grey hoodie stares at his phone, his cheerful look draining away; reading on, his face turns pale and stunned, his lips trembling and pressed tight, his hand shaking slightly',
     's05_01_0411': 'close-up, the chubby young man in the dark grey hoodie keeps staring at his phone, stunned and pale, biting his lip, frozen in place',
 })
+EN['s01_01_0577'] = 'wide shot of the whole dorm room with bunk beds on both sides, exactly two people for the whole shot: in the back the chubby young man in the dark grey open hoodie has just climbed down the bunk ladder and grabs a toothbrush cup and towel from his desk, then hurries toward the door; at the desk on the left the slim young man with round glasses in a white shirt stays seated the whole time, glancing up at him and then back to his book'   # 视频后半段多出一个站着的白衬衫男生（陈瑶分身）
+EXTRA.setdefault('s01_01_0577', {}).update(pose_w=1.0, depth_w=0.6)
