@@ -87,6 +87,8 @@ def main():
                      for a in json.load(open(ap_))[1:] if os.path.exists(os.path.join(td, 'anchor_%04d.png' % a))]
         for jid, src_name, out in jobs:
             make_kf(td, jid, task, src_name, out)
+    try: comfy_run._post('/free', {'unload_models': True, 'free_memory': True})   # 首帧的 Krea2/Qwen 模型不放，同时在跑的视频会 OOM（11-28 s03_02_0001、s05_01_0090）
+    except Exception as e: print('free 失败', e, flush=True)
     print('KEYFRAMES DONE', flush=True)
 
 def kf_prefix(task):
