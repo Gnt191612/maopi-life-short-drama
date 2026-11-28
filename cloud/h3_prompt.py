@@ -114,7 +114,7 @@ def build(task, mode='i2va', lines=None, speech=False):
     people = ', '.join(who_short(c) for c in chars if who_short(c))
     focus = 'the characters' if len(chars) > 1 else ('him' if chars else 'the scene')
     cam = CAMERA.get(task.get('move', 'static'), CAMERA['static']).format(focus=focus)
-    if task.get('move') in ('track', 'arc') and task.get('cam_motion', 99) < 15:   # 白模机位几乎不动的「跟拍」：写成跟拍模型会自己往前推、编出大通铺（s01_01_0577，踩坑 91）
+    if task.get('move') in ('track', 'arc') and task.get('cam_motion', 99) < 15 and not task.get('end_frame'):   # 白模机位几乎不动的「跟拍」：写成跟拍模型会自己往前推、编出大通铺（s01_01_0577，踩坑 91）
         cam = 'The camera stays almost still, drifting only slightly with %s' % focus
     if mode == 'i2va':
         keep = ('The people shown in <Picture 1> (%s) remain in the positions and framing established by <Picture 1>, preserving their faces, hairstyles, clothing, body shapes, '

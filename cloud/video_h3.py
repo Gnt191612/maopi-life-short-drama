@@ -171,7 +171,7 @@ for tid in man['tasks']:
     while os.path.exists('/root/v11_out/PAUSE_VIDEO'): time.sleep(20)   # 暂停开关：首帧重做时先让出显卡（11-27：首帧和视频交替排队，每步首帧都要等一个 20 分钟的视频）
     if not os.path.exists(kf): log('跳过（没有写实首帧）', tid); continue
     if args.approved and tid not in (open(args.approved, encoding='utf-8').read().split() if os.path.exists(args.approved) else []): log('跳过（首帧还没审过）', tid); continue
-    BIGMOVE = task.get('cam_motion', 99) >= 15   # 机位几乎不动的镜头不用尾帧：写实首帧和尾帧各自把人画在不同位置，视频中途会跳一下（s01_01_0577 第二版）；它们靠「镜头基本不动」的提示词
+    BIGMOVE = task.get('cam_motion', 99) >= 15 or bool(task.get('end_frame'))   # end_frame：首尾深度差小、中途机位和站位却大变的镜头（s08_01_0288 教室四面墙深度差不多，cam_motion 量不出来）   # 机位几乎不动的镜头不用尾帧：写实首帧和尾帧各自把人画在不同位置，视频中途会跳一下（s01_01_0577 第二版）；它们靠「镜头基本不动」的提示词
     if BIGMOVE and args.approved and args.mode == 'fl' and os.path.exists(os.path.join(td, 'end.png')) and tid + '@end' not in open(args.approved, encoding='utf-8').read().split():
         log('跳过（写实尾帧还没审过）', tid); continue   # 跟拍/环绕镜头没有尾帧会编出新房间（踩坑 91），等尾帧审过再做
     if task.get('still_insert'):   # 静物特写（手机屏幕）：用首帧做轻微手持晃动，不走模型（踩坑 95）
