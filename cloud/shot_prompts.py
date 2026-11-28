@@ -246,5 +246,6 @@ EN.update({   # 「笑容凝固/消失」容易被模型抓成笑（s04_00_0321 
     's05_01_0411': 'close-up, the chubby young man in the dark grey hoodie keeps staring at his phone, stunned and pale, biting his lip, frozen in place',
 })
 EN['s01_01_0577'] = 'wide shot of the whole dorm room with bunk beds on both sides, exactly two people for the whole shot: in the back the chubby young man in the dark grey open hoodie has just climbed down the bunk ladder and grabs a toothbrush cup and towel from his desk, then hurries toward the door; at the desk on the left the slim young man with round glasses in a white shirt stays seated the whole time, glancing up at him and then back to his book'   # 视频后半段多出一个站着的白衬衫男生（陈瑶分身）
+EXTRA.setdefault('s02_01_1021', {}).update(kf_hint_end='这是真实的大学图书馆阅览室：画面里只有两个人坐在桌边——体型明显偏胖、穿深灰色开襟连帽卫衣的林晓侧过身，把头凑到右边陈瑶的耳边小声说话；戴圆框眼镜、穿白衬衫的清瘦男生陈瑶坐着听。他们身后是书架，上方和周围没有别的人。')   # 11-28 尾帧第一版：两人并排坐、头顶多出半截站着的人
 # 11-28：pose 1.0 / depth 0.6 试过，没用（镜头照样推成大通铺、多出三个陈瑶），改用写实尾帧（踩坑 91），强度回默认
 EXTRA.setdefault('s01_01_0577', {}).update(kf_hint_end='这是真实的四人间大学宿舍，画面里只有一个人：后排书桌前坐着戴圆框眼镜、穿白衬衫的清瘦男生陈瑶，在看书。前面的过道是空的。')
