@@ -355,6 +355,15 @@ def libdoor():
     od.hedge((-26, -0.4), (-7.5, -0.4), col); od.hedge((7.5, -0.4), (26, -0.4), col)
     od.bike_rack((-14, -3.5), 9, col, rnd, rot=math.radians(90)); od.sign((10.5, -4.2), col, rot=0.0)
     for x in (-60, 60): od.curb((x, -6.0), (0, -6.0), col)
+    # 11-27 用户指出外景太空旷：s04_00_0001 背对图书馆往广场另一头拍，那一侧只有平地和天空 → 补上对面的教学楼、行道树和绿篱，地面扩大
+    box('ext_ground_far', (140, 80, 0.02), (0, -60, -0.025), (0.45, 0.43, 0.40), col)
+    for k, x in enumerate((-34, 0, 34)):
+        od.building('ext_campus_far%d' % k, (28, 12, 16), (x, -44, 0), col, rnd, ((0.80, 0.77, 0.72), (0.84, 0.81, 0.76), (0.78, 0.75, 0.70))[k], face='+Y')
+    for x in range(-40, 41, 4):
+        od.tree((x, -30, 0), rnd, col, season='autumn', scale=1.1)
+    for x in (-38, -30, 30, 38):
+        for y in range(-26, -6, 5): od.tree((x, y, 0), rnd, col, season='autumn', scale=1.05)
+    od.hedge((-40, -27.5), (-3, -27.5), col); od.hedge((3, -27.5), (40, -27.5), col)
     light('light_sun', 'SUN', (0, -10, 10), 2.6, (1, 0.93, 0.82), (55, 0, -20))
     od.sky('day', 0.8)
     return dict(marks={'step_bottom': (0, 1.5, 0, 0), 'door': (0.2, 7.4, top, 0), 'step_sit': (0.8, 5.1, 1.05, 180)},
