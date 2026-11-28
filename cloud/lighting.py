@@ -32,16 +32,14 @@ LIGHT = {
 def zh(set_name): return LIGHT.get(set_name, ('', ''))[0]
 def en(set_name): return LIGHT.get(set_name, ('', ''))[1]
 
-# 回忆镜头有自己的调色（剧本写明冷蓝/暖金），不能套场景平时的光线（s07_01/03 夜里宿舍回忆是冷蓝，不是暖黄台灯）
+# 回忆镜头：调色在后期统一做（postfix_text.json 的 grade；11-27 起），这里只给光线，不让模型画色调（首帧不是冷色时两边会打架）
 FLASH = {
-    'cold blue': ('这是回忆画面，整体冷蓝色调，昏暗的夜里，人脸主要被手机屏幕的冷光照亮，周围很暗。',
-                  'This is a flashback with a cold blue color grade: a dim night, his face lit mainly by the cool glow of the phone screen, the surroundings dark.'),
-    'warm golden': ('这是回忆画面，整体暖金色调，温暖柔和的晨光，画面明亮温馨。',
-                    'This is a flashback with a warm golden color grade: soft warm morning light, bright and cozy.'),
+    'cold': ('这是夜里的回忆画面：昏暗的宿舍，人脸主要被手机屏幕的光照亮，周围很暗。',
+             'It is night in a dim dorm: his face is lit mainly by the glow of the phone screen, the surroundings dark.'),
+    'warm': ('这是回忆画面：清晨柔和温暖的光，画面明亮温馨。', 'Soft warm early-morning light, bright and cozy.'),
 }
 def for_task(task):
-    """(中文, 英文)：回忆镜头按调色，其他按场景"""
-    p = task.get('prompt', '').lower()
-    for k, v in FLASH.items():
-        if k + ' color grade' in p: return v
+    """(中文, 英文)：回忆镜头（task 的 flashback 字段）按回忆光线，其他按场景"""
+    fb = task.get('flashback')
+    if fb in FLASH: return FLASH[fb]
     return LIGHT.get(task.get('set', ''), ('', ''))

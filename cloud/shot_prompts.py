@@ -183,3 +183,18 @@ EXTRA.update({
 
 EXTRA['s05_01_0001'] = dict(kf_hint='前面是体型明显偏胖、穿深灰色开襟连帽卫衣的林晓在看手机；后面站着另一个排队的同学。')   # 见 visible_overrides.json 的说明
 EXTRA['s05_01_0440'] = {'kf_hint': '这是真实的大学食堂：红色方块是红色塑料凳，白色长条是餐桌。左下前景是穿橄榄绿针织毛衣的周明远的背影；画面中间只站着一个人——穿藏青色T恤、端着餐盘的健壮男生；右下角只露出体型偏胖的林晓的黑色头顶。画面里一共三个人。真实照片质感。'}   # 重绘力度 2 时两次都多画一个人 → 恢复默认（第 3 步开始）
+# —— 回忆镜头：调色改在后期统一做（cloud/postfix_text.json 的 grade），提示词只写光线和动作（11-27：首帧不是冷色、提示词却要冷蓝，两边打架）——
+EN.update({
+    's07_01_0001': 'medium shot in a dark dorm room at night: the thin young man with fluffy slightly curly black hair in an olive green knit sweater stands beside the bunk bed railing holding his ringing phone, staring at the screen, unable to answer',   # 白模全程站着（原文「坐在床上抱膝」和白模不符）
+    's07_01_0023': 'extreme close-up of a smartphone screen showing an incoming call, the phone keeps ringing in his hand; the screen text stays exactly as in Picture 1',
+    's07_01_0056': 'medium shot in a dark dorm room at night: the thin young man with fluffy slightly curly black hair in an olive green knit sweater stands beside the bunk bed railing, still holding the ringing phone, his head sinking lower as he lets it ring',
+    's07_03_0023': 'extreme close-up of a smartphone screen in the dark, a message being typed, his thumb hovering over the send button; the screen text stays exactly as in Picture 1',
+})
+for _t in ('s07_01_0001', 's07_01_0023', 's07_01_0056', 's07_03_0001', 's07_03_0023', 's07_03_0152'): EXTRA.setdefault(_t, {})['flashback'] = 'cold'
+for _t in ('s07_05_0001',): EXTRA.setdefault(_t, {})['flashback'] = 'warm'
+EXTRA['s07_00_0469'] = dict(kf_hint='画面里只有这两个人：左边是清瘦、蓬松卷发、穿橄榄绿针织毛衣的周明远，右边是体型明显偏胖、穿深灰色开襟连帽卫衣的林晓，两人面对面站在跑道边；周围没有别人。')   # 首帧周明远身后多出一个人影
+EN.update({   # 回忆镜头去掉调色字样（后期统一调色）
+    's07_03_0001': 'late at night in a dark dorm, the thin young man types on his phone, the screen light on his tired face',
+    's07_03_0152': 'late at night in a dark dorm, the thin young man types on his phone, the screen light on his tired face',
+    's07_05_0001': 'at a dorm door in the morning, two smiling classmates hand steaming takeaway lunch boxes to the thin young man with fluffy slightly curly black hair who has just opened the door, and pat his arm; he is stunned, then smiles',
+})
