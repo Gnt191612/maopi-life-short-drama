@@ -128,10 +128,12 @@ def run(A, tag):
     r = comfy_run._post('/prompt', {'prompt': A}); pid = r.get('prompt_id')
     if not pid: sys.exit('排队失败 %s（上面 REJECTED 是 ComfyUI 给的原因）' % tag)
     if r.get('node_errors'): sys.exit('节点错误 %s %s' % (tag, json.dumps(r['node_errors'], ensure_ascii=False)[:2000]))
-    for _ in range(2400):
+    for i in range(2400):
         time.sleep(3); h = comfy_run._get('/history/' + pid)
         if pid in h and h[pid].get('status', {}).get('status_str') == 'error': raise RuntimeError('生成失败 %s %s' % (tag, json.dumps(h[pid]['status'], ensure_ascii=False)[:600]))
         if pid in h and h[pid].get('status', {}).get('completed'): break
+        if pid not in h and i % 10 == 9 and pid not in json.dumps(comfy_run._get('/queue')):   # 任务被从队列里删了（11-28：不在队列也不在历史里，原来会空等 2 小时、显卡闲着）
+            raise RuntimeError('任务不见了（被从队列删除）%s' % tag)
     else: raise RuntimeError('超时 %s' % tag)
     for o in h[pid]['outputs'].values():
         for a in o.get('audio', []):
