@@ -79,7 +79,7 @@ def kf_prefix(task):
         parts = LOOK[c].split('，'); s = parts[0]
         keep = [p for p in parts[1:] if '发' in p and len(p) < 24]   # 发型（11-25：林母在 s03 被画成黑长直、s09 是波浪短发）
         keep += [p for p in parts[1:] if p.startswith('穿')]   # 衣着（单人也加：同学乙的衣服、周明远的毛衣在不同镜头里被画成别的）
-        if len(chars) > 1: keep += [p for p in parts[1:] if '眼镜' in p]
+        if len(chars) + len([o for o in task.get('others', []) if o not in chars]) > 1: keep += [p for p in parts[1:] if '眼镜' in p]   # 画面里不止一个人就写眼镜（11-27 s08_01_0001 陈瑶只算「画面边缘的人」，眼镜没写进去被画丢）
         if keep: s += '（' + '，'.join(keep) + '）'
         return s
     pre = ('画面中的人物是' + '、'.join(tag(c) for c in chars if c in LOOK) + '，不要改变人物的性别、人数和衣着。') if chars else ''
