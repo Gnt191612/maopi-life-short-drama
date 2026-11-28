@@ -262,7 +262,7 @@ EN['s09_03_0001'] = 'close-up, the same young man on the phone call, the phone h
 EN['s02_01_0606'] = 'medium close-up, the same young man sits low beside the table, frowning; he takes out his phone and holds it up to frame the desk, his face clearly visible'
 # 11-28 场景空镜审查：描述里的人群、自行车、慢跑的人首帧里都没有（s05_00_0001 视频整段换成一栋带乱码大字的红砖楼）
 EN['s05_00_0001'] = 'wide establishing shot of the entrance of a university canteen at noon: a long low white building with a wide entrance at the end of a tree-lined paved road, two students walking toward the entrance in the distance'
-EXTRA.setdefault('s05_00_0001', {}).update(kf_start=3, kf_hint='这是一张真实拍摄的大学校园照片：林荫路尽头是一栋白色的长条形食堂楼，门口宽敞；路两边是真实的树木，自然的树冠和枝叶、真实的树干，路灯和长椅。远处门口有两个正常走路的学生，双手自然下垂。真实照片质感。')   # 首帧第一版：树是白模的卡通低多边形，门口的人张开双臂（白模 T 字姿势）
+EXTRA.setdefault('s05_00_0001', {}).update(kf_start=2, kf_hint='这是一张真实拍摄的大学校园照片：林荫路尽头是一栋白色的长条形食堂楼，门口宽敞；路两边是高大的真实梧桐树，枝叶繁茂、层次自然、树干粗糙，路灯和长椅。左边的人行道上空无一人；远处食堂门口有两个正常走路的学生，双手自然下垂。真实照片质感。')   # 首帧第一版：树是白模的卡通低多边形，路边的人张开双臂（白模 T 字姿势）；力度 3 仍是这样 → 2（空镜没有主角，不怕人数串）
 EN['s06_00_0001'] = 'wide establishing shot, an empty tree-lined campus road between dormitory buildings at dusk, a pale pink and purple evening sky, street lamps just turning on'
 EN['s07_00_0001'] = 'wide establishing shot, the red running track of the university sports field seen through a railing just after nightfall, floodlights glowing beyond the trees, the track empty and quiet'
 EN['s08_00_0001'] = 'wide establishing shot, a long bright university teaching building corridor on a Friday afternoon, sunlight through the windows falling in patches on the floor, the corridor empty and quiet'
