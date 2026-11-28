@@ -8,6 +8,7 @@ rm -f $OUT/DONE_FULL; cd $S
 TOTAL=$(ls -d $PACK/s*_*_* | wc -l)
 while [ ! -f $OUT/STOP_VIDEO ]; do
   n0=$(ls $OUT/fun/*.mp4 2>/dev/null | wc -l)
+  find /root/ComfyUI/output /root/ComfyUI/temp -type f -mmin +60 -delete 2>/dev/null   # 视频脚本已取走的逐帧中间图（11-28：积到 6G，系统盘只剩 14G）
   $PYC video_h3.py $PACK --res 1344x768 --out $OUT/fun --hybrid --subset full --approved $OUT/kf_ok.txt >> $OUT/full_video_full.log 2>&1
   $PYC video_h3.py $PACK --res 1344x768 --out $OUT/fun --hybrid --subset pika --approved $OUT/kf_ok.txt >> $OUT/full_video_pika.log 2>&1
   n1=$(ls $OUT/fun/*.mp4 2>/dev/null | wc -l)

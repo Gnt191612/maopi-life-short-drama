@@ -52,7 +52,21 @@ def flatten_dark(path, radius=6, lo=70, hi=100):
     except Exception as e:
         print('flatten_dark skip', e, flush=True)
 
+END = '--end' in sys.argv
+def end_task(task):
+    """尾帧用的 task：人物换成最后一帧入画的人（make_endframes.py 算的 end_cast），换脸只换看得见脸的；
+    首帧的 kf_hint 写的是开头的站位，尾帧不用（kf_hint_end 可单独写）"""
+    t = dict(task); ec = task.get('end_cast')
+    if ec is not None:
+        t['characters'] = [c for c in task.get('characters', []) if c in ec]
+        t['others'] = [c for c in ec if c not in t['characters']]
+        t['extras'] = task.get('end_extras', 0)
+        t['face_visible'] = task.get('face_visible_end', [])
+    t['kf_hint'] = task.get('kf_hint_end', '')
+    return t
+
 def main():
+    sys.argv = [a for a in sys.argv if a != '--end']
     pack = sys.argv[1]; pre = sys.argv[2:]
     man = json.load(open(os.path.join(pack, 'manifest.json'), encoding='utf-8'))
     for f in os.listdir(os.path.join(pack, 'refs')):   # 标准长相照片放进 ComfyUI 输入目录
@@ -62,6 +76,9 @@ def main():
         if pre and not any(tid.startswith(p) for p in pre): continue
         if my is not None and tid not in my: continue
         td = os.path.join(pack, tid); task = json.load(open(os.path.join(td, 'task.json'), encoding='utf-8'))
+        if END:   # 写实尾帧（11-28，踩坑 91）：白模最后一帧 end.png → kf/<id>@end.png，人物按最后一帧里实际入画、看得见脸的人
+            if os.path.exists(os.path.join(td, 'end.png')): make_kf(td, tid + '@end', end_task(task), 'end.png', os.path.join(OUTK, tid + '@end.png'))
+            continue
         jobs = [(tid, 'first.png', os.path.join(OUTK, tid + '.png'))]
         ap_ = os.path.join(td, 'anchors.json')   # 锚点模式：每个锚点帧（白模 anchor_####.png）也出一张写实图 kf/<id>@####.png（2026-11-25）
         if os.path.exists(ap_):

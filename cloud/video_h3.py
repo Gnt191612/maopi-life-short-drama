@@ -86,7 +86,7 @@ import h3_prompt   # 提示词按 MiniMax 官方写作规范生成（cloud/h3_pr
 def prompt_of(task, lines=None):
     return h3_prompt.build(task, 'i2va' if args.mode == 'fl' else 'ref', lines, args.speech)
 
-def graph(refs, controls, n, prompt, seed, audio=None):
+def graph(refs, controls, n, prompt, seed, audio=None, last=None):
     A = {}; k = [0]
     def node(cls, links=None, vals=None, **named):
         k[0] += 1; i = str(k[0]); inp = dict(widgets(cls, vals or [])); inp.update(named); inp.update(links or {})
@@ -100,7 +100,9 @@ def graph(refs, controls, n, prompt, seed, audio=None):
         v = node('LoadVideo', vals=[vid, 'image']); fr = node('GetVideoComponents', {'video': [v, 0]})
         m = node('MiniMaxH3FunControlNetApply', {'model': [m, 0], 'model_patch': [patch, 0], 'vae': [vv, 0], 'control_video': [fr, 0]}, [w, 0.0, 1.0])
     if args.mode == 'fl':   # 首帧模式：refs[0] = 这一段的第一帧（第一段是写实首帧，后面是上一段最后一帧）
-        r2v = node('MiniMaxH3ImageToVideo', {'clip': [clip, 0], 'vae': [vv, 0], 'first_frame': [node('LoadImage', vals=[refs[0], 'image']), 0]}, [prompt, W, H, n])
+        fl = {'clip': [clip, 0], 'vae': [vv, 0], 'first_frame': [node('LoadImage', vals=[refs[0], 'image']), 0]}
+        if last: fl['last_frame'] = [node('LoadImage', vals=[last, 'image']), 0]   # 写实尾帧（跟拍/环绕，11-28 踩坑 91）：终点也钉在真实房间里
+        r2v = node('MiniMaxH3ImageToVideo', fl, [prompt, W, H, n])
     else:
         links = {'clip': [clip, 0], 'vae': [vv, 0], 'audio_vae': [av, 0]}
         for j, r in enumerate(refs): links['ref_images.ref_image_%d' % j] = [node('LoadImage', vals=[r, 'image']), 0]
@@ -165,6 +167,8 @@ for tid in man['tasks']:
     while os.path.exists('/root/v11_out/PAUSE_VIDEO'): time.sleep(20)   # 暂停开关：首帧重做时先让出显卡（11-27：首帧和视频交替排队，每步首帧都要等一个 20 分钟的视频）
     if not os.path.exists(kf): log('跳过（没有写实首帧）', tid); continue
     if args.approved and tid not in (open(args.approved, encoding='utf-8').read().split() if os.path.exists(args.approved) else []): log('跳过（首帧还没审过）', tid); continue
+    if args.approved and args.mode == 'fl' and os.path.exists(os.path.join(td, 'end.png')) and tid + '@end' not in open(args.approved, encoding='utf-8').read().split():
+        log('跳过（写实尾帧还没审过）', tid); continue   # 跟拍/环绕镜头没有尾帧会编出新房间（踩坑 91），等尾帧审过再做
     n24 = min(task['n'], args.frames) if args.frames else task['n']; t0 = time.time()
     USE_PIKA[0] = pika_for(task)
     if args.subset != 'all' and (args.subset == 'pika') != USE_PIKA[0]: continue   # 不属于这一批
@@ -187,10 +191,14 @@ for tid in man['tasks']:
     prompt = prompt_of(task, vlines)
     if args.speech and vlines and not audio and os.path.exists(os.path.join(td, 'voice.wav')) and args.mode == 'ref':
         audio = 'h3voice_%s.wav' % tid; shutil.copy(os.path.join(td, 'voice.wav'), os.path.join(INP, audio))
+    endkf, endimg = os.path.join(KF, tid + '@end.png'), None
+    if args.mode == 'fl' and os.path.exists(endkf) and (not args.approved or tid + '@end' in open(args.approved, encoding='utf-8').read().split()):   # 尾帧也要审过
+        endimg = 'h3end_%s.png' % tid; ff('-i', endkf, '-vf', 'scale=%d:%d:flags=lanczos' % (W, H), os.path.join(INP, endimg)); log(tid, '用写实尾帧')
     frames, s, k, extra = [], 0, 0, []
     while s < n24 - 1 or not frames:
         n = grid(min(MAXF, n24 - s))
         if n > MAXF: n = MAXF - 17
+        lastimg = endimg if endimg and s + n >= n24 else None   # 只给最后一段（补到网格的那几帧控制视频是定格的最后一帧，尾帧正好对上）
         segs = []
         for j, (p, w) in enumerate(ctl):
             seg = 'h3ctl_%s_%d_%02d.mp4' % (tid, j, k)
@@ -198,7 +206,7 @@ for tid in man['tasks']:
             segs.append((seg, w))
         refs = ([extra[0]] if extra else [first]) if args.mode == 'fl' else [first] + extra + canon   # 首帧模式：续接段的第一帧 = 上一段最后一帧
         try:
-            imgs = run(graph(refs, segs, n, prompt, args.seed, audio if k == 0 else None), '%s_%02d' % (tid, k))
+            imgs = run(graph(refs, segs, n, prompt, args.seed, audio if k == 0 else None, lastimg), '%s_%02d' % (tid, k))
         except RuntimeError as e:   # 一个镜头失败只跳过它（下一轮重试），不让整批退出（11-27：取消一个任务后整批 Pika 都停了）
             log(tid, '本轮失败，跳过', str(e)[:200]); frames = None; break
         if args.dry: break
