@@ -25,6 +25,8 @@ for v in sorted(glob.glob(os.path.join(src, 's*_*_*.mp4'))):
     lines = os.path.join(ROOT, 'dist', 'cloud_pack', tid, 'lines.json'); nl = len(json.load(open(lines, encoding='utf-8'))) if os.path.exists(lines) else 0
     pika = t.get('move', 'static') in ('hand', 'static', 'push') or t.get('cam_motion', 99) < 15   # 和 video_h3.pika_for 一致
     txt = '%s  %s  %s  %s  主角:%s  台词%d句  | 左=白模首帧' % (tid, t.get('set', ''), t.get('move'), 'Pika' if pika else '20步', '、'.join(looks.NAME.get(c, c) for c in t.get('characters', [])) or '无', nl)
+    if abs(n - t['n']) > 1:   # 11-28：重启视频进程时正赶上合成 mp4，文件只有 72/74 帧
+        txt += '  【帧数不对 %d/%d，文件不完整，删掉重做】' % (n, t['n']); print('帧数不对', tid, n, t['n'])
     im = Image.fromarray(cv2.cvtColor(row, cv2.COLOR_BGR2RGB)); d = ImageDraw.Draw(im); d.rectangle([0, 0, row.shape[1], 24], fill=(0, 0, 0)); d.text((6, 2), txt, font=FONT, fill=(255, 230, 0))
     rows.append(cv2.cvtColor(np.asarray(im), cv2.COLOR_RGB2BGR))
 for k in range(0, len(rows), 6):
