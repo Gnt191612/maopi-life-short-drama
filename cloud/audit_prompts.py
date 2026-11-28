@@ -77,6 +77,9 @@ for r in rows:
         add(tid, '朝向', '描述写了脸看得见，但白模第一帧主角看不到脸，且描述里没有转身/抬头的动作')
     if fv is not None and chars and not fv and re.search(r'\bscreen\b', d) is None and re.search(r'smug grin|smil|grin|laugh', d) and 'from behind' not in d and 'over-the-shoulder' not in d:
         add(tid, '朝向', '白模第一帧看不到任何人的脸，描述却写表情（笑等）：确认是不是背影/手机特写镜头')
+    # 12 负面情绪的剧情里描述出现「笑」字（smile frozen/fading 会被模型画成笑，s04_00_0321）——剧情本身要的苦笑、挤出笑容例外
+    if re.search(r'\bsmil|\bgrin|\blaugh', d) and re.search('失落|难过|愣住|叹气|垮|发白|呆住|脸色难看', acts) and not re.search('苦笑|挤出笑容|笑了|笑出|自嘲', acts):
+        add(tid, '情绪', '剧情是负面情绪，描述里却有笑：%s' % ', '.join(re.findall(r'[^,;.]*(?:smil|grin|laugh)[^,;.]*', d))[:120])
     # 8 kf_hint 也查一遍时间
     kh = r.get('kf_prefix_zh', '')
     if st in DAY and re.search('夜|黄昏|傍晚|天黑', kh.replace(lighting.zh(st), '')): add(tid, '时间', '首帧提示（kf_hint）在白天场景里写了夜晚/黄昏')
