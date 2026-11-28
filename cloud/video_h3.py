@@ -130,7 +130,9 @@ def run(A, tag):
     if r.get('node_errors'): sys.exit('节点错误 %s %s' % (tag, json.dumps(r['node_errors'], ensure_ascii=False)[:2000]))
     for i in range(2400):
         time.sleep(3); h = comfy_run._get('/history/' + pid)
-        if pid in h and h[pid].get('status', {}).get('status_str') == 'error': raise RuntimeError('生成失败 %s %s' % (tag, json.dumps(h[pid]['status'], ensure_ascii=False)[:600]))
+        if pid in h and h[pid].get('status', {}).get('status_str') == 'error':
+            why = [m[1].get('exception_type', '') + ' ' + str(m[1].get('exception_message', ''))[:200] for m in h[pid]['status'].get('messages', []) if m[0] == 'execution_error'] or ['interrupted']
+            raise RuntimeError('生成失败 %s %s' % (tag, why[0]))   # 异常类型放最前面（原来截前 600 字只看得到 execution_start，看不出是 OOM）
         if pid in h and h[pid].get('status', {}).get('completed'): break
         if pid not in h and i % 10 == 9 and pid not in json.dumps(comfy_run._get('/queue')):   # 任务被从队列里删了（11-28：不在队列也不在历史里，原来会空等 2 小时、显卡闲着）
             raise RuntimeError('任务不见了（被从队列删除）%s' % tag)
@@ -209,7 +211,13 @@ for tid in man['tasks']:
             segs.append((seg, w))
         refs = ([extra[0]] if extra else [first]) if args.mode == 'fl' else [first] + extra + canon   # 首帧模式：续接段的第一帧 = 上一段最后一帧
         try:
-            imgs = run(graph(refs, segs, n, prompt, args.seed, audio if k == 0 else None, lastimg), '%s_%02d' % (tid, k))
+            try:
+                imgs = run(graph(refs, segs, n, prompt, args.seed, audio if k == 0 else None, lastimg), '%s_%02d' % (tid, k))
+            except RuntimeError as e:
+                if 'OutOfMemory' not in str(e): raise
+                # 显存不够：多半是首帧/尾帧的 Krea2、Qwen 模型还占着（11-28 s03_02_0001 250 帧 OOM，早上同一镜头能跑）。释放后当场重试一次
+                log(tid, '显存不够，释放模型后重试'); comfy_run._post('/free', {'unload_models': True, 'free_memory': True}); time.sleep(10)
+                imgs = run(graph(refs, segs, n, prompt, args.seed, audio if k == 0 else None, lastimg), '%s_%02d' % (tid, k))
         except RuntimeError as e:   # 一个镜头失败只跳过它（下一轮重试），不让整批退出（11-27：取消一个任务后整批 Pika 都停了）
             log(tid, '本轮失败，跳过', str(e)[:200]); frames = None; break
         if args.dry: break
