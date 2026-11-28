@@ -142,7 +142,9 @@ def run(A, tag):
             q = urllib.parse.urlencode({'filename': a['filename'], 'subfolder': a.get('subfolder', ''), 'type': a.get('type', 'output')})
             open(os.path.join(TMP, '%s_audio%s' % (tag, os.path.splitext(a['filename'])[1])), 'wb').write(urllib.request.urlopen(comfy_run.URL + '/view?' + q).read())
     out = []
-    for j, im in enumerate(im for o in h[pid]['outputs'].values() for im in o.get('images', [])):
+    # 只收 SaveImage 的输出（type=output）：LoadVideo 节点也会登记一条 images（内容是控制视频 mp4，type=input），
+    # 以前一起下载、排在最前面，ffmpeg 解不开跳过 → 每个镜头结尾少 1～2 帧、分段接缝多一帧重复（11-28 查明，踩坑 96）
+    for j, im in enumerate(im for o in h[pid]['outputs'].values() for im in o.get('images', []) if im.get('type') == 'output'):
         q = urllib.parse.urlencode({'filename': im['filename'], 'subfolder': im.get('subfolder', ''), 'type': im.get('type', 'output')})
         p = os.path.join(TMP, '%s_%04d.png' % (tag, j)); open(p, 'wb').write(urllib.request.urlopen(comfy_run.URL + '/view?' + q).read()); out.append(p)
     return out
