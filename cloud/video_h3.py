@@ -79,7 +79,7 @@ PIKA = pick('LoraLoaderModelOnly', 'lora_name', 'pika_h3_flex_%s_v1' % _M, 'pika
 CLIP_T = 'minimax' if 'minimax' in pool('CLIPLoader', 'type') else pool('CLIPLoader', 'type')[0]
 for c in (('MiniMaxH3ImageToVideo' if args.mode == 'fl' else 'MiniMaxH3ReferenceToVideo'), 'MiniMaxH3FunControlNetApply', 'ModelPatchLoader', 'LoadVideo', 'GetVideoComponents', 'SamplerCustomAdvanced', 'BasicGuider', 'KSamplerSelect', 'BasicScheduler', 'RandomNoise') + (('ManualSigmas',) if (args.pika or args.hybrid) else ()): spec(c)
 USE_PIKA = [bool(args.pika)]   # 当前镜头是否用 Pika（--hybrid 时按镜头运镜类型逐个设置）
-def pika_for(task): return bool(args.pika) or (args.hybrid and task.get('move', 'static') in ('hand', 'static'))
+def pika_for(task): return bool(args.pika) or (args.hybrid and task.get('move', 'static') in ('hand', 'static', 'push'))   # 11-27 余额 74.8 元：推镜头运动轻、也用 Pika，20 步只留给跟拍/环绕（运镜幅度最大的 35 个），省约 11 元留出补拍余量
 log('节点和模型核对通过', args.mode, UNET, TE, PATCH, LORA or '（不用 turbo）', PIKA or '（不用 Pika）', '%dx%d' % (W, H), 'steps', 4 if args.turbo else args.steps)
 
 import h3_prompt   # 提示词按 MiniMax 官方写作规范生成（cloud/h3_prompt.py，docs/prompts/）
