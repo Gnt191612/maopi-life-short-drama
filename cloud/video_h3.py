@@ -128,9 +128,9 @@ def run(A, tag):
     if r.get('node_errors'): sys.exit('节点错误 %s %s' % (tag, json.dumps(r['node_errors'], ensure_ascii=False)[:2000]))
     for _ in range(2400):
         time.sleep(3); h = comfy_run._get('/history/' + pid)
-        if pid in h and h[pid].get('status', {}).get('status_str') == 'error': sys.exit('生成失败 %s %s' % (tag, json.dumps(h[pid]['status'], ensure_ascii=False)[:2000]))
+        if pid in h and h[pid].get('status', {}).get('status_str') == 'error': raise RuntimeError('生成失败 %s %s' % (tag, json.dumps(h[pid]['status'], ensure_ascii=False)[:600]))
         if pid in h and h[pid].get('status', {}).get('completed'): break
-    else: sys.exit('超时 %s' % tag)
+    else: raise RuntimeError('超时 %s' % tag)
     for o in h[pid]['outputs'].values():
         for a in o.get('audio', []):
             q = urllib.parse.urlencode({'filename': a['filename'], 'subfolder': a.get('subfolder', ''), 'type': a.get('type', 'output')})
@@ -196,14 +196,17 @@ for tid in man['tasks']:
             ff('-ss', '%.4f' % (s / 24.0), '-i', p, '-vf', 'tpad=stop_mode=clone:stop_duration=16', '-frames:v', str(n), '-an', '-c:v', 'libx264', '-crf', '12', '-pix_fmt', 'yuv420p', os.path.join(INP, seg))
             segs.append((seg, w))
         refs = ([extra[0]] if extra else [first]) if args.mode == 'fl' else [first] + extra + canon   # 首帧模式：续接段的第一帧 = 上一段最后一帧
-        imgs = run(graph(refs, segs, n, prompt, args.seed, audio if k == 0 else None), '%s_%02d' % (tid, k))
+        try:
+            imgs = run(graph(refs, segs, n, prompt, args.seed, audio if k == 0 else None), '%s_%02d' % (tid, k))
+        except RuntimeError as e:   # 一个镜头失败只跳过它（下一轮重试），不让整批退出（11-27：取消一个任务后整批 Pika 都停了）
+            log(tid, '本轮失败，跳过', str(e)[:200]); frames = None; break
         if args.dry: break
         if k: imgs = imgs[1:]
         frames += imgs; k += 1
         last = 'h3last_%s_%02d.png' % (tid, k); shutil.copy(imgs[-1], os.path.join(INP, last)); extra = [last]   # 续接段：上一段最后一帧也当参考
         s += n - 1
         log(tid, '段 %d' % k, '%d/%d 帧' % (len(frames), n24), '%.0f 秒' % (time.time() - t0))
-    if args.dry: continue
+    if args.dry or frames is None: continue   # frames is None：本轮生成失败，留到下一轮
     od = os.path.join(OUT, tid); shutil.rmtree(od, ignore_errors=True); os.makedirs(od)
     for i, f in enumerate(frames[:n24]): shutil.move(f, os.path.join(od, 'frame_%04d.png' % (task['frames'][0] + i)))
     ff('-framerate', '24', '-start_number', str(task['frames'][0]), '-i', os.path.join(od, 'frame_%04d.png'), '-c:v', 'libx264', '-crf', '14', '-pix_fmt', 'yuv420p', os.path.join(OUT, tid + '.mp4'))
