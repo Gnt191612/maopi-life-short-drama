@@ -166,3 +166,10 @@ EXTRA.update({   # 首帧审查第 3 批（11-27）
     's02_01_0450': dict(kf_hint='画面里只有林晓一个人站着：体型明显偏胖、穿深灰色开襟连帽卫衣，站在桌边。后面远处的桌边坐着两个低头看书的同学，一共只有这两个人坐着。'),   # 首帧多出一个站着的人、后面坐着的人也多了；原来的 bg_face=classA 是掩盖多出的人，去掉
 })
 EXTRA['s02_01_0450'].pop('bg_face', None)
+EXTRA.update({   # 首帧审查第 4 批（11-27）
+    's02_01_0450': dict(kf_start=4, kf_hint='画面里只有林晓一个人站着：体型明显偏胖、穿深灰色开襟连帽卫衣，站在桌边。后面远处的桌边坐着两个低头看书的同学，一共只有这两个人坐着。'),   # 两次重做都在林晓左边多出一个站着的人 → 少重绘（从第 4 步开始），更多保留白模构图
+    's02_01_1021': dict(noswap=True, kf_hint='画面里两个人：左后方是体型明显偏胖、穿深灰色开襟连帽卫衣的林晓，弯着腰凑到右边那人耳边小声说话，他的上半身和脸都在画面里；右边坐在桌前的是戴圆框眼镜、穿白衬衫的清瘦男生陈瑶。'),   # 首帧里林晓不见了，只剩一件外套
+})
+EN.update({
+    's04_00_0001': 'wide shot, Saturday morning, the chubby young man in the dark grey hoodie with a backpack walks briskly across a wide sunny paved plaza toward the library entrance off-screen, a few autumn-colored trees and a bench on the right',   # 白模是空旷广场，看不到台阶和玻璃门，不写（踩坑 65/76）
+})
