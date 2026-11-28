@@ -269,5 +269,6 @@ EN['s08_00_0001'] = 'wide establishing shot, a long bright university teaching b
 EN['s09_00_0001'] = 'wide establishing shot, exterior of a Chinese university dormitory building late at night, rows of windows, many still lit warm yellow by desk lamps, street lamps along the path in front'
 EN['s10_00_0001'] = 'wide establishing shot, sunny early-summer university lawn with shady green trees and teaching buildings behind, the three friends standing together on the grass, two students walking along the path in the distance'
 EXTRA.setdefault('s10_00_0001', {}).update(extras=2)   # 首帧远处小路上有两个路人（visible_cast 没算进来）
+EXTRA.setdefault('s03_02_0001', {}).update(depth_w=0.85)   # 11-28 第二版：深度 0.55 时背景从虚化米色墙变成带窗户和电视的客厅（第 2 帧起）
 # 11-28：pose 1.0 / depth 0.6 试过，没用（镜头照样推成大通铺、多出三个陈瑶），改用写实尾帧（踩坑 91），强度回默认
 EXTRA.setdefault('s01_01_0577', {}).update(kf_hint_end='这是真实的四人间大学宿舍，画面里只有一个人：后排书桌前坐着戴圆框眼镜、穿白衬衫的清瘦男生陈瑶，在看书。前面的过道是空的。')
