@@ -173,3 +173,6 @@ EXTRA.update({   # 首帧审查第 4 批（11-27）
 EN.update({
     's04_00_0001': 'wide shot, Saturday morning, the chubby young man in the dark grey hoodie with a backpack walks briskly across a wide sunny paved plaza toward the library entrance off-screen, a few autumn-colored trees and a bench on the right',   # 白模是空旷广场，看不到台阶和玻璃门，不写（踩坑 65/76）
 })
+EXTRA.update({
+    's05_01_0001': dict(kf_hint='前面是体型明显偏胖、穿深灰色开襟连帽卫衣的林晓在看手机；后面站着的是清瘦、蓬松微卷黑发、穿橄榄绿针织毛衣和卡其色工装裤的周明远。'),   # 首帧周明远上衣成了深灰色，和下一镜 0068 的橄榄绿毛衣接不上
+})
