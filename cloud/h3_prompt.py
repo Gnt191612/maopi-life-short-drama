@@ -49,6 +49,14 @@ SET_SOUND = {   # 场景（segments.py 的 set_name）→ 环境音
     'dorm_am': 'dorm', 'dorm_pm': 'dorm', 'dorm_dusk': 'dorm_nt', 'dorm_nt': 'dorm_nt', 'lib': 'lib', 'libdoor': 'lib', 'ext_library': 'outdoor_day',
     'canteen': 'canteen', 'ext_canteen': 'outdoor_day', 'class': 'class', 'ext_corridor': 'corridor', 'track': 'outdoor_night', 'ext_dusk': 'outdoor_night',
     'lawn': 'outdoor_day', 'home': 'home', 'home_nt': 'home', 'ext_dorm_am': 'outdoor_day', 'ext_dorm_pm': 'outdoor_day', 'ext_dorm_nt': 'outdoor_night'}
+SET_KIND = {   # 场景类型（只说是哪里，不列物体），给运镜会露出新空间的镜头用
+    'dorm_am': 'a Chinese university four-person student dorm room', 'dorm_pm': 'a Chinese university four-person student dorm room',
+    'dorm_dusk': 'a Chinese university four-person student dorm room', 'dorm_nt': 'a Chinese university four-person student dorm room',
+    'lib': 'a university library reading room', 'libdoor': 'the entrance of a university library', 'ext_library': 'a university campus in front of the library',
+    'canteen': 'a university canteen hall', 'ext_canteen': 'a university campus outside the canteen', 'class': 'a small university meeting room',
+    'ext_corridor': 'a university teaching building corridor', 'track': 'a university outdoor running track', 'lawn': 'a university campus lawn',
+    'home': "a family apartment's living room", 'home_nt': "a family apartment's living room", 'ext_dusk': 'a university campus road',
+    'ext_dorm_am': 'a university campus outside the dormitory', 'ext_dorm_pm': 'a university campus outside the dormitory', 'ext_dorm_nt': 'a university campus outside the dormitory'}
 _SEG = None
 def sound_of(task):
     global _SEG
@@ -127,6 +135,9 @@ def build(task, mode='i2va', lines=None, speech=False):
         shot += ' The shot contains exactly %d people.' % (len(chars) + len(others) + extras)
     light = lighting.for_task(task)[1]   # 场景的时间和光线，和首帧（keyframes.py 用 lighting.zh）同一说法（踩坑 70：台灯亮着、窗外白天）
     if light: shot += ' ' + light
+    # 运镜会露出首帧外空间的镜头（推/跟/环绕）只加一句「这是什么场景」，不列物体（11-27 s01_01_0411：首帧只有白墙，跟拍到书桌区后模型把一排显示器理解成办公室）
+    if mode == 'i2va' and task.get('move') in ('track', 'arc', 'push') and SET_KIND.get(task.get('set', '')):
+        shot += ' The whole shot takes place in %s.' % SET_KIND[task['set']]
     # 首帧模式：背景只认首帧，不再用文字描述场景（11-27 试片教训：近景首帧只有白墙，文字写了「宿舍、上下铺、黄昏窗户」，模型中途把背景整个换成宿舍还镜像重复）
     if mode == 'i2va':
         shot += (' The background stays exactly as seen in <Picture 1> for the whole shot, softly out of focus, with the same walls, objects and light; '

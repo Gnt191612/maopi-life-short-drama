@@ -496,16 +496,30 @@ def lawn():
     import outdoor as od
     rnd = random.Random(7)
     box('ext_path2', (120, 2.5, 0.02), (0, 32, -0.01), (0.7, 0.68, 0.62), col)                       # 横穿草坪的小路
-    od.scatter_trees(col, rnd, 34, (-45, 45), (6, 55), avoid=[(-10.5, -5.5, -60, 60), (-60, 60, 30, 34), (-6, 6, 0, 28)])
+    # 11-27 用户指出「现实里根本没有这样平坦开阔空旷的地方」：原来楼在 70 米外、树稀稀拉拉、人物站的一大片刻意空着。
+    # → 改成真实校园里被楼和树围起来的院落式草坪：楼拉近到草坪边、四周成排行道树、路边绿篱、更多来往的学生；人物站位和走位路线不动。
+    od.scatter_trees(col, rnd, 30, (-34, 34), (6, 38), avoid=[(-10.5, -5.5, -60, 60), (-60, 60, 30, 34), (-7, 7, -2, 29)])
+    for x in list(range(-34, -11, 4)) + list(range(-3, 35, 4)):                                             # 横路两侧成排的行道树（香樟）
+        if abs(x) > 7: od.tree((x, 29.2, 0), rnd, col, scale=1.15)
+        od.tree((x + 2, 35.6, 0), rnd, col, scale=1.2)
+    for y in range(-12, 46, 5):                                                                            # 竖路两侧行道树
+        od.tree((-12.6, y, 0), rnd, col, scale=1.1); od.tree((-3.6, y + 2.5, 0), rnd, col, scale=1.05) if y < -3 or y > 30 else None
+    od.hedge((-40, 30.6, 0), (-11, 30.6, 0), col); od.hedge((-5, 30.6, 0), (40, 30.6, 0), col)              # 路边绿篱
+    od.hedge((-40, 33.9, 0), (-11, 33.9, 0), col); od.hedge((-5, 33.9, 0), (40, 33.9, 0), col)
     for y in range(-20, 50, 9):                                                                            # 沿路：路灯、长椅、垃圾桶
         od.lamppost((-10.2, y, 0), col, rot=0.0)
         if y % 2: od.bench((-11.2, y + 3, 0), col, rot=math.radians(-90)); od.trash_bin((-11.0, y + 4.6), col)
-    for x, y in ((-16, 12), (12, 18), (22, 8), (-25, 22)):
-        for k in range(rnd.randint(2, 4)): od.bush((x + rnd.uniform(-1.5, 1.5), y + rnd.uniform(-1, 1), 0), rnd, col)
+    for x, y in ((-16, 12), (12, 18), (22, 8), (-25, 22), (16, 4), (-22, 6), (26, 22)):
+        for k in range(rnd.randint(3, 5)): od.bush((x + rnd.uniform(-1.5, 1.5), y + rnd.uniform(-1, 1), 0), rnd, col)
     od.flowerbed((6, 30), (4, 1.6), col, rnd); od.flowerbed((-20, 30), (4, 1.6), col, rnd)
-    for k, x in enumerate((-30, 0, 30)):
-        od.building('ext_building%d' % k, (24, 14, 16), (x, 70, 0), col, rnd, ((0.85, 0.82, 0.76), (0.78, 0.74, 0.70), (0.82, 0.80, 0.78))[k])
-    od.bike_rack((-14.5, 58), 12, col, rnd, rot=math.radians(90))
+    for x, y in ((10, -3), (13, 3), (-15, -2), (9.5, 9), (16, -6)):                                         # 镜头两侧近处的树，给画面前景层次
+        od.tree((x, y, 0), rnd, col, scale=1.1)
+        for k in range(2): od.bush((x + rnd.uniform(-1.2, 1.2), y + rnd.uniform(-1, 1), 0), rnd, col)
+    for k, x in enumerate((-28, 0, 28)):                                                                   # 教学楼/宿舍楼拉近到草坪边（原来在 70 米外）
+        od.building('ext_building%d' % k, (24, 14, 18), (x, 46, 0), col, rnd, ((0.85, 0.82, 0.76), (0.78, 0.74, 0.70), (0.82, 0.80, 0.78))[k])
+    for k, sx in enumerate((-1, 1)):                                                                       # 两侧稍靠前的楼，围成院落（building 只支持正立面朝 ±Y，正面朝镜头）
+        od.building('ext_building_side%d' % k, (20, 12, 15), (sx * 44, 22, 0), col, rnd, ((0.80, 0.77, 0.72), (0.84, 0.81, 0.75))[k])
+    od.bike_rack((-14.5, 38), 14, col, rnd, rot=math.radians(90))
     light('light_sun', 'SUN', (0, -10, 10), 5.0, (1, 0.96, 0.88), (45, 0, -30))
     od.sky('day', 1.0)
     return dict(marks={'trio': (0, 0, 0, 0), 'walk_to': (0, 25, 0, 0)}, cams={'wide': ((3, -8, 1.6), (0, 2, 1.2), 30)},
