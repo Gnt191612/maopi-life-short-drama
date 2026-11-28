@@ -29,7 +29,7 @@ ap.add_argument('--subset', choices=['all', 'full', 'pika'], default='all')   # 
 ap.add_argument('--approved', default='')   # 首帧审批清单（每行/空格分隔的镜头 id）：只跑审过合格的首帧，每个镜头开始前重新读（11-27：没审的首帧被拿去跑视频）
 ap.add_argument('--frames', type=int, default=0)   # 只跑前 N 帧（便宜的对比测试用，如 SageAttention 测速；0 = 整个镜头）
 args = ap.parse_args()
-W, H = [int(v) for v in args.res.split('x')]; OUT = args.out; os.makedirs(OUT, exist_ok=True); MAXF = 362
+W, H = [int(v) for v in args.res.split('x')]; OUT = args.out; os.makedirs(OUT, exist_ok=True); MAXF = 262   # 一段最多帧数：48G 显存 1344x768 实测 262 帧能过、321 帧 OOM（11-28 s05_01_0090）；更长的镜头分段，下一段接上一段最后一帧
 def log(*a):
     s = time.strftime('%H:%M:%S ') + ' '.join(str(x) for x in a); print(s, flush=True)
     open('/root/v11_out/h3_progress.log', 'a', encoding='utf-8').write(s + '\n')
