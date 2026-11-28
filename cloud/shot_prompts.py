@@ -260,5 +260,14 @@ EN['s09_01_1019'] = 'close-up, the same young man on a phone call, the phone hel
 EN['s09_02_0001'] = 'close-up, the middle-aged woman sits on the sofa at home at night on a phone call, holding her phone close beside her face in one hand, warm floor lamp light, face clearly visible'
 EN['s09_03_0001'] = 'close-up, the same young man on the phone call, the phone held in his hand at the lower edge of the frame on speaker, tears falling, yet smiling'
 EN['s02_01_0606'] = 'medium close-up, the same young man sits low beside the table, frowning; he takes out his phone and holds it up to frame the desk, his face clearly visible'
+# 11-28 场景空镜审查：描述里的人群、自行车、慢跑的人首帧里都没有（s05_00_0001 视频整段换成一栋带乱码大字的红砖楼）
+EN['s05_00_0001'] = 'wide establishing shot of the entrance of a university canteen at noon: a long low white building with a wide entrance at the end of a tree-lined paved road, two students walking toward the entrance in the distance'
+EXTRA.setdefault('s05_00_0001', {}).update(kf_start=3, kf_hint='这是一张真实拍摄的大学校园照片：林荫路尽头是一栋白色的长条形食堂楼，门口宽敞；路两边是真实的树木，自然的树冠和枝叶、真实的树干，路灯和长椅。远处门口有两个正常走路的学生，双手自然下垂。真实照片质感。')   # 首帧第一版：树是白模的卡通低多边形，门口的人张开双臂（白模 T 字姿势）
+EN['s06_00_0001'] = 'wide establishing shot, an empty tree-lined campus road between dormitory buildings at dusk, a pale pink and purple evening sky, street lamps just turning on'
+EN['s07_00_0001'] = 'wide establishing shot, the red running track of the university sports field seen through a railing just after nightfall, floodlights glowing beyond the trees, the track empty and quiet'
+EN['s08_00_0001'] = 'wide establishing shot, a long bright university teaching building corridor on a Friday afternoon, sunlight through the windows falling in patches on the floor, the corridor empty and quiet'
+EN['s09_00_0001'] = 'wide establishing shot, exterior of a Chinese university dormitory building late at night, rows of windows, many still lit warm yellow by desk lamps, street lamps along the path in front'
+EN['s10_00_0001'] = 'wide establishing shot, sunny early-summer university lawn with shady green trees and teaching buildings behind, the three friends standing together on the grass, two students walking along the path in the distance'
+EXTRA.setdefault('s10_00_0001', {}).update(extras=2)   # 首帧远处小路上有两个路人（visible_cast 没算进来）
 # 11-28：pose 1.0 / depth 0.6 试过，没用（镜头照样推成大通铺、多出三个陈瑶），改用写实尾帧（踩坑 91），强度回默认
 EXTRA.setdefault('s01_01_0577', {}).update(kf_hint_end='这是真实的四人间大学宿舍，画面里只有一个人：后排书桌前坐着戴圆框眼镜、穿白衬衫的清瘦男生陈瑶，在看书。前面的过道是空的。')
