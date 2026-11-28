@@ -25,6 +25,7 @@ try {
     if (-not (Get-ChildItem $Result -Filter 'intro_hd*.gif' -ErrorAction SilentlyContinue)) { Get-ChildItem (Join-Path $Root 'build\cloud_out\intro_hd') -Filter 'intro_hd*.gif' | Copy-Item -Destination ([string]($Result -join "")) -Force; Write-Host '    云端没做片头：用本地已有的片头' }
     Write-Host '[1/4] 写实视频拆帧'
     & python cloud\mp4_frames.py "$Result\real"
+    & python cloud\postfix_apply.py "$Result\real"   # 手机屏幕/通知文字贴回、回忆镜头调色（cloud/postfix_text.json，11-27）
     Write-Host '[2/4] 片头'
     $gif = Join-Path $Result ("intro_hd{0}.gif" -f $IntroPick)
     if (Test-Path $gif) {
