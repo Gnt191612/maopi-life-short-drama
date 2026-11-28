@@ -271,5 +271,7 @@ EN['s10_00_0001'] = 'wide establishing shot, sunny early-summer university lawn 
 EXTRA.setdefault('s10_00_0001', {}).update(extras=2)   # 首帧远处小路上有两个路人（visible_cast 没算进来）
 EXTRA.setdefault('s03_02_0001', {}).update(depth_w=0.85)   # 11-28 第二版：深度 0.55 时背景从虚化米色墙变成带窗户和电视的客厅（第 2 帧起）
 EXTRA.setdefault('s05_01_0090', {}).update(still_insert=True, tremor=3)   # 11-28：321 帧手机屏幕特写，Pika 拍到四分之一变成两个林晓在食堂吃饭 → 用首帧做手持晃动（踩坑 95）
+for _t in ('s07_01_0023', 's09_01_0707', 's10_00_0586'):   # 纯手机屏幕特写都不走模型（s07_01_0023「爸爸来电」屏幕拍着拍着变成一个穿灰 T 恤的男生）
+    EXTRA.setdefault(_t, {}).update(still_insert=True, tremor=2)
 # 11-28：pose 1.0 / depth 0.6 试过，没用（镜头照样推成大通铺、多出三个陈瑶），改用写实尾帧（踩坑 91），强度回默认
 EXTRA.setdefault('s01_01_0577', {}).update(kf_hint_end='这是真实的四人间大学宿舍，画面里只有一个人：后排书桌前坐着戴圆框眼镜、穿白衬衫的清瘦男生陈瑶，在看书。前面的过道是空的。')
